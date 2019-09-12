@@ -31,7 +31,9 @@ import (
 const (
 	// TODO(roasbeef): tune
 	msgBufferSize = 50
-
+	
+	/* Darius: CSV = CheckSequenceVerify. Presumably each currency would have
+	it's own value  */
 	// minBtcRemoteDelay and maxBtcRemoteDelay is the extremes of the
 	// Bitcoin CSV delay we will require the remote to use for its
 	// commitment transaction. The actual delay we will require will be
@@ -46,6 +48,9 @@ const (
 	minLtcRemoteDelay uint16 = 576
 	maxLtcRemoteDelay uint16 = 8064
 
+	/* Darius: not essential, but we might want to wait for more blocks
+	depending on the block times of different currencies. 
+	Also, things like max funding amount should depend on currency*/
 	// maxWaitNumBlocksFundingConf is the maximum number of blocks to wait
 	// for the funding transaction to be confirmed before forgetting
 	// channels that aren't initiated by us. 2016 blocks is ~2 weeks.
@@ -130,6 +135,11 @@ func (r *reservationWithCtx) updateTimestamp() {
 	r.lastUpdated = time.Now()
 }
 
+/* Darius: Below are the types for open_channel, accept_channel, funding_created,
+funding_signed, funding_locked 
+We would need different message types for Bolt. e.g. for sending closing/payment 
+tokens */
+
 // initFundingMsg is sent by an outside subsystem to the funding manager in
 // order to kick off a funding workflow with a specified target peer. The
 // original request which defines the parameters of the funding workflow are
@@ -204,7 +214,8 @@ func newSerializedKey(pubKey *btcec.PublicKey) serializedPubKey {
 	copy(s[:], pubKey.SerializeCompressed())
 	return s
 }
-
+/* Darius: You (Ayo) mentioned that this should probably be extended, but I'm not
+sure if there are any big changes apart from replacing btcsuite */
 // fundingConfig defines the configuration for the FundingManager. All elements
 // within the configuration MUST be non-nil for the FundingManager to carry out
 // its duties.
@@ -221,6 +232,8 @@ type fundingConfig struct {
 	// transaction to the network.
 	PublishTransaction func(*wire.MsgTx) error
 
+	/* Darius: Fee estimator for shielded outputs (when it's ready) will be 
+	constant */
 	// FeeEstimator calculates appropriate fee rates based on historical
 	// transaction information.
 	FeeEstimator lnwallet.FeeEstimator
@@ -230,6 +243,7 @@ type fundingConfig struct {
 	// so that the channel creation process can be completed.
 	Notifier chainntnfs.ChainNotifier
 
+	/* Darius: btcsuite used here */
 	// SignMessage signs an arbitrary message with a given public key. The
 	// actual digest signed is the double sha-256 of the message. In the
 	// case that the private key corresponding to the passed public key
@@ -271,6 +285,7 @@ type fundingConfig struct {
 	// initially announcing channels.
 	DefaultRoutingPolicy htlcswitch.ForwardingPolicy
 
+	/* Darius: btcsuite used here */
 	// NumRequiredConfs is a function closure that helps the funding
 	// manager decide how many confirmations it should require for a
 	// channel extended to it. The function is able to take into account
@@ -278,6 +293,7 @@ type fundingConfig struct {
 	// process to determine how many confirmations we'll require.
 	NumRequiredConfs func(btcutil.Amount, lnwire.MilliSatoshi) uint16
 
+	/* Darius: btcsuite used here */
 	// RequiredRemoteDelay is a function that maps the total amount in a
 	// proposed channel to the CSV delay that we'll require for the remote
 	// party. Naturally a larger channel should require a higher CSV delay
@@ -285,22 +301,26 @@ type fundingConfig struct {
 	// contract breach.
 	RequiredRemoteDelay func(btcutil.Amount) uint16
 
+	/* Darius: btcsuite used here */
 	// RequiredRemoteChanReserve is a function closure that, given the
 	// channel capacity and dust limit, will return an appropriate amount
 	// for the remote peer's required channel reserve that is to be adhered
 	// to at all times.
 	RequiredRemoteChanReserve func(capacity, dustLimit btcutil.Amount) btcutil.Amount
 
+	/* Darius: btcsuite used here */
 	// RequiredRemoteMaxValue is a function closure that, given the channel
 	// capacity, returns the amount of MilliSatoshis that our remote peer
 	// can have in total outstanding HTLCs with us.
 	RequiredRemoteMaxValue func(btcutil.Amount) lnwire.MilliSatoshi
 
+	/* Darius: btcsuite used here */
 	// RequiredRemoteMaxHTLCs is a function closure that, given the channel
 	// capacity, returns the number of maximum HTLCs the remote peer can
 	// offer us.
 	RequiredRemoteMaxHTLCs func(btcutil.Amount) uint16
 
+	/* Darius: btcsuite used here */
 	// WatchNewChannel is to be called once a new channel enters the final
 	// funding stage: waiting for on-chain confirmation. This method sends
 	// the channel to the ChainArbitrator so it can watch for any on-chain
@@ -321,6 +341,7 @@ type fundingConfig struct {
 	// a reservation is considered a zombie.
 	ReservationTimeout time.Duration
 
+	/* Darius: btcsuite used here */
 	// MinChanSize is the smallest channel size that we'll accept as an
 	// inbound channel. We have such a parameter, as otherwise, nodes could
 	// flood us with very small channels that would never really be usable
@@ -487,6 +508,10 @@ func (f *fundingManager) start() error {
 	if err != nil {
 		return err
 	}
+
+	/* Darius: This section handles payment channels which didn't finish getting
+	established before the daemon was shut down. This would have to change for
+	Bolt channels to handle the extra transition states */
 
 	// For any channels that were in a pending state when the daemon was
 	// last connected, the Funding Manager will re-initialize the channel
@@ -756,6 +781,7 @@ func (f *fundingManager) nextPendingChanID() [32]byte {
 	return nextChanID
 }
 
+	/* Darius: btcsuite used here */
 type pendingChannel struct {
 	identityPub   *btcec.PublicKey
 	channelPoint  *wire.OutPoint
@@ -885,6 +911,7 @@ func (f *fundingManager) failFundingFlow(peer lnpeer.Peer, tempChanID [32]byte,
 	}
 }
 
+/* Darius: This is the main section which needs to be edited. CONTINUE FROM HERE */
 // reservationCoordinator is the primary goroutine tasked with progressing the
 // funding workflow between the wallet, and any outside peers or local callers.
 //
@@ -897,7 +924,7 @@ func (f *fundingManager) reservationCoordinator() {
 
 	for {
 		select {
-
+			/* Darius: add new phases here */
 		case msg := <-f.fundingMsgs:
 			switch fmsg := msg.(type) {
 			case *fundingOpenMsg:
