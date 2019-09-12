@@ -32,7 +32,6 @@ import (
 const (
 	// TODO(roasbeef): tune
 	msgBufferSize = 50
-
 	/* Darius: CSV = CheckSequenceVerify. Presumably each currency would have
 	it's own value  */
 	// minBtcRemoteDelay and maxBtcRemoteDelay is the extremes of the
@@ -745,6 +744,7 @@ func (f *fundingManager) failFundingFlow(peer lnpeer.Peer, tempChanID [32]byte,
 	}
 }
 
+/* Darius: This is the main section which needs to be edited. CONTINUE FROM HERE */
 // reservationCoordinator is the primary goroutine tasked with progressing the
 // funding workflow between the wallet, and any outside peers or local callers.
 //
