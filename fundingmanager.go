@@ -872,8 +872,9 @@ func (f *fundingManager) failFundingFlow(peer lnpeer.Peer, tempChanID [32]byte,
 	fndgLog.Debugf("Failing funding flow for pendingID=%x: %v",
 		tempChanID, fundingErr)
 
-		/* Darius TODO: find function of peer.IdentityKey() 
-		will probably have to change the way this works for tx to be unlinkable */
+		/* Darius: peer.IdentityKey() is the peer's public key.
+		maybe this could stay the same for the customer keeping track of the merchan pk,
+		but for the merchant, it would have to keep track of the peer's wallet? */
 	ctx, err := f.cancelReservationCtx(peer.IdentityKey(), tempChanID) 
 	if err != nil {
 		fndgLog.Errorf("unable to cancel reservation: %v", err)
@@ -958,6 +959,12 @@ func (f *fundingManager) reservationCoordinator() {
 			case *fundingCommitmentMsg:
 				f.handleFundingCommitment(fmsg) 
 				// Darius: Merchant receiving commitment tx (and wallet-closing message?)
+
+				// Darius:
+
+			case *fundingCommitmentSuccessMsg:
+				f.handleFundingCommitmentSuccess(fmsg) 
+				// Darius: Customer receiving confirmation of commitment tx
 
 			case *fundingCreateCustCloseTokenMsg:
 				f.handleCreateCloseToken(fmsg) 
