@@ -27,7 +27,7 @@ const (
 type OpenChannel struct {
 
 	/* Darius: Needs to be changed for zec. This is usually the genesis hash
-	 of the respective blockchain. 	*/
+	of the respective blockchain. 	*/
 	// ChainHash is the target chain that the initiator wishes to open a
 	// channel within.
 	ChainHash chainhash.Hash
@@ -124,6 +124,8 @@ type OpenChannel struct {
 	// within the commitment transaction of the sender.
 	FirstCommitmentPoint *btcec.PublicKey
 
+	/* Darius: in ChannelFlags we would want to add a flag to say whether we
+	are opening a BOLT channel */
 	// ChannelFlags is a bit-field which allows the initiator of the
 	// channel to specify further behavior surrounding the channel.
 	// Currently, the least significant bit of this bit field indicates the
@@ -136,7 +138,7 @@ type OpenChannel struct {
 	// BoltChannelToken is the ...
 	BoltChannelToken uint16
 
-	// BoltCustState is 
+	// BoltCustState is
 	BoltCustState string
 
 	// BoltComm is the commitment of ...
