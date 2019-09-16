@@ -788,6 +788,12 @@ func (f *fundingManager) reservationCoordinator() {
 				f.handleFundingCommitment(fmsg)
 				// Darius: Merchant receiving commitment tx (and wallet-closing message?)
 
+				// Darius:
+
+			case *fundingCommitmentSuccessMsg:
+				f.handleFundingCommitmentSuccess(fmsg)
+				// Darius: Customer receiving confirmation of commitment tx
+
 			case *fundingCreateCustCloseTokenMsg:
 				f.handleCreateCloseToken(fmsg)
 				// Darius: Customer receiving request to start interactive process
