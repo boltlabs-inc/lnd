@@ -703,6 +703,8 @@ func (f *fundingManager) failFundingFlow(peer lnpeer.Peer, tempChanID [32]byte,
 	fndgLog.Debugf("Failing funding flow for pendingID=%x: %v",
 		tempChanID, fundingErr)
 
+	/* Darius TODO: find function of peer.IdentityKey()
+	will probably have to change the way this works for tx to be unlinkable */
 	ctx, err := f.cancelReservationCtx(peer.IdentityKey(), tempChanID)
 	if err != nil {
 		fndgLog.Errorf("unable to cancel reservation: %v", err)
@@ -1142,6 +1144,7 @@ func (f *fundingManager) handlePendingChannels(msg *pendingChansReq) {
 	msg.resp <- pendingChannels
 }
 
+/* Darius: Next two functions are specific to funding open */
 // processFundingOpen sends a message to the fundingManager allowing it to
 // initiate the new funding workflow with the source peer.
 func (f *fundingManager) processFundingOpen(msg *lnwire.OpenChannel,
@@ -1425,6 +1428,7 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 		HtlcPoint:            ourContribution.HtlcBasePoint.PubKey,
 		FirstCommitmentPoint: ourContribution.FirstCommitmentPoint,
 	}
+	/* Darius: fundingAccepted used here */
 	if err := fmsg.peer.SendMessage(false, &fundingAccept); err != nil {
 		fndgLog.Errorf("unable to send funding response to peer: %v", err)
 		f.failFundingFlow(fmsg.peer, msg.PendingChannelID, err)
@@ -1432,6 +1436,8 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	}
 }
 
+/* Darius: next 6 functions below (up to handleFundingSigned)
+are specific to previous workflow */
 // processFundingAccept sends a message to the fundingManager allowing it to
 // continue the second phase of a funding workflow with the target peer.
 func (f *fundingManager) processFundingAccept(msg *lnwire.AcceptChannel,
@@ -1911,6 +1917,7 @@ func (f *fundingManager) waitForFundingWithTimeout(
 	}
 }
 
+/* Darius: needs to use libbolt */
 // makeFundingScript re-creates the funding script for the funding transaction
 // of the target channel.
 func makeFundingScript(channel *channeldb.OpenChannel) ([]byte, error) {
@@ -1925,6 +1932,7 @@ func makeFundingScript(channel *channeldb.OpenChannel) ([]byte, error) {
 	return input.WitnessScriptHash(multiSigScript)
 }
 
+/* Darius: needs editing. Continue from here */
 // waitForFundingConfirmation handles the final stages of the channel funding
 // process once the funding transaction has been broadcast. The primary
 // function of waitForFundingConfirmation is to wait for blockchain
