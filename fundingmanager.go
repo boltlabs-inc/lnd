@@ -743,7 +743,7 @@ func (f *fundingManager) failFundingFlow(peer lnpeer.Peer, tempChanID [32]byte,
 	}
 }
 
-/* Darius: This is the main section which needs to be edited. CONTINUE FROM HERE */
+/* Darius: This is the main section which needs to be edited. */
 // reservationCoordinator is the primary goroutine tasked with progressing the
 // funding workflow between the wallet, and any outside peers or local callers.
 //
@@ -773,6 +773,54 @@ func (f *fundingManager) reservationCoordinator() {
 			case *fundingErrorMsg:
 				f.handleErrorMsg(fmsg)
 			}
+
+		/* Darius: Potential message types for Bolt.
+		// Question: Right now, the merchant is initiating the steps which require
+		// interactive processes. Is that okay or should it be Customer who initiates?
+		// If customer, would there need to be extra confirmation messages?
+		// e.g. Merchant confirming that commitment tx was successfully proved.
+
+		case msg := <-f.fundingMsgs:
+			switch fmsg := msg.(type) {
+			case *fundingCommitmentMsg:
+				f.handleFundingCommitment(fmsg)
+				// Darius: Merchant receiving commitment tx (and wallet-closing message?)
+
+			case *fundingCreateCustCloseTokenMsg:
+				f.handleCreateCloseToken(fmsg)
+				// Darius: Customer receiving request to start interactive process
+				// to create Customer Close Token.
+				// Customer should then receive their closing token.
+
+			case *fundingMerchCloseTokenMsg:
+				f.handleFundingMerchCloseToken(fmsg)
+				// Darius: Merchant receiving signed escrow tx, and merchant closing tx
+				// Merchant should then broadcast this message on-chain
+
+			case *fundingBroadcastMsg:
+				f.handleFundingBroadcast(fmsg)
+				// Darius: Customer receiving notification and details of
+				// the broadcasted funding transaction. Customer is now
+				// watching blockchain for enough confirmations of funding tx.
+
+			case *fundingPrivLockedMsg:
+				f.wg.Add(1)
+				go f.handlePrivFundingLocked(fmsg)
+				// Darius: Merchant receiving msg from Customer that funding has
+				// been confirmed on-chain.
+				// Upon receiving this, Merchant should initiate interactive
+				// process for generating pay token
+
+			case *fundingPrivErrorMsg:
+				f.handlePrivErrorMsg(fmsg)
+
+			case *fundingCreatePayTokenMsg:
+				f.handleCreatePayToken(fmsg)
+				// Darius: Customer receiving request to start interactive process
+				// to create Customer Pay Token
+				// Customer should then receive their Pay Token
+			}
+		*/
 		case req := <-f.fundingRequests:
 			f.handleInitFundingMsg(req)
 
