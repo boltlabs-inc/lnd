@@ -25,6 +25,10 @@ const (
 // by nodes backed by SPV Bitcoin clients, and have a simpler security models
 // than dual funded channels.
 type OpenChannel struct {
+	/* Darius: I'm thinking we would make a bolt version of these messages 
+	(e.g. open_bolt_channel.go) that get called instead for Bolt channels */
+
+	/* Darius: 'target chain' refers to the blockchain?	*/
 	// ChainHash is the target chain that the initiator wishes to open a
 	// channel within.
 	ChainHash chainhash.Hash
@@ -32,6 +36,9 @@ type OpenChannel struct {
 	// PendingChannelID serves to uniquely identify the future channel
 	// created by the initiated single funder workflow.
 	PendingChannelID [32]byte
+
+	/* Darius: btcutil and MilliSatoshi are specific for btc. Should they be
+	renamed something more chain-agnostic? */
 
 	// FundingAmount is the amount of satoshis that the initiator of the
 	// channel wishes to use as the total capacity of the channel. The
@@ -81,6 +88,8 @@ type OpenChannel struct {
 	// sender of this channel will accept.
 	MaxAcceptedHTLCs uint16
 
+	/* Darius: for the lines below btcec -> Zcash version. 
+	(ec in btcec stands for elliptic curve) */
 	// FundingKey is the key that should be used on behalf of the sender
 	// within the 2-of-2 multi-sig output that it contained within the
 	// funding transaction.
@@ -117,6 +126,8 @@ type OpenChannel struct {
 	// within the commitment transaction of the sender.
 	FirstCommitmentPoint *btcec.PublicKey
 
+	/* Darius: in ChannelFlags we would want to add a flag to say whether we 
+	are opening a BOLT channel */
 	// ChannelFlags is a bit-field which allows the initiator of the
 	// channel to specify further behavior surrounding the channel.
 	// Currently, the least significant bit of this bit field indicates the
@@ -128,6 +139,7 @@ type OpenChannel struct {
 // interface.
 var _ Message = (*OpenChannel)(nil)
 
+/* Darius: New fields from above to be added here too */
 // Encode serializes the target OpenChannel into the passed io.Writer
 // implementation. Serialization will observe the rules defined by the passed
 // protocol version.
@@ -192,6 +204,7 @@ func (o *OpenChannel) MsgType() MessageType {
 	return MsgOpenChannel
 }
 
+/* Darius: increase MaxPayloadLength to include extra fields */
 // MaxPayloadLength returns the maximum allowed payload length for a
 // OpenChannel message.
 //
