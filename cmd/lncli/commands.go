@@ -656,6 +656,13 @@ var openChannelCommand = cli.Command{
 				"transaction must satisfy",
 			Value: 1,
 		},
+		/* Darius:
+		cli.BoolFlag{
+			Name: "bolt_channel",
+			Usage: "make a private BOLT payment channel, such that " +
+			"the merchant you connect to cannot link your transactions together",
+		},
+		*/
 	},
 	Action: actionDecorator(openChannel),
 }

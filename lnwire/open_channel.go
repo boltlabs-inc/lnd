@@ -26,7 +26,9 @@ const (
 // than dual funded channels.
 type OpenChannel struct {
 	/* Darius: I'm thinking we would make a bolt version of these messages 
-	(e.g. open_bolt_channel.go) that get called instead for Bolt channels */
+	(e.g. open_bolt_channel.go) that get called instead for Bolt channels 
+	
+	TODO: What fields need to go in here for opening a Bolt channel? */
 
 	/* Darius: 'target chain' refers to the blockchain?	*/
 	// ChainHash is the target chain that the initiator wishes to open a
