@@ -745,7 +745,6 @@ func (f *fundingManager) failFundingFlow(peer lnpeer.Peer, tempChanID [32]byte,
 	}
 }
 
-/* Darius: This is the main section which needs to be edited. */
 // reservationCoordinator is the primary goroutine tasked with progressing the
 // funding workflow between the wallet, and any outside peers or local callers.
 //
