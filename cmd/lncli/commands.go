@@ -656,6 +656,11 @@ var openChannelCommand = cli.Command{
 				"transaction must satisfy",
 			Value: 1,
 		},
+		// Darius
+		// cli.StringFlag{
+		// 	Name: "zkchannel_token",
+		// 	Usage: "creates a zero knowledge channel using the ", +
+		// 	"zkchannel token provided by the merchant."
 	},
 	Action: actionDecorator(openChannel),
 }
@@ -748,6 +753,26 @@ func openChannel(ctx *cli.Context) error {
 			return fmt.Errorf("unable to decode push amt: %v", err)
 		}
 	}
+
+	// // Darius:
+	// if ctx.IsSet("zkchannel_token"){
+
+	// 	// Channel token provided by Merchant
+	// 	channelToken := ctx.String("zkchannel_token")
+
+	// 	// req.LocalFundingAmount, req.PushSat are equivalent to
+	// 	// initial customer and merchant balances
+	// 	channelToken, custState, err := BidirectionalInitCustomer(channelToken, req.LocalFundingAmount, req.PushSat, "Alice")
+	// 	if err != nil {
+	// 		return fmt.Errorf("Unable to initialize customer: %v", err)
+	// 	}
+
+	// 	// Generate commitment and commitment proof
+	// 	channelToken, custState, com, comProof, err := BidirectionalEstablishCustomerGenerateProof(channelToken, custState)
+
+	// 	// Darius: Fix this syntax for packing variables together
+	// 	req.ZkChannelParams = [channchannelToken, com, comProof]
+	// }
 
 	req.Private = ctx.Bool("private")
 
