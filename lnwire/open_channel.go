@@ -27,7 +27,11 @@ const (
 type OpenChannel struct {
 
 	/* Darius: Needs to be changed for zec. This is usually the genesis hash
+<<<<<<< HEAD
 	of the respective blockchain. 	*/
+=======
+	 of the respective blockchain. 	*/
+>>>>>>> add ZkNode flag in config, MerchInit in lnd.go, and other comments
 	// ChainHash is the target chain that the initiator wishes to open a
 	// channel within.
 	ChainHash chainhash.Hash
@@ -124,8 +128,11 @@ type OpenChannel struct {
 	// within the commitment transaction of the sender.
 	FirstCommitmentPoint *btcec.PublicKey
 
+<<<<<<< HEAD
 	/* Darius: in ChannelFlags we would want to add a flag to say whether we
 	are opening a BOLT channel */
+=======
+>>>>>>> add ZkNode flag in config, MerchInit in lnd.go, and other comments
 	// ChannelFlags is a bit-field which allows the initiator of the
 	// channel to specify further behavior surrounding the channel.
 	// Currently, the least significant bit of this bit field indicates the
@@ -138,7 +145,11 @@ type OpenChannel struct {
 	// BoltChannelToken is the ...
 	BoltChannelToken uint16
 
+<<<<<<< HEAD
 	// BoltCustState is
+=======
+	// BoltCustState is 
+>>>>>>> add ZkNode flag in config, MerchInit in lnd.go, and other comments
 	BoltCustState string
 
 	// BoltComm is the commitment of ...
