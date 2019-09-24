@@ -308,6 +308,11 @@ func main() {
 	app.Commands = append(app.Commands, watchtowerCommands()...)
 	app.Commands = append(app.Commands, wtclientCommands()...)
 
+	// Darius: Also need to add RPC files to lncli:
+	// zkChannelrpc_active.go
+	// zkChannelrpc_default.go
+	// app.Commands = append(app.Commands, zkChannelCommands()...)
+
 	if err := app.Run(os.Args); err != nil {
 		fatal(err)
 	}
