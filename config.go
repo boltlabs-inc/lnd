@@ -335,6 +335,9 @@ type config struct {
 	Watchtower *lncfg.Watchtower `group:"watchtower" namespace:"watchtower"`
 
 	LegacyProtocol *lncfg.LegacyProtocol `group:"legacyprotocol" namespace:"legacyprotocol"`
+
+	// Darius
+	// ZkNode bool `long:"ZkNode" description:"If true, the node will expect extra inputs for setting up zkChannels."`
 }
 
 // loadConfig initializes and parses the config using a config file and command
