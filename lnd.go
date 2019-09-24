@@ -136,24 +136,24 @@ func Main(lisCfg ListenerCfg) error {
 		build.Version(), build.Deployment, build.LoggingType)
 
 	// Darius: if ZkNode flag is true, load Merchant state. If it's not there, create one
-	if cfg.ZkNode {
-		fmt.Println("Loading ZkNode")
-		// 	Darius TODO: Check for file with merchant state
-		// 	If Bolt.db exists {
-		// 		Load Bolt.db
-		// 	}
-		// 	If Bolt.db does not exist, create it{
-		// 		channelState, err := BidirectionalChannelSetup("Test Channel", false)
-		// 		if err != nil {
-		// 			return nil, err
-		// 		}
-		// 		channelToken, merchState, channelState, err := BidirectionalInitMerchant(channelState, "Bob")
-		// 		if err != nil {
-		// 			return nil, err
-		// 		}
-		// 	}
-		os.Exit(0)
-	}
+	// if cfg.ZkNode {
+	// 	fmt.Println("Loading ZkNode")
+	// 	// 	Darius TODO: Check for file with merchant state
+	// 		If Bolt.db exists {
+	// 			Load Bolt.db
+	// 		}
+	// 		If Bolt.db does not exist, create it{
+	// 			channelState, err := BidirectionalChannelSetup("Test Channel", false)
+	// 			if err != nil {
+	// 				return nil, err
+	// 			}
+	// 			channelToken, merchState, channelState, err := BidirectionalInitMerchant(channelState, "Bob")
+	// 			if err != nil {
+	// 				return nil, err
+	// 			}
+	// 			// Save channelToken, merchState, channelState in Bolt.db
+	// 		}
+	// }
 
 	var network string
 	switch {

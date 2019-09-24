@@ -1512,6 +1512,10 @@ message OpenChannelRequest {
 
     /// Whether unconfirmed outputs should be used as inputs for the funding transaction.
     bool spend_unconfirmed = 12 [json_name = "spend_unconfirmed"];
+
+    // /// Darius TODO: Make this field an optional field
+    // /// Additional parameters needed to request a zkchannel with a merchant: channelToken, commitment, commitmentProof.
+    // string zk_channel_params = 13 [json_name = "ZkChannelParams"];
 }
 message OpenStatusUpdate {
     oneof update {
