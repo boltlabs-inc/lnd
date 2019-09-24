@@ -1347,6 +1347,12 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	maxHtlcs := f.cfg.RequiredRemoteMaxHTLCs(amt)
 	minHtlc := f.cfg.DefaultRoutingPolicy.MinHTLC
 
+	// Darius:
+	// TODO: Unpack ZkChannelParams into: channelState, com, comProof
+	// To find out: What is custState.PkC?
+	// closeToken, err := BidirectionalEstablishMerchantIssueCloseToken(
+	// 	channelState, com, comProof, custState.PkC, amt, msg.PushAmount, merchState)
+
 	// Once the reservation has been created successfully, we add it to
 	// this peer's map of pending reservations to track this particular
 	// reservation until either abort or completion.
@@ -1429,8 +1435,10 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 		DelayedPaymentPoint:  ourContribution.DelayBasePoint.PubKey,
 		HtlcPoint:            ourContribution.HtlcBasePoint.PubKey,
 		FirstCommitmentPoint: ourContribution.FirstCommitmentPoint,
+		// Darius
+		// ClosingToken:	closingToken,
 	}
-	/* Darius: fundingAccepted used here */
+
 	if err := fmsg.peer.SendMessage(false, &fundingAccept); err != nil {
 		fndgLog.Errorf("unable to send funding response to peer: %v", err)
 		f.failFundingFlow(fmsg.peer, msg.PendingChannelID, err)
@@ -1555,6 +1563,22 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 	fndgLog.Debugf("Remote party accepted commitment constraints: %v",
 		spew.Sdump(remoteContribution.ChannelConfig.ChannelConstraints))
 
+	// // Darius: We need to verify the merchant's close token
+	// isTokenValid, channelState, custState, err :=
+	// 	BidirectionalVerifyCloseToken(channelState, custState, closeToken)
+	//
+	// if isTokenValid == false {
+	// 	fndgLog.Errorf("CloseToken was not valid")
+	// 	return
+	// }
+	// // Darius
+	// // Here is where the wagyu is used and transactions are signed e.g.
+	// escrowTx, custSigEscrowTx, custSignMerchCloseTx := BidirectionalCustSignMerchCloseTx (...)
+	// Customer sends: escrowTx, custSigEscrowTx, custSignMerchCloseTx
+
+	// Darius: For the section below, we would not do these if it was a zkChannel tx.
+	// Darius: TODO - find out the format of 'outPoint' and 'sig' below
+
 	// Now that we have their contribution, we can extract, then send over
 	// both the funding out point and our signature for their version of
 	// the commitment transaction to the remote peer.
@@ -1634,6 +1658,10 @@ func (f *fundingManager) handleFundingCreated(fmsg *fundingCreatedMsg) {
 	fundingOut := fmsg.msg.FundingPoint
 	fndgLog.Infof("completing pendingID(%x) with ChannelPoint(%v)",
 		pendingChanID[:], fundingOut)
+
+	// Darius: First we verify the validity of the signature
+	// isValidMerchCloseTx :=
+	// 	 BidirectionalVerifyMerchCloseTx (custSigEscrowTx, custSignMerchCloseTx)
 
 	// With all the necessary data available, attempt to advance the
 	// funding workflow to the next stage. If this succeeds then the

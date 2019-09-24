@@ -3046,6 +3046,9 @@ type openChanReq struct {
 	// output selected to fund the channel should satisfy.
 	minConfs int32
 
+	// Darius
+	// zkChannelParams string
+
 	// TODO(roasbeef): add ability to specify channel constraints as well
 
 	updates chan *lnrpc.OpenStatusUpdate
