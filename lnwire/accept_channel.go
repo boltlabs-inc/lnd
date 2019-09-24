@@ -86,6 +86,9 @@ type AcceptChannel struct {
 	// base point in order to derive the revocation keys that are placed
 	// within the commitment transaction of the sender.
 	FirstCommitmentPoint *btcec.PublicKey
+
+	// Darius
+	// CloseToken string
 }
 
 // A compile time check to ensure AcceptChannel implements the lnwire.Message
