@@ -32,9 +32,9 @@ import (
 const (
 	// TODO(roasbeef): tune
 	msgBufferSize = 50
-	
-	/* Darius: CSV = CheckSequenceVerify. Presumably each currency would have
-	it's own value  */
+
+	/* Darius (not essential): each currency should have it's own value
+	depending on block times */
 	// minBtcRemoteDelay and maxBtcRemoteDelay is the extremes of the
 	// Bitcoin CSV delay we will require the remote to use for its
 	// commitment transaction. The actual delay we will require will be
@@ -49,8 +49,8 @@ const (
 	minLtcRemoteDelay uint16 = 576
 	maxLtcRemoteDelay uint16 = 8064
 
-	/* Darius: not essential, but we might want to wait for more blocks
-	depending on the block times of different currencies. 
+	/* Darius (not essential): but we might want to wait for more blocks
+	depending on the block times of different currencies.
 	Also, things like max funding amount should depend on currency*/
 	// maxWaitNumBlocksFundingConf is the maximum number of blocks to wait
 	// for the funding transaction to be confirmed before forgetting
@@ -137,8 +137,8 @@ func (r *reservationWithCtx) updateTimestamp() {
 }
 
 /* Darius: Below are the types for open_channel, accept_channel, funding_created,
-funding_signed, funding_locked 
-We would need different message types for Bolt. e.g. for sending closing/payment 
+funding_signed, funding_locked
+We would need different message types for Bolt. e.g. for sending closing/payment
 tokens */
 
 // initFundingMsg is sent by an outside subsystem to the funding manager in
@@ -215,8 +215,8 @@ func newSerializedKey(pubKey *btcec.PublicKey) serializedPubKey {
 	copy(s[:], pubKey.SerializeCompressed())
 	return s
 }
-/* Darius: You (Ayo) mentioned that this should probably be extended, but I'm not
-sure if there are any big changes apart from replacing btcsuite */
+
+/* Darius: IDKey has to change for the customer */
 // fundingConfig defines the configuration for the FundingManager. All elements
 // within the configuration MUST be non-nil for the FundingManager to carry out
 // its duties.
@@ -233,7 +233,7 @@ type fundingConfig struct {
 	// transaction to the network.
 	PublishTransaction func(*wire.MsgTx) error
 
-	/* Darius: Fee estimator for shielded outputs (when it's ready) will be 
+	/* Darius: Fee estimator for shielded outputs (when it's ready) will be
 	constant */
 	// FeeEstimator calculates appropriate fee rates based on historical
 	// transaction information.
@@ -782,8 +782,8 @@ func (f *fundingManager) nextPendingChanID() [32]byte {
 	return nextChanID
 }
 
-	/* Darius: btcsuite used here. But since there's no ltcsuite, I guess it'll
-	also be fine for ZEC? */
+/* Darius: btcsuite used here. But since there's no ltcsuite, I guess it'll
+also be fine for ZEC? */
 type pendingChannel struct {
 	identityPub   *btcec.PublicKey
 	channelPoint  *wire.OutPoint
@@ -873,10 +873,10 @@ func (f *fundingManager) failFundingFlow(peer lnpeer.Peer, tempChanID [32]byte,
 	fndgLog.Debugf("Failing funding flow for pendingID=%x: %v",
 		tempChanID, fundingErr)
 
-		/* Darius: peer.IdentityKey() is the peer's public key.
-		maybe this could stay the same for the customer keeping track of the merchan pk,
-		but for the merchant, it would have to keep track of the peer's wallet? */
-	ctx, err := f.cancelReservationCtx(peer.IdentityKey(), tempChanID) 
+	/* Darius: peer.IdentityKey() is the peer's public key.
+	maybe this could stay the same for the customer keeping track of the merchan pk,
+	but for the merchant, it would have to keep track of the peer's wallet? */
+	ctx, err := f.cancelReservationCtx(peer.IdentityKey(), tempChanID)
 	if err != nil {
 		fndgLog.Errorf("unable to cancel reservation: %v", err)
 	}
@@ -917,7 +917,6 @@ func (f *fundingManager) failFundingFlow(peer lnpeer.Peer, tempChanID [32]byte,
 	}
 }
 
-/* Darius: This is the main section which needs to be edited. */
 // reservationCoordinator is the primary goroutine tasked with progressing the
 // funding workflow between the wallet, and any outside peers or local callers.
 //
@@ -1253,7 +1252,7 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	}
 }
 
-/* Darius: next 6 functions below (up to handleFundingSigned) 
+/* Darius: next 6 functions below (up to handleFundingSigned)
 are specific to previous workflow */
 // processFundingAccept sends a message to the fundingManager allowing it to
 // continue the second phase of a funding workflow with the target peer.
