@@ -1496,8 +1496,9 @@ func (r *rpcServer) OpenChannel(in *lnrpc.OpenChannelRequest,
 		private:         in.Private,
 		remoteCsvDelay:  remoteCsvDelay,
 		minConfs:        minConfs,
-		// Darius
-		// zkChannelParams in.ZkChannelParams
+		//	########### zkChannels ###########
+		zkChannelParams: in.ZkChannelParams,
+		//	########### zkChannels ###########
 	}
 
 	updateChan, errChan := r.server.OpenChannel(req)

@@ -13,6 +13,10 @@ type FundingSigned struct {
 	// CommitSig is Bob's signature for Alice's version of the commitment
 	// transaction.
 	CommitSig Sig
+
+	// ########### zkChannels ###########
+	PayToken string
+	// ########### zkChannels ###########
 }
 
 // A compile time check to ensure FundingSigned implements the lnwire.Message

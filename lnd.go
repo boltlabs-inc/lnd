@@ -135,25 +135,28 @@ func Main(lisCfg ListenerCfg) error {
 	ltndLog.Infof("Version: %s, build=%s, logging=%s",
 		build.Version(), build.Deployment, build.LoggingType)
 
-	// Darius: if ZkNode flag is true, load Merchant state. If it's not there, create one
-	// if cfg.ZkNode {
-	// 	fmt.Println("Loading ZkNode")
-	// 	// 	Darius TODO: Check for file with merchant state
-	// 		If Bolt.db exists {
-	// 			Load Bolt.db
-	// 		}
-	// 		If Bolt.db does not exist, create it{
-	// 			channelState, err := BidirectionalChannelSetup("Test Channel", false)
-	// 			if err != nil {
-	// 				return nil, err
-	// 			}
-	// 			channelToken, merchState, channelState, err := BidirectionalInitMerchant(channelState, "Bob")
-	// 			if err != nil {
-	// 				return nil, err
-	// 			}
-	// 			// Save channelToken, merchState, channelState in Bolt.db
-	// 		}
-	// }
+	// ########### zkChannels ###########
+	// Darius: if ZkMode flag is true, load Merchant state. If it's not there, create one
+	if cfg.ZkMode {
+		fmt.Println("Starting in ZkMode")
+		// // 	Darius TODO: Check for file with merchant state
+		// 	If filepath/Bolt.db exists {
+		// 		Load Bolt.db
+		// 	}
+		// 	If Bolt.db does not exist, create it{
+		// 		channelState, err := BidirectionalChannelSetup("Test Channel", false)
+		// 		if err != nil {
+		// 			return nil, err
+		// 		}
+		// 		channelToken, merchState, channelState, err := BidirectionalInitMerchant(channelState, "Bob")
+		// 		if err != nil {
+		// 			return nil, err
+		// 		}
+		// 		// Save Bolt.db(channelToken, merchState, channelState)
+		// 	}
+		os.Exit(0)
+	}
+	// ########### zkChannels ###########
 
 	var network string
 	switch {

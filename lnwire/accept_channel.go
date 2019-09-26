@@ -87,8 +87,13 @@ type AcceptChannel struct {
 	// within the commitment transaction of the sender.
 	FirstCommitmentPoint *btcec.PublicKey
 
-	// Darius
-	// CloseToken string
+	// ########### zkChannels ###########
+	// CloseToken is given to the Customer by the Merchant, to allow the
+	// Customer to close the channel unilaterally, paying out to each party
+	// the channel balances specified in the Customer's original openChannel
+	// request.
+	CloseToken string
+	// ########### zkChannels ###########
 }
 
 // A compile time check to ensure AcceptChannel implements the lnwire.Message

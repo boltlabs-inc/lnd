@@ -336,8 +336,9 @@ type config struct {
 
 	LegacyProtocol *lncfg.LegacyProtocol `group:"legacyprotocol" namespace:"legacyprotocol"`
 
-	// Darius
-	// ZkNode bool `long:"ZkNode" description:"If true, the node will expect extra inputs for setting up zkChannels."`
+	// ########### zkChannels ###########
+	ZkMode bool `long:"ZkMode" description:"If true, the node will create zkChannels."`
+	// ########### zkChannels ###########
 }
 
 // loadConfig initializes and parses the config using a config file and command
