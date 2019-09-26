@@ -32,8 +32,6 @@ const (
 	// TODO(roasbeef): tune
 	msgBufferSize = 50
 
-	/* Darius (not essential): each currency should have it's own value
-	depending on block times */
 	// minBtcRemoteDelay and maxBtcRemoteDelay is the extremes of the
 	// Bitcoin CSV delay we will require the remote to use for its
 	// commitment transaction. The actual delay we will require will be
@@ -48,9 +46,6 @@ const (
 	minLtcRemoteDelay uint16 = 576
 	maxLtcRemoteDelay uint16 = 8064
 
-	/* Darius (not essential): but we might want to wait for more blocks
-	depending on the block times of different currencies.
-	Also, things like max funding amount should depend on currency*/
 	// maxWaitNumBlocksFundingConf is the maximum number of blocks to wait
 	// for the funding transaction to be confirmed before forgetting
 	// channels that aren't initiated by us. 2016 blocks is ~2 weeks.
@@ -135,11 +130,6 @@ func (r *reservationWithCtx) updateTimestamp() {
 	r.lastUpdated = time.Now()
 }
 
-/* Darius: Below are the types for open_channel, accept_channel, funding_created,
-funding_signed, funding_locked
-We would need different message types for Bolt. e.g. for sending closing/payment
-tokens */
-
 // initFundingMsg is sent by an outside subsystem to the funding manager in
 // order to kick off a funding workflow with a specified target peer. The
 // original request which defines the parameters of the funding workflow are
@@ -215,7 +205,7 @@ func newSerializedKey(pubKey *btcec.PublicKey) serializedPubKey {
 	return s
 }
 
-/* Darius: IDKey has to change for the customer */
+/* Darius: IDKey has to change for the customer to keep it anonymous? */
 // fundingConfig defines the configuration for the FundingManager. All elements
 // within the configuration MUST be non-nil for the FundingManager to carry out
 // its duties.
@@ -285,7 +275,6 @@ type fundingConfig struct {
 	// initially announcing channels.
 	DefaultRoutingPolicy htlcswitch.ForwardingPolicy
 
-	/* Darius: btcsuite used here */
 	// NumRequiredConfs is a function closure that helps the funding
 	// manager decide how many confirmations it should require for a
 	// channel extended to it. The function is able to take into account
@@ -293,7 +282,6 @@ type fundingConfig struct {
 	// process to determine how many confirmations we'll require.
 	NumRequiredConfs func(btcutil.Amount, lnwire.MilliSatoshi) uint16
 
-	/* Darius: btcsuite used here */
 	// RequiredRemoteDelay is a function that maps the total amount in a
 	// proposed channel to the CSV delay that we'll require for the remote
 	// party. Naturally a larger channel should require a higher CSV delay
@@ -301,26 +289,22 @@ type fundingConfig struct {
 	// contract breach.
 	RequiredRemoteDelay func(btcutil.Amount) uint16
 
-	/* Darius: btcsuite used here */
 	// RequiredRemoteChanReserve is a function closure that, given the
 	// channel capacity and dust limit, will return an appropriate amount
 	// for the remote peer's required channel reserve that is to be adhered
 	// to at all times.
 	RequiredRemoteChanReserve func(capacity, dustLimit btcutil.Amount) btcutil.Amount
 
-	/* Darius: btcsuite used here */
 	// RequiredRemoteMaxValue is a function closure that, given the channel
 	// capacity, returns the amount of MilliSatoshis that our remote peer
 	// can have in total outstanding HTLCs with us.
 	RequiredRemoteMaxValue func(btcutil.Amount) lnwire.MilliSatoshi
 
-	/* Darius: btcsuite used here */
 	// RequiredRemoteMaxHTLCs is a function closure that, given the channel
 	// capacity, returns the number of maximum HTLCs the remote peer can
 	// offer us.
 	RequiredRemoteMaxHTLCs func(btcutil.Amount) uint16
 
-	/* Darius: btcsuite used here */
 	// WatchNewChannel is to be called once a new channel enters the final
 	// funding stage: waiting for on-chain confirmation. This method sends
 	// the channel to the ChainArbitrator so it can watch for any on-chain
@@ -341,7 +325,6 @@ type fundingConfig struct {
 	// a reservation is considered a zombie.
 	ReservationTimeout time.Duration
 
-	/* Darius: btcsuite used here */
 	// MinChanSize is the smallest channel size that we'll accept as an
 	// inbound channel. We have such a parameter, as otherwise, nodes could
 	// flood us with very small channels that would never really be usable
@@ -508,10 +491,6 @@ func (f *fundingManager) start() error {
 	if err != nil {
 		return err
 	}
-
-	/* Darius: This section handles payment channels which didn't finish getting
-	established before the daemon was shut down. This would have to change for
-	Bolt channels to handle the extra transition states */
 
 	// For any channels that were in a pending state when the daemon was
 	// last connected, the Funding Manager will re-initialize the channel
@@ -781,8 +760,6 @@ func (f *fundingManager) nextPendingChanID() [32]byte {
 	return nextChanID
 }
 
-/* Darius: btcsuite used here. But since there's no ltcsuite, I guess it'll
-also be fine for ZEC? */
 type pendingChannel struct {
 	identityPub   *btcec.PublicKey
 	channelPoint  *wire.OutPoint
@@ -872,9 +849,6 @@ func (f *fundingManager) failFundingFlow(peer lnpeer.Peer, tempChanID [32]byte,
 	fndgLog.Debugf("Failing funding flow for pendingID=%x: %v",
 		tempChanID, fundingErr)
 
-	/* Darius: peer.IdentityKey() is the peer's public key.
-	maybe this could stay the same for the customer keeping track of the merchan pk,
-	but for the merchant, it would have to keep track of the peer's wallet? */
 	ctx, err := f.cancelReservationCtx(peer.IdentityKey(), tempChanID)
 	if err != nil {
 		fndgLog.Errorf("unable to cancel reservation: %v", err)
@@ -988,7 +962,6 @@ func (f *fundingManager) handlePendingChannels(msg *pendingChansReq) {
 	msg.resp <- pendingChannels
 }
 
-/* Darius: Next two functions are specific to funding open */
 // processFundingOpen sends a message to the fundingManager allowing it to
 // initiate the new funding workflow with the source peer.
 func (f *fundingManager) processFundingOpen(msg *lnwire.OpenChannel,
@@ -1114,8 +1087,9 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 		PushMSat:         msg.PushAmount,
 		Flags:            msg.ChannelFlags,
 		MinConfs:         1,
-		// Darius
+		//	########### zkChannels ###########
 		// ZkChannelParams: msg.ZkChannelParams,
+		//	########### zkChannels ###########
 	}
 
 	reservation, err := f.cfg.Wallet.InitChannelReservation(req)
@@ -1161,11 +1135,18 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	maxHtlcs := f.cfg.RequiredRemoteMaxHTLCs(amt)
 	minHtlc := f.cfg.DefaultRoutingPolicy.MinHTLC
 
-	// Darius:
-	// TODO: Unpack ZkChannelParams into: channelState, com, comProof
-	// To find out: What is custState.PkC?
-	// closeToken, err := BidirectionalEstablishMerchantIssueCloseToken(
+	// ########### zkChannels ###########
+	// if ZkChannelParams exists:
+	// 	TODO: Unpack ZkChannelParams into: channelState, com, comProof, custState.PkC
+	// 	closeToken, err := BidirectionalEstablishMerchantIssueCloseToken(
 	// 	channelState, com, comProof, custState.PkC, amt, msg.PushAmount, merchState)
+
+	// 	if err != nil {
+	// 		fndgLog.Errorf("Customer was not validated: %v", err)
+	// 		f.failFundingFlow(fmsg.peer, fmsg.msg.PendingChannelID, err)
+	// 		return
+	// 	}
+	// ########### zkChannels ###########
 
 	// Once the reservation has been created successfully, we add it to
 	// this peer's map of pending reservations to track this particular
@@ -1249,8 +1230,10 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 		DelayedPaymentPoint:  ourContribution.DelayBasePoint.PubKey,
 		HtlcPoint:            ourContribution.HtlcBasePoint.PubKey,
 		FirstCommitmentPoint: ourContribution.FirstCommitmentPoint,
-		// Darius
-		// ClosingToken:	closingToken,
+		// ########### zkChannels ###########
+		// CloseToken:			  closeToken,
+		// ########### zkChannels ###########
+
 	}
 
 	if err := fmsg.peer.SendMessage(false, &fundingAccept); err != nil {
@@ -1260,8 +1243,6 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	}
 }
 
-/* Darius: next 6 functions below (up to handleFundingSigned)
-are specific to previous workflow */
 // processFundingAccept sends a message to the fundingManager allowing it to
 // continue the second phase of a funding workflow with the target peer.
 func (f *fundingManager) processFundingAccept(msg *lnwire.AcceptChannel,
@@ -1332,6 +1313,10 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 	maxValue := f.cfg.RequiredRemoteMaxValue(resCtx.chanAmt)
 	maxHtlcs := f.cfg.RequiredRemoteMaxHTLCs(resCtx.chanAmt)
 
+	// ########### zkChannels ###########
+	// if CloseToken does NOT exist (i.e. normal LN channel):
+	// ########### zkChannels ###########
+
 	// The remote node has responded with their portion of the channel
 	// contribution. At this point, we can process their contribution which
 	// allows us to construct and sign both the commitment transaction, and
@@ -1377,27 +1362,41 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 	fndgLog.Debugf("Remote party accepted commitment constraints: %v",
 		spew.Sdump(remoteContribution.ChannelConfig.ChannelConstraints))
 
-	// // Darius: We need to verify the merchant's close token
-	// isTokenValid, channelState, custState, err :=
-	// 	BidirectionalVerifyCloseToken(channelState, custState, closeToken)
-	//
-	// if isTokenValid == false {
-	// 	fndgLog.Errorf("CloseToken was not valid")
-	// 	return
-	// }
-	// // Darius
-	// // Here is where the wagyu is used and transactions are signed e.g.
-	// escrowTx, custSigEscrowTx, custSignMerchCloseTx := BidirectionalCustSignMerchCloseTx (...)
-	// Customer sends: escrowTx, custSigEscrowTx, custSignMerchCloseTx
-
-	// Darius: For the section below, we would not do these if it was a zkChannel tx.
-	// Darius: TODO - find out the format of 'outPoint' and 'sig' below
+	// Darius: resCtx stands for reservation Commitment tx.
 
 	// Now that we have their contribution, we can extract, then send over
 	// both the funding out point and our signature for their version of
 	// the commitment transaction to the remote peer.
 	outPoint := resCtx.reservation.FundingOutpoint()
 	_, sig := resCtx.reservation.OurSignatures()
+
+	// ########### zkChannels ###########
+	// else (if CloseToken DOES exist):
+	// // We (Customer) need to verify the Merchant's close token
+	// isTokenValid, channelState, custState, err :=
+	// 	BidirectionalVerifyCloseToken(channelState, custState, closeToken)
+	// if err != nil {
+	// 	fndgLog.Errorf("Unable to process close token from %v: %v",
+	// 		peerKey, err)
+	// 	f.failFundingFlow(fmsg.peer, msg.PendingChannelID, err)
+	// }
+	// if isTokenValid == false {
+	// 	fndgLog.Errorf("CloseToken was not valid")
+	// 	f.failFundingFlow(fmsg.peer, msg.PendingChannelID, "Funding failed: close token invalid")
+	// 	return
+	// }
+	// // Here is where the wagyu is used and transactions are signed e.g.
+	// escrowTx, custSigEscrowTx, custSignMerchCloseTx := BidirectionalCustSignMerchCloseTx (...)
+	// ZkChannelFundingtx := [escrowTx, custSigEscrowTx, custSignMerchCloseTx]
+
+	// // Darius: I'm not sure how this will work for blind signatures, or for MPC.
+	// outpoint = the previous output transaction reference (the funding tx)
+	// sig = the signature for the customer's side of the commitment tx
+	//
+	// outPoint := resCtx.reservation.FundingOutpoint()
+	// sig := closeToken?
+	// } // end else
+	// ########### zkChannels ###########
 
 	// A new channel has almost finished the funding process. In order to
 	// properly synchronize with the writeHandler goroutine, we add a new
@@ -1424,6 +1423,8 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 		PendingChannelID: pendingChanID,
 		FundingPoint:     *outPoint,
 	}
+	// Darius: NewSigFromRawSignature converts standard btc sig into a fixed
+	// size signature version used by LN.
 	fundingCreated.CommitSig, err = lnwire.NewSigFromRawSignature(sig)
 	if err != nil {
 		fndgLog.Errorf("Unable to parse signature: %v", err)
@@ -1473,9 +1474,61 @@ func (f *fundingManager) handleFundingCreated(fmsg *fundingCreatedMsg) {
 	fndgLog.Infof("completing pendingID(%x) with ChannelPoint(%v)",
 		pendingChanID[:], fundingOut)
 
-	// Darius: First we verify the validity of the signature
-	// isValidMerchCloseTx :=
-	// 	 BidirectionalVerifyMerchCloseTx (custSigEscrowTx, custSignMerchCloseTx)
+	// ########### zkChannels ###########
+	// if fmsg.msg.ZkChannelFundingtx exists {
+	// // parse ZkChannelFundingtx
+	// escrowTx, custSigEscrowTx, custSignMerchCloseTx := ZkChannelFundingtx
+	// (NOT IN BOLT)
+	// isValidMerchCloseTx, err :=
+	// 		BidirectionalVerifyMerchCloseTx (custSigEscrowTx, custSignMerchCloseTx)
+	// 	}
+	// if err != nil {
+	// 	fndgLog.Errorf("Unable to verify close transaction from %v: %v",
+	// 		peerKey, err)
+	// 	f.failFundingFlow(fmsg.peer, msg.PendingChannelID, err)
+	// }
+	// if isValidMerchCloseTx == false {
+	// 	fndgLog.Errorf("Close transaction was not valid")
+	// 	f.failFundingFlow(fmsg.peer, msg.PendingChannelID, "Funding failed: close transaction invalid")
+	// 	return
+	// }
+	// (NOT IN BOLT)
+	// signedEscrowTx := BilateralSignFundingTx (custSigEscrowTx, escrowTx)
+	//
+	// // Merchant broadcasts the funding tx (signedEscrowTx) to the network.
+	// // (taken from line 1723).
+	//
+	// err = f.cfg.PublishTransaction(signedEscrowTx)
+	//
+	// if err != nil {
+	// 	fndgLog.Errorf("Unable to broadcast funding tx for "+
+	// 		"ChannelPoint(%v): %v", completeChan.FundingOutpoint,
+	// 		err)
+	// {
+	//
+	// // Merchant waits for on chain confirmation
+	// // (Copy logic from 1621)
+	//
+	// // Once funding tx is confirmed on chain:
+	// payToken, err := BidirectionalEstablishMerchantIssuePayToken(channelState, com, merchState)
+	// if err != nil {
+	// 	fndgLog.Errorf("Unable to generate payToken: %v", err)
+	// {
+	//
+	// // Send payToken to customer
+	// fundingSigned := &lnwire.FundingSigned{
+	// 	ChanID:    channelID,
+	// 	CommitSig: ourCommitSig,
+	//	PayToken:  payToken,
+	// }
+	// if err := fmsg.peer.SendMessage(false, fundingSigned); err != nil {
+	// 	fndgLog.Errorf("unable to send FundingSigned message: %v", err)
+	// 	f.failFundingFlow(fmsg.peer, pendingChanID, err)
+	// 	deleteFromDatabase()
+	// 	return
+	// }
+	// else (if not a zkChannel) {
+	// ########### zkChannels ###########
 
 	// With all the necessary data available, attempt to advance the
 	// funding workflow to the next stage. If this succeeds then the
@@ -1843,7 +1896,6 @@ func (f *fundingManager) handleFundingSigned(fmsg *fundingSignedMsg) {
 	}()
 }
 
-/* Darius: waitForFundingWithTimeout can be kept largely the same */
 // waitForFundingWithTimeout is a wrapper around waitForFundingConfirmation that
 // will cancel the wait for confirmation if we are not the channel initiator and
 // the maxWaitNumBlocksFundingConf has passed from bestHeight.
@@ -1926,7 +1978,6 @@ func (f *fundingManager) waitForFundingWithTimeout(completeChan *channeldb.OpenC
 	}
 }
 
-/* Darius: needs to use libbolt */
 // makeFundingScript re-creates the funding script for the funding transaction
 // of the target channel.
 func makeFundingScript(channel *channeldb.OpenChannel) ([]byte, error) {
@@ -1941,7 +1992,6 @@ func makeFundingScript(channel *channeldb.OpenChannel) ([]byte, error) {
 	return input.WitnessScriptHash(multiSigScript)
 }
 
-/* Darius: needs editing. Continue from here */
 // waitForFundingConfirmation handles the final stages of the channel funding
 // process once the funding transaction has been broadcast. The primary
 // function of waitForFundingConfirmation is to wait for blockchain

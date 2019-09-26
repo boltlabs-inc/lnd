@@ -24,6 +24,13 @@ type FundingCreated struct {
 	// CommitSig is Alice's signature from Bob's version of the commitment
 	// transaction.
 	CommitSig Sig
+
+	// ########### zkChannels ###########
+	// ZkChannelFundingtx contains extra information needed for the merchant
+	// to create a zkChannel: escrowTx, custSigEscrowTx, custSignMerchCloseTx
+	ZkChannelFundingtx string
+	// ########### zkChannels ###########
+
 }
 
 // A compile time check to ensure FundingCreated implements the lnwire.Message

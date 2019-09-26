@@ -656,11 +656,16 @@ var openChannelCommand = cli.Command{
 				"transaction must satisfy",
 			Value: 1,
 		},
-		// Darius
-		// cli.StringFlag{
-		// 	Name: "zkchannel_token",
-		// 	Usage: "creates a zero knowledge channel using the ", +
-		// 	"zkchannel token provided by the merchant."
+
+		// ########### zkChannels ###########
+		cli.StringFlag{
+			Name: "zkchannel_info",
+			Usage: "creates a zero knowledge channel using the " +
+				"zkchannel token provided by the merchant, and" +
+				"the customer's public key for the channel",
+		},
+		// ########### zkChannels ###########
+
 	},
 	Action: actionDecorator(openChannel),
 }
@@ -754,7 +759,7 @@ func openChannel(ctx *cli.Context) error {
 		}
 	}
 
-	// // Darius:
+	// ########### zkChannels start ###########
 	// if ctx.IsSet("zkchannel_token"){
 
 	// 	// Channel token provided by Merchant
@@ -773,6 +778,7 @@ func openChannel(ctx *cli.Context) error {
 	// 	// Darius: Fix this syntax for packing variables together
 	// 	req.ZkChannelParams = [channchannelToken, com, comProof]
 	// }
+	// ########### zkChannels end ###########
 
 	req.Private = ctx.Bool("private")
 

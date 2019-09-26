@@ -124,11 +124,11 @@ type OpenChannel struct {
 	// initiator of the channel wishes to advertise this channel publicly.
 	ChannelFlags FundingFlag
 
-	// // Darius
-	// // ZkChannelParams contains three additional parameters needed to establish
-	// // a zkchannel: channelToken, commitment, commitment proof.
-	// ZkChannelParams string
-
+	//	########### zkChannels ###########
+	// ZkChannelParams contains three additional parameters needed to
+	// establish a zkchannel: channelToken, commitment, commitment proof.
+	ZkChannelParams string
+	//	########### zkChannels ###########
 }
 
 // A compile time check to ensure OpenChannel implements the lnwire.Message

@@ -3035,8 +3035,9 @@ type openChanReq struct {
 	// output selected to fund the channel should satisfy.
 	minConfs int32
 
-	// Darius
-	// zkChannelParams string
+	// ########### zkChannels ###########
+	zkChannelParams string
+	// ########### zkChannels ###########
 
 	// TODO(roasbeef): add ability to specify channel constraints as well
 
