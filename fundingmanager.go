@@ -1691,7 +1691,7 @@ func (f *fundingManager) handleFundingCreated(fmsg *fundingCreatedMsg) {
 	// 	f.failFundingFlow(fmsg.peer, msg.PendingChannelID, "Funding failed: close transaction invalid")
 	// 	return
 	// }
-	// (NOT IN BOLT)
+	// (NOT IN BOLT) NOT NEEDED
 	// signedEscrowTx := BilateralSignFundingTx (custSigEscrowTx, escrowTx)
 	//
 	// // Merchant broadcasts the funding tx (signedEscrowTx) to the network.

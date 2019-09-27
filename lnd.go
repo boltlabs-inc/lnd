@@ -136,9 +136,9 @@ func Main(lisCfg ListenerCfg) error {
 		build.Version(), build.Deployment, build.LoggingType)
 
 	// ########### zkChannels ###########
-	// Darius: if ZkMode flag is true, load Merchant state. If it's not there, create one
-	if cfg.ZkMode {
-		fmt.Println("Starting in ZkMode")
+	// Darius: if LNMode flag is true, load Merchant state. If it's not there, create one
+	if cfg.LNMode {
+		fmt.Println("Starting in LNMode")
 		// // 	Darius TODO: Check for file with merchant state
 		// 	If filepath/Bolt.db exists {
 		// 		Load Bolt.db
