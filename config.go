@@ -337,7 +337,7 @@ type config struct {
 	LegacyProtocol *lncfg.LegacyProtocol `group:"legacyprotocol" namespace:"legacyprotocol"`
 
 	// ########### zkChannels ###########
-	ZkMode bool `long:"ZkMode" description:"If true, the node will create zkChannels."`
+	LNMode bool `long:"LNMode" description:"If true, the node will create zkChannels."`
 	// ########### zkChannels ###########
 }
 

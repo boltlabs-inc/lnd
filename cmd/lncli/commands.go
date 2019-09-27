@@ -662,7 +662,7 @@ var openChannelCommand = cli.Command{
 			Name: "zkchannel_info",
 			Usage: "creates a zero knowledge channel using the " +
 				"zkchannel token provided by the merchant, and" +
-				"the customer's public key for the channel",
+				"the customer's state for the channel",
 		},
 		// ########### zkChannels ###########
 
