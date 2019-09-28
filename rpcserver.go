@@ -1477,7 +1477,7 @@ func (r *rpcServer) OpenChannel(in *lnrpc.OpenChannelRequest,
 		remoteCsvDelay:  remoteCsvDelay,
 		minConfs:        minConfs,
 		//	########### zkChannels ###########
-		zkChannelParams: in.ZkChannelParams,
+		//zkChannelParams: in.ZkChannelParams,
 		//	########### zkChannels ###########
 	}
 

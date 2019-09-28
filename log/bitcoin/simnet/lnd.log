@@ -1,2 +1,26 @@
 2019-09-25 17:25:20.496 [INF] LTND: Version: 0.7.1-beta commit=v0.7.1-beta-374-g2e30ee6a8d31e857b5873292d03d749e764cef96-dirty, build=production, logging=default
 2019-09-25 17:25:39.296 [INF] LTND: Version: 0.7.1-beta commit=v0.7.1-beta-374-g2e30ee6a8d31e857b5873292d03d749e764cef96-dirty, build=production, logging=default
+2019-09-28 14:24:54.430 [WRN] LTND: open /Users/ayo/Library/Application Support/Lnd/lnd.conf: no such file or directory
+2019-09-28 14:24:54.430 [INF] LTND: Version: 0.7.1-beta commit=v0.7.1-beta-375-g6ac95efe2f61828481f8fd80f8b909ddbf3f59eb-dirty, build=development, logging=default
+2019-09-28 14:24:54.430 [INF] LTND: Active chain: Bitcoin (network=simnet)
+2019-09-28 14:24:54.431 [INF] CHDB: Checking for schema update: latest_version=11, min_upgrade_version=9, db_version=11
+2019-09-28 14:24:54.440 [INF] RPCS: password RPC server listening on 127.0.0.1:10001
+2019-09-28 14:24:54.440 [INF] RPCS: password gRPC proxy started at 127.0.0.1:8001
+2019-09-28 14:24:54.440 [INF] LTND: Waiting for wallet encryption password. Use `lncli create` to create a wallet, `lncli unlock` to unlock an existing wallet, or `lncli changepassword` to change the password of an existing wallet and unlock it.
+2019-09-28 14:25:05.133 [INF] LTND: Received interrupt
+2019-09-28 14:25:05.133 [INF] LTND: Shutting down...
+2019-09-28 14:25:05.133 [INF] LTND: Gracefully shutting down.
+2019-09-28 14:25:05.133 [ERR] LTND: Unable to set up wallet password listeners: shutting down
+2019-09-28 14:25:05.134 [INF] LTND: Shutdown complete
+2019-09-28 14:25:16.191 [WRN] LTND: open /Users/ayo/Library/Application Support/Lnd/lnd.conf: no such file or directory
+2019-09-28 14:25:16.191 [INF] LTND: Version: 0.7.1-beta commit=v0.7.1-beta-375-g6ac95efe2f61828481f8fd80f8b909ddbf3f59eb-dirty, build=development, logging=default
+2019-09-28 14:25:16.191 [INF] LTND: Active chain: Bitcoin (network=simnet)
+2019-09-28 14:25:16.191 [INF] CHDB: Checking for schema update: latest_version=11, min_upgrade_version=9, db_version=11
+2019-09-28 14:25:16.199 [INF] RPCS: password RPC server listening on 127.0.0.1:10001
+2019-09-28 14:25:16.199 [INF] RPCS: password gRPC proxy started at 127.0.0.1:8001
+2019-09-28 14:25:16.199 [INF] LTND: Waiting for wallet encryption password. Use `lncli create` to create a wallet, `lncli unlock` to unlock an existing wallet, or `lncli changepassword` to change the password of an existing wallet and unlock it.
+2019-09-28 14:25:22.129 [INF] LTND: Received interrupt
+2019-09-28 14:25:22.129 [INF] LTND: Shutting down...
+2019-09-28 14:25:22.129 [INF] LTND: Gracefully shutting down.
+2019-09-28 14:25:22.130 [ERR] LTND: Unable to set up wallet password listeners: shutting down
+2019-09-28 14:25:22.130 [INF] LTND: Shutdown complete

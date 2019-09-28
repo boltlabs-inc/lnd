@@ -54,6 +54,7 @@ import (
 	"github.com/lightningnetwork/lnd/walletunlocker"
 	"github.com/lightningnetwork/lnd/watchtower"
 	"github.com/lightningnetwork/lnd/watchtower/wtdb"
+	"github.com/boltlabs-inc/libbolt-go"
 )
 
 const (
@@ -143,15 +144,16 @@ func Main(lisCfg ListenerCfg) error {
 		// 		Load Bolt.db
 		// 	}
 		// 	If Bolt.db does not exist, create it{
-		// 		channelState, err := BidirectionalChannelSetup("Test Channel", false)
-		// 		if err != nil {
-		// 			return nil, err
-		// 		}
-		// 		channelToken, merchState, channelState, err := BidirectionalInitMerchant(channelState, "Bob")
-		// 		if err != nil {
-		// 			return nil, err
-		// 		}
-		// 		// Save Bolt.db(channelToken, merchState, channelState)
+		channelState, _ := libbolt.BidirectionalChannelSetup("zkChannel", false)
+		// TODO: merchant name should be an argument
+		channelToken, merchState, channelState, err := libbolt.BidirectionalInitMerchant(channelState, "Merchant")
+		if err != nil {
+		    return err
+		}
+		ltndLog.Infof("ChannelToken := %s\n", channelToken)
+		_ = merchState
+		_ = channelState
+		// Save Bolt.db(channelToken, merchState, channelState)
 		// 	}
 		os.Exit(0)
 	}
