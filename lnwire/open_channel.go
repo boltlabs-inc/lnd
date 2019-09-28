@@ -26,7 +26,6 @@ const (
 // than dual funded channels.
 type OpenChannel struct {
 
-	/* Darius: Needs to be changed for zec. This is usually the genesis hash*/
 	// ChainHash is the target chain that the initiator wishes to open a
 	// channel within.
 	ChainHash chainhash.Hash
@@ -127,37 +126,11 @@ type OpenChannel struct {
 	// initiator of the channel wishes to advertise this channel publicly.
 	ChannelFlags FundingFlag
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-	/* Darius
-	// Customer sends these to the merchant when openning a channel
-
-	// BoltChannelToken is the ...
-	BoltChannelToken uint16
-
-<<<<<<< HEAD
-	// BoltCustState is
-=======
-	// BoltCustState is 
->>>>>>> add ZkNode flag in config, MerchInit in lnd.go, and other comments
-	BoltCustState string
-
-	// BoltComm is the commitment of ...
-	BoltComm string
-=======
-	// // Darius
-	// // ZkChannelParams contains three additional parameters needed to establish
-	// // a zkchannel: channelToken, commitment, commitment proof.
-	// ZkChannelParams string
->>>>>>> add comments for zkchannel version
-
-=======
 	//	########### zkChannels ###########
 	// ZkChannelParams contains three additional parameters needed to
 	// establish a zkchannel: channelToken, commitment, commitment proof.
 	ZkChannelParams string
 	//	########### zkChannels ###########
->>>>>>> add logic for zkChannels
 }
 
 // A compile time check to ensure OpenChannel implements the lnwire.Message
