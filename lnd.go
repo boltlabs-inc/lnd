@@ -43,6 +43,7 @@ import (
 
 	"github.com/lightningnetwork/lnd/autopilot"
 	"github.com/lightningnetwork/lnd/build"
+	"github.com/lightningnetwork/lnd/chanacceptor"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/keychain"
 	"github.com/lightningnetwork/lnd/lncfg"
@@ -136,9 +137,9 @@ func Main(lisCfg ListenerCfg) error {
 		build.Version(), build.Deployment, build.LoggingType)
 
 	// ########### zkChannels ###########
-	// Darius: if ZkMode flag is true, load Merchant state. If it's not there, create one
-	if cfg.ZkMode {
-		fmt.Println("Starting in ZkMode")
+	// Darius: if LNMode flag is true, load Merchant state. If it's not there, create one
+	if cfg.LNMode {
+		fmt.Println("Starting in LNMode")
 		// // 	Darius TODO: Check for file with merchant state
 		// 	If filepath/Bolt.db exists {
 		// 		Load Bolt.db
@@ -513,11 +514,14 @@ func Main(lisCfg ListenerCfg) error {
 		}
 	}
 
+	// Initialize the ChainedAcceptor.
+	chainedAcceptor := chanacceptor.NewChainedAcceptor()
+
 	// Set up the core server which will listen for incoming peer
 	// connections.
 	server, err := newServer(
 		cfg.Listeners, chanDB, towerClientDB, activeChainControl,
-		idPrivKey, walletInitParams.ChansToRestore,
+		idPrivKey, walletInitParams.ChansToRestore, chainedAcceptor,
 	)
 	if err != nil {
 		err := fmt.Errorf("Unable to create server: %v", err)
@@ -572,7 +576,7 @@ func Main(lisCfg ListenerCfg) error {
 	rpcServer, err := newRPCServer(
 		server, macaroonService, cfg.SubRPCServers, restDialOpts,
 		restProxyDest, atplManager, server.invoices, tower, tlsCfg,
-		rpcListeners,
+		rpcListeners, chainedAcceptor,
 	)
 	if err != nil {
 		err := fmt.Errorf("Unable to create RPC server: %v", err)

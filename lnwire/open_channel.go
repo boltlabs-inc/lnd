@@ -118,6 +118,8 @@ type OpenChannel struct {
 	// within the commitment transaction of the sender.
 	FirstCommitmentPoint *btcec.PublicKey
 
+	/* Darius: in ChannelFlags we would want to add a flag to say whether we
+	are opening a BOLT channel */
 	// ChannelFlags is a bit-field which allows the initiator of the
 	// channel to specify further behavior surrounding the channel.
 	// Currently, the least significant bit of this bit field indicates the

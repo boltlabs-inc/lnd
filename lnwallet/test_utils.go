@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"io"
 	"io/ioutil"
+	prand "math/rand"
+	"net"
 	"os"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -86,8 +88,11 @@ var (
 // allocated to each side. Within the channel, Alice is the initiator. The
 // function also returns a "cleanup" function that is meant to be called once
 // the test has been finalized. The clean up function will remote all temporary
-// files created
-func CreateTestChannels() (*LightningChannel, *LightningChannel, func(), error) {
+// files created. If tweaklessCommits is true, then the commits within the
+// channels will use the new format, otherwise the legacy format.
+func CreateTestChannels(tweaklessCommits bool) (
+	*LightningChannel, *LightningChannel, func(), error) {
+
 	channelCapacity, err := btcutil.NewAmount(10)
 	if err != nil {
 		return nil, nil, nil, err
@@ -101,7 +106,7 @@ func CreateTestChannels() (*LightningChannel, *LightningChannel, func(), error) 
 
 	prevOut := &wire.OutPoint{
 		Hash:  chainhash.Hash(testHdSeed),
-		Index: 0,
+		Index: prand.Uint32(),
 	}
 	fundingTxIn := wire.NewTxIn(prevOut, nil, nil)
 
@@ -200,9 +205,10 @@ func CreateTestChannels() (*LightningChannel, *LightningChannel, func(), error) 
 	}
 	aliceCommitPoint := input.ComputeCommitmentPoint(aliceFirstRevoke[:])
 
-	aliceCommitTx, bobCommitTx, err := CreateCommitmentTxns(channelBal,
-		channelBal, &aliceCfg, &bobCfg, aliceCommitPoint, bobCommitPoint,
-		*fundingTxIn)
+	aliceCommitTx, bobCommitTx, err := CreateCommitmentTxns(
+		channelBal, channelBal, &aliceCfg, &bobCfg, aliceCommitPoint,
+		bobCommitPoint, *fundingTxIn, tweaklessCommits,
+	)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -268,7 +274,7 @@ func CreateTestChannels() (*LightningChannel, *LightningChannel, func(), error) 
 		IdentityPub:             aliceKeys[0].PubKey(),
 		FundingOutpoint:         *prevOut,
 		ShortChannelID:          shortChanID,
-		ChanType:                channeldb.SingleFunder,
+		ChanType:                channeldb.SingleFunderTweakless,
 		IsInitiator:             true,
 		Capacity:                channelCapacity,
 		RemoteCurrentRevocation: bobCommitPoint,
@@ -286,7 +292,7 @@ func CreateTestChannels() (*LightningChannel, *LightningChannel, func(), error) 
 		IdentityPub:             bobKeys[0].PubKey(),
 		FundingOutpoint:         *prevOut,
 		ShortChannelID:          shortChanID,
-		ChanType:                channeldb.SingleFunder,
+		ChanType:                channeldb.SingleFunderTweakless,
 		IsInitiator:             false,
 		Capacity:                channelCapacity,
 		RemoteCurrentRevocation: aliceCommitPoint,
@@ -296,6 +302,11 @@ func CreateTestChannels() (*LightningChannel, *LightningChannel, func(), error) 
 		RemoteCommitment:        bobCommit,
 		Db:                      dbBob,
 		Packager:                channeldb.NewChannelPackager(shortChanID),
+	}
+
+	if !tweaklessCommits {
+		aliceChannelState.ChanType = channeldb.SingleFunder
+		bobChannelState.ChanType = channeldb.SingleFunder
 	}
 
 	aliceSigner := &input.MockSigner{Privkeys: aliceKeys}
@@ -334,10 +345,20 @@ func CreateTestChannels() (*LightningChannel, *LightningChannel, func(), error) 
 		return nil, nil, nil, err
 	}
 
-	if err := channelAlice.channelState.FullSync(); err != nil {
+	addr := &net.TCPAddr{
+		IP:   net.ParseIP("127.0.0.1"),
+		Port: 18556,
+	}
+	if err := channelAlice.channelState.SyncPending(addr, 101); err != nil {
 		return nil, nil, nil, err
 	}
-	if err := channelBob.channelState.FullSync(); err != nil {
+
+	addr = &net.TCPAddr{
+		IP:   net.ParseIP("127.0.0.1"),
+		Port: 18555,
+	}
+
+	if err := channelBob.channelState.SyncPending(addr, 101); err != nil {
 		return nil, nil, nil, err
 	}
 
