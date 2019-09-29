@@ -65,3 +65,4 @@ profile.tmp
 .vscode
 *.log
 log/
+libbolt/
