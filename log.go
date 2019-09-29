@@ -94,6 +94,9 @@ var (
 	promLog = build.NewSubLogger("PROM", backendLog.Logger)
 	wtclLog = build.NewSubLogger("WTCL", backendLog.Logger)
 	prnfLog = build.NewSubLogger("PRNF", backendLog.Logger)
+	// ########### zkChannels ###########
+	zkchLog = build.NewSubLogger("ZKCH", backendLog.Logger)
+	// ########### zkChannels ###########
 )
 
 // Initialize package-global logger variables.
@@ -124,6 +127,9 @@ func init() {
 	monitoring.UseLogger(promLog)
 	wtclient.UseLogger(wtclLog)
 	peernotifier.UseLogger(prnfLog)
+	// ########### zkChannels ###########
+	// libbolt.UseLogger(zkchLog)
+	// ########### zkChannels ###########
 
 	addSubLogger(routerrpc.Subsystem, routerrpc.UseLogger)
 	addSubLogger(wtclientrpc.Subsystem, wtclientrpc.UseLogger)
@@ -171,6 +177,9 @@ var subsystemLoggers = map[string]btclog.Logger{
 	"PROM": promLog,
 	"WTCL": wtclLog,
 	"PRNF": prnfLog,
+	// ########### zkChannels ###########
+	"ZKCH": zkchLog,
+	// ########### zkChannels ###########
 }
 
 // initLogRotator initializes the logging rotator to write logs to logFile and

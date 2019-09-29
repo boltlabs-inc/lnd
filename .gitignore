@@ -64,3 +64,4 @@ profile.tmp
 
 .vscode
 *.log
+log/
