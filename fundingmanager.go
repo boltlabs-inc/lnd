@@ -1621,9 +1621,10 @@ func (f *fundingManager) handleFundingCreated(fmsg *fundingCreatedMsg) {
 		pendingChanID[:], fundingOut)
 
 	// ########### zkChannels ###########
-	// if fmsg.msg.ZkChannelFundingtx exists {
+	// if !cfg.LNMode {
 	// // parse ZkChannelFundingtx
-	// escrowTx, custSigEscrowTx, custSignMerchCloseTx := ZkChannelFundingtx
+	// escrowTx, custSigEscrowTx, merchCloseTx, custSignMerchCloseTx := ZkChannelFundingtx
+	//
 	// (NOT IN BOLT)
 	// isValidMerchCloseTx, err :=
 	// 		BidirectionalVerifyMerchCloseTx (custSigEscrowTx, custSignMerchCloseTx)
@@ -1638,42 +1639,7 @@ func (f *fundingManager) handleFundingCreated(fmsg *fundingCreatedMsg) {
 	// 	f.failFundingFlow(fmsg.peer, msg.PendingChannelID, "Funding failed: close transaction invalid")
 	// 	return
 	// }
-	// (NOT IN BOLT) NOT NEEDED
-	// signedEscrowTx := BilateralSignFundingTx (custSigEscrowTx, escrowTx)
 	//
-	// // Merchant broadcasts the funding tx (signedEscrowTx) to the network.
-	// // (taken from line 1723).
-	//
-	// err = f.cfg.PublishTransaction(signedEscrowTx)
-	//
-	// if err != nil {
-	// 	fndgLog.Errorf("Unable to broadcast funding tx for "+
-	// 		"ChannelPoint(%v): %v", completeChan.FundingOutpoint,
-	// 		err)
-	// {
-	//
-	// // Merchant waits for on chain confirmation
-	// // (Copy logic from 1621)
-	//
-	// // Once funding tx is confirmed on chain:
-	// payToken, err := BidirectionalEstablishMerchantIssuePayToken(channelState, com, merchState)
-	// if err != nil {
-	// 	fndgLog.Errorf("Unable to generate payToken: %v", err)
-	// {
-	//
-	// // Send payToken to customer
-	// fundingSigned := &lnwire.FundingSigned{
-	// 	ChanID:    channelID,
-	// 	CommitSig: ourCommitSig,
-	//	PayToken:  payToken,
-	// }
-	// if err := fmsg.peer.SendMessage(false, fundingSigned); err != nil {
-	// 	fndgLog.Errorf("unable to send FundingSigned message: %v", err)
-	// 	f.failFundingFlow(fmsg.peer, pendingChanID, err)
-	// 	deleteFromDatabase()
-	// 	return
-	// }
-	// else (if not a zkChannel) {
 	// ########### zkChannels ###########
 
 	// With all the necessary data available, attempt to advance the
@@ -1731,6 +1697,9 @@ func (f *fundingManager) handleFundingCreated(fmsg *fundingCreatedMsg) {
 	fndgLog.Infof("sending FundingSigned for pendingID(%x) over "+
 		"ChannelPoint(%v)", pendingChanID[:], fundingOut)
 
+	// ########### zkChannels ###########
+	// if cfg.LNMode {   // if we are in LN mode, sign commitment sig
+	// ########### zkChannels ###########
 	// With their signature for our version of the commitment transaction
 	// verified, we can now send over our signature to the remote peer.
 	_, sig := resCtx.reservation.OurSignatures()
@@ -1741,6 +1710,13 @@ func (f *fundingManager) handleFundingCreated(fmsg *fundingCreatedMsg) {
 		deleteFromDatabase()
 		return
 	}
+	// ########### zkChannels ###########
+	// } else { 	// else if we are in default zkchannel mode...
+	//	// Merchant doesn't need to sign anything, this is just a place holder
+	// 	ourCommitSig := nil
+	//
+	// }
+	// ########### zkChannels ###########
 
 	fundingSigned := &lnwire.FundingSigned{
 		ChanID:    channelID,
@@ -1830,7 +1806,10 @@ func (f *fundingManager) handleFundingSigned(fmsg *fundingSignedMsg) {
 		f.failFundingFlow(fmsg.peer, pendingChanID, err)
 		return
 	}
-
+	// ########### zkChannels ###########
+	// if cfg.LNMode {  // if in LN mode, verify remote node's commitment
+	// signature. No need for zkChannel since we already verified close token.
+	// ########### zkChannels ###########
 	// Create an entry in the local discovery map so we can ensure that we
 	// process the channel confirmation fully before we receive a funding
 	// locked message.
@@ -1853,13 +1832,23 @@ func (f *fundingManager) handleFundingSigned(fmsg *fundingSignedMsg) {
 		f.failFundingFlow(fmsg.peer, pendingChanID, err)
 		return
 	}
+	// ########### zkChannels ###########
+	// }  // end of LN Mode if statement
+	// ########### zkChannels ###########
 
 	// The channel is now marked IsPending in the database, and we can
 	// delete it from our set of active reservations.
 	f.deleteReservationCtx(peerKey, pendingChanID)
 
 	// Broadcast the finalized funding transaction to the network.
+	// ########### zkChannels start ###########
+	// if cfg.LNMode {  //
 	fundingTx := completeChan.FundingTxn
+	// } else {
+	// fundingTx := zkChannel_escrow_tx
+	// }
+	// ########### zkChannels end ###########
+
 	fndgLog.Infof("Broadcasting funding tx for ChannelPoint(%v): %v",
 		completeChan.FundingOutpoint, spew.Sdump(fundingTx))
 
@@ -2207,6 +2196,9 @@ func (f *fundingManager) sendFundingLocked(
 	var peerKey [33]byte
 	copy(peerKey[:], completeChan.IdentityPub.SerializeCompressed())
 
+	// ########### zkChannels LN Mode start ###########
+	// if cfg.LNMode {  //
+	// ########### zkChannels ###########
 	// Next, we'll send over the funding locked message which marks that we
 	// consider the channel open by presenting the remote party with our
 	// next revocation key. Without the revocation key, the remote party
@@ -2216,6 +2208,22 @@ func (f *fundingManager) sendFundingLocked(
 		return fmt.Errorf("unable to create next revocation: %v", err)
 	}
 	fundingLockedMsg := lnwire.NewFundingLocked(chanID, nextRevocation)
+
+	// ########### zkChannels ###########
+	// }
+	// ########### zkChannels LN Mode end ###########
+
+	// ########### zkChannels start ###########
+	// // For customers, just send msg that funding was confirmed
+	// if zkChan_Customer {
+	// fundingLockedMsg := lnwire.NewFundingLocked(c
+	// }
+	// // For Merchants, generate and send payToken to customer
+	// if zkChan_Merchant {
+	// payToken, err := BidirectionalEstablishMerchantIssuePayToken(
+	// channelState, com, merchState)
+	// fundingLockedMsg := lnwire.NewFundingLockedWithPayToken(chanID, payToken)
+	// }
 
 	// If the peer has disconnected before we reach this point, we will need
 	// to wait for him to come back online before sending the fundingLocked
@@ -2492,6 +2500,21 @@ func (f *fundingManager) processFundingLocked(msg *lnwire.FundingLocked,
 // handleFundingLocked finalizes the channel funding process and enables the
 // channel to enter normal operating mode.
 func (f *fundingManager) handleFundingLocked(fmsg *fundingLockedMsg) {
+
+	// // ########### zkChannels ###########
+	// if !cfg.LNMode & zkChannel_Customer {
+	// 	isChannelEstablished, channelState, custState, err := BidirectionalEstablishCustomerFinal(
+	// 	channelState, custState, fmsg.PayToken)
+	// }
+	// if !isChannelEstablished {
+	// 	err := fmt.Errorf("Unable to verify payToken. "+
+	// 	"chan_id=%x", fmsg.msg.ChanID)
+	// 	fndgLog.Warnf(err.Error())
+	// 	f.failFundingFlow(fmsg.peer, fmsg.msg.ChanID, err)
+	// 	return
+	// }
+	// // ########### zkChannels ###########
+
 	defer f.wg.Done()
 	fndgLog.Debugf("Received FundingLocked for ChannelID(%v) from "+
 		"peer %x", fmsg.msg.ChanID,

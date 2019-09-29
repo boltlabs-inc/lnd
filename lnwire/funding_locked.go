@@ -19,6 +19,11 @@ type FundingLocked struct {
 	// NextPerCommitmentPoint is the secret that can be used to revoke the
 	// next commitment transaction for the channel.
 	NextPerCommitmentPoint *btcec.PublicKey
+
+	// ########### zkChannels ###########
+	// Merchant sends PayToken to customer after funding has been locked
+	// PayToken string
+	// ########### zkChannels ###########
 }
 
 // NewFundingLocked creates a new FundingLocked message, populating it with the
@@ -29,6 +34,17 @@ func NewFundingLocked(cid ChannelID, npcp *btcec.PublicKey) *FundingLocked {
 		NextPerCommitmentPoint: npcp,
 	}
 }
+
+// ########### zkChannels ###########
+// NewFundingLockedWithPayToken creates a new FundingLocked message, populating it
+// with the necessary IDs and PayToken
+// func NewFundingLockedWithPayToken(cid ChannelID, paytkn string) *FundingLocked {
+// 	return &FundingLocked{
+// 		ChanID:   cid,
+// 		PayToken: paytkn,
+// 	}
+// }
+// ########### zkChannels ###########
 
 // A compile time check to ensure FundingLocked implements the lnwire.Message
 // interface.
