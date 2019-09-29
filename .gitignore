@@ -63,3 +63,4 @@ profile.tmp
 .DS_Store
 
 .vscode
+*.log

@@ -41,6 +41,7 @@ import (
 	proxy "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/lightninglabs/neutrino"
 
+	"github.com/boltlabs-inc/libbolt-go"
 	"github.com/lightningnetwork/lnd/autopilot"
 	"github.com/lightningnetwork/lnd/build"
 	"github.com/lightningnetwork/lnd/chanacceptor"
@@ -55,7 +56,6 @@ import (
 	"github.com/lightningnetwork/lnd/walletunlocker"
 	"github.com/lightningnetwork/lnd/watchtower"
 	"github.com/lightningnetwork/lnd/watchtower/wtdb"
-	"github.com/boltlabs-inc/libbolt-go"
 )
 
 const (
@@ -138,27 +138,40 @@ func Main(lisCfg ListenerCfg) error {
 
 	// ########### zkChannels ###########
 	// Darius: if LNMode flag is true, load Merchant state. If it's not there, create one
-	if cfg.LNMode {
-		fmt.Println("Starting in LNMode")
+	if !cfg.LNMode {
+		fmt.Println("Starting in ZkMode")
 		// // 	Darius TODO: Check for file with merchant state
 		// 	If filepath/Bolt.db exists {
 		// 		Load Bolt.db
 		// 	}
 		// 	If Bolt.db does not exist, create it{
 		channelState, _ := libbolt.BidirectionalChannelSetup("zkChannel", false)
-		// TODO: merchant name should be an argument
-		channelToken, merchState, channelState, err := libbolt.BidirectionalInitMerchant(channelState, "Merchant")
+
+		merchName := cfg.Alias
+		if merchName == "" {
+			merchName = "Merchant"
+		}
+
+		channelToken, merchState, channelState, err := libbolt.BidirectionalInitMerchant(channelState, merchName)
 		if err != nil {
-		    return err
+			return err
 		}
 		ltndLog.Infof("ChannelToken := %s\n", channelToken)
 		_ = merchState
 		_ = channelState
 		// Save Bolt.db(channelToken, merchState, channelState)
 		// 	}
+		fmt.Println("merchant name:", merchName)
+		os.Exit(0)
+	} else {
+		fmt.Println("Starting in LNMode")
 		os.Exit(0)
 	}
 	// ########### zkChannels ###########
+
+	fmt.Println("closing")
+
+	os.Exit(0)
 
 	var network string
 	switch {
