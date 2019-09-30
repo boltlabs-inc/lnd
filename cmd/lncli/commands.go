@@ -16,6 +16,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/boltlabs-inc/libbolt-go"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/golang/protobuf/jsonpb"
@@ -660,7 +661,7 @@ var openChannelCommand = cli.Command{
 
 		// ########### zkChannels ###########
 		cli.StringFlag{
-			Name: "zkchannel_info",
+			Name: "zkchannel_token",
 			Usage: "creates a zero knowledge channel using the " +
 				"zkchannel token provided by the merchant, and" +
 				"the customer's state for the channel",
@@ -670,6 +671,32 @@ var openChannelCommand = cli.Command{
 	},
 	Action: actionDecorator(openChannel),
 }
+
+// ########### zkChannels ###########
+// TEMPORARY workaround for not loading ChannelToken properly
+func libboltTempFixSetup(b0Cust int, b0Merch int) (libbolt.ChannelState, libbolt.ChannelToken, libbolt.MerchState, libbolt.CustState, error) {
+	channelState, err := libbolt.BidirectionalChannelSetup("Test Channel", false)
+	if err != nil {
+		return libbolt.ChannelState{}, libbolt.ChannelToken{}, libbolt.MerchState{}, libbolt.CustState{}, err
+	}
+	channelToken, merchState, channelState, err := libbolt.BidirectionalInitMerchant(channelState, "Bob")
+	if err != nil {
+		return libbolt.ChannelState{}, libbolt.ChannelToken{}, libbolt.MerchState{}, libbolt.CustState{}, err
+	}
+	channelToken, custState, err := libbolt.BidirectionalInitCustomer(channelToken, b0Cust, b0Merch, "Alice")
+	return channelState, channelToken, merchState, custState, err
+}
+
+// ZkChannelParams are the parameters the customer needs to send to the
+// merchant in order to open a channel.
+type ZkChannelParams struct {
+	channelToken    libbolt.ChannelToken
+	commitment      libbolt.Commitment
+	commitmentProof libbolt.CommitmentProof
+	custPkc         string
+}
+
+// ########### zkChannels ###########
 
 func openChannel(ctx *cli.Context) error {
 	// TODO(roasbeef): add deadline to context
@@ -761,24 +788,58 @@ func openChannel(ctx *cli.Context) error {
 	}
 
 	// ########### zkChannels start ###########
-	// if ctx.IsSet("zkchannel_token"){
+	// Check all necessary parameters are set
+	if !ctx.IsSet("zkchannel_token") {
+		return fmt.Errorf("channel token is missing")
+	}
+	if !ctx.IsSet("local_amt") {
+		return fmt.Errorf("local_amt (customer initial balance) is missing")
+	}
+	if !ctx.IsSet("push_amt") {
+		return fmt.Errorf("push_amt (merchant initial balance) is missing")
+	}
 
-	// 	// Channel token provided by Merchant
-	// 	channelToken := ctx.String("zkchannel_token")
+	// Channel token provided by Merchant
+	// TODO FIX: Right now zkchannel_token is loaded using 'StringFlag' which means
+	// it is not a 'ChannelToken' type, and doesnt work with BiInitCust function.
+	// Find a way to load as a ChannelToken type.
+	// channelToken = ctx.String("zkchannel_token")
 
-	// 	// req.LocalFundingAmount, req.PushSat are equivalent to
-	// 	// initial customer and merchant balances
-	// 	channelToken, custState, err := BidirectionalInitCustomer(channelToken, req.LocalFundingAmount, req.PushSat, "Alice")
-	// 	if err != nil {
-	// 		return fmt.Errorf("Unable to initialize customer: %v", err)
-	// 	}
+	// Temporary fix for now:
 
-	// 	// Generate commitment and commitment proof
-	// 	channelToken, custState, com, comProof, err := BidirectionalEstablishCustomerGenerateProof(channelToken, custState)
+	_, channelToken, _, custState, err := libboltTempFixSetup(int(req.LocalFundingAmount), int(req.PushSat))
 
-	// 	// Darius: Fix this syntax for packing variables together
-	// 	req.ZkChannelParams = [channchannelToken, com, comProof]
+	// // req.LocalFundingAmount, req.PushSat are equivalent to
+	// // initial customer and merchant balances
+	// // Initialize customer state
+
+	// channelToken, custState, err := libbolt.BidirectionalInitCustomer(channelToken, req.LocalFundingAmount, req.PushSat, "Alice")
+	// if err != nil {
+	// 	return fmt.Errorf("Unable to initialize customer: %v", err)
 	// }
+	// zkchLog.Infof("initialized custState: %s", custState)
+
+	// Generate commitment and commitment proof
+	channelToken, custState, com, comProof, err := libbolt.BidirectionalEstablishCustomerGenerateProof(channelToken, custState)
+	if err != nil {
+		return err
+	}
+	fmt.Println("channelToken after generate proof: %v", channelToken)
+	fmt.Println("custState after generate proof: %v", custState)
+	fmt.Println("com after generate proof: %v", com)
+	fmt.Println("comProof after generate proof: %v", comProof)
+
+	// Darius TODO: Find out how to add ZkChannelParams as a field in
+	// OpenChannelRequest in rpc.proto. Also, would it be able to handle
+	// struct of structs as data types?
+	req.ZkChannelParams = ZkChannelParams{
+		channelToken:    channelToken,
+		commitment:      com,
+		commitmentProof: comProof,
+		custPkc:         custState.PkC,
+	}
+
+	fmt.Println("ZkChannelParams: %v", ZkChannelParams)
 	// ########### zkChannels end ###########
 
 	req.Private = ctx.Bool("private")

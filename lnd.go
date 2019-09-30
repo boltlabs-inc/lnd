@@ -138,8 +138,8 @@ func Main(lisCfg ListenerCfg) error {
 
 	// ########### zkChannels start ###########
 	// Darius: if LNMode flag is not set, do Bolt initialization.
-	if !cfg.LNMode {
-		zkchLog.Infof("Starting in ZkMode")
+	if cfg.Merchant {
+		zkchLog.Infof("Initializing merchant setup")
 		// // Darius TODO: Check for file with merchant state
 		// 	If filepath/Bolt.db exists {
 		// 		Load Bolt.db
@@ -156,21 +156,14 @@ func Main(lisCfg ListenerCfg) error {
 		if err != nil {
 			return err
 		}
-		zkchLog.Infof("ChannelToken := %s\n", channelToken)
+		zkchLog.Infof("ChannelToken := %s", channelToken)
 		_ = merchState
 		_ = channelState
 		// // Darius TODO: Save Bolt.db(channelToken, merchState, channelState)
 
 		fmt.Println("merchant name:", merchName)
-		os.Exit(0)
-	} else {
-		zkchLog.Infof("Starting in LNMode")
-		os.Exit(0)
 	}
 	// ########### zkChannels end ###########
-
-	fmt.Println("closing")
-	os.Exit(0)
 
 	var network string
 	switch {
