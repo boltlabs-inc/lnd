@@ -12,6 +12,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -137,14 +138,13 @@ func Main(lisCfg ListenerCfg) error {
 		build.Version(), build.Deployment, build.LoggingType)
 
 	// ########### zkChannels start ###########
-	// Darius: if LNMode flag is not set, do Bolt initialization.
+	// Do merchant initialization if merchant flag was set
 	if cfg.Merchant {
 		zkchLog.Infof("Initializing merchant setup")
-		// // Darius TODO: Check for file with merchant state
+		// // Darius TODO: Check for existing file with merchstate, otherwise create one
 		// 	If filepath/Bolt.db exists {
 		// 		Load Bolt.db
 		// 	}
-		// 	If Bolt.db does not exist, create it{
 		channelState, _ := libbolt.BidirectionalChannelSetup("zkChannel", false)
 
 		merchName := cfg.Alias
@@ -156,12 +156,20 @@ func Main(lisCfg ListenerCfg) error {
 		if err != nil {
 			return err
 		}
-		zkchLog.Infof("ChannelToken := %s", channelToken)
+
+		// Darius TODO: make a more elegant solution for displaying channelToken
+		byteArray, err := json.Marshal(channelToken)
+		fmt.Println("ChannelToken as a string (to be given to customers) = ", string(byteArray))
+		if err != nil {
+			return err
+		}
+
 		_ = merchState
 		_ = channelState
-		// // Darius TODO: Save Bolt.db(channelToken, merchState, channelState)
 
-		fmt.Println("merchant name:", merchName)
+		// Darius TODO: Save Bolt.db(channelToken, merchState, channelState)
+
+		fmt.Println("merchant name =", merchName)
 	}
 	// ########### zkChannels end ###########
 

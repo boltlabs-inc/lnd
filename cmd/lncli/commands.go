@@ -673,22 +673,23 @@ var openChannelCommand = cli.Command{
 }
 
 // ########### zkChannels ###########
-// TEMPORARY workaround for not loading ChannelToken properly
-func libboltTempFixSetup(b0Cust int, b0Merch int) (libbolt.ChannelState, libbolt.ChannelToken, libbolt.MerchState, libbolt.CustState, error) {
-	channelState, err := libbolt.BidirectionalChannelSetup("Test Channel", false)
-	if err != nil {
-		return libbolt.ChannelState{}, libbolt.ChannelToken{}, libbolt.MerchState{}, libbolt.CustState{}, err
-	}
-	channelToken, merchState, channelState, err := libbolt.BidirectionalInitMerchant(channelState, "Bob")
-	if err != nil {
-		return libbolt.ChannelState{}, libbolt.ChannelToken{}, libbolt.MerchState{}, libbolt.CustState{}, err
-	}
-	channelToken, custState, err := libbolt.BidirectionalInitCustomer(channelToken, b0Cust, b0Merch, "Alice")
-	return channelState, channelToken, merchState, custState, err
-}
+// TEMPORARY workaround for not loading ChannelToken properly. Can be deleted
+// func libboltTempFixSetup(b0Cust int, b0Merch int) (libbolt.ChannelState, libbolt.ChannelToken, libbolt.MerchState, libbolt.CustState, error) {
+// 	channelState, err := libbolt.BidirectionalChannelSetup("Test Channel", false)
+// 	if err != nil {
+// 		return libbolt.ChannelState{}, libbolt.ChannelToken{}, libbolt.MerchState{}, libbolt.CustState{}, err
+// 	}
+// 	channelToken, merchState, channelState, err := libbolt.BidirectionalInitMerchant(channelState, "Bob")
+// 	if err != nil {
+// 		return libbolt.ChannelState{}, libbolt.ChannelToken{}, libbolt.MerchState{}, libbolt.CustState{}, err
+// 	}
+// 	channelToken, custState, err := libbolt.BidirectionalInitCustomer(channelToken, b0Cust, b0Merch, "Alice")
+// 	return channelState, channelToken, merchState, custState, err
+// }
 
 // ZkChannelParams are the parameters the customer needs to send to the
 // merchant in order to open a channel.
+// TODO: Have this struct defined in libbolt instead?
 type ZkChannelParams struct {
 	channelToken    libbolt.ChannelToken
 	commitment      libbolt.Commitment
@@ -800,20 +801,23 @@ func openChannel(ctx *cli.Context) error {
 	}
 
 	// Channel token provided by Merchant
-	// TODO FIX: Right now zkchannel_token is loaded using 'StringFlag' which means
-	// it is not a 'ChannelToken' type, and doesnt work with BiInitCust function.
-	// Find a way to load as a ChannelToken type.
-	// channelToken = ctx.String("zkchannel_token")
+	// NOTE: the quotation marks in the channelToken flag, ' " ', must be
+	// preceeded by "\" so that they are read in properly
+	channelTokenByteArr := []byte(ctx.String("zkchannel_token"))
 
-	// Temporary fix for now:
-
-	_, channelToken, _, custState, err := libboltTempFixSetup(int(req.LocalFundingAmount), int(req.PushSat))
+	var channelToken libbolt.ChannelToken
+	err = json.Unmarshal(channelTokenByteArr, &channelToken)
+	if err != nil {
+		return fmt.Errorf("push_amt (merchant initial balance) is missing")
+	}
+	// Temporary fix while loading channelToken from flag wasnt working. Delete if it does work:
+	// _, channelToken, _, custState, err := libboltTempFixSetup(int(req.LocalFundingAmount), int(req.PushSat))
 
 	// // req.LocalFundingAmount, req.PushSat are equivalent to
 	// // initial customer and merchant balances
 	// // Initialize customer state
 
-	// channelToken, custState, err := libbolt.BidirectionalInitCustomer(channelToken, req.LocalFundingAmount, req.PushSat, "Alice")
+	channelToken, custState, err := libbolt.BidirectionalInitCustomer(channelToken, int(req.LocalFundingAmount), int(req.PushSat), "Alice")
 	// if err != nil {
 	// 	return fmt.Errorf("Unable to initialize customer: %v", err)
 	// }
@@ -824,22 +828,33 @@ func openChannel(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("channelToken after generate proof: %v", channelToken)
-	fmt.Println("custState after generate proof: %v", custState)
-	fmt.Println("com after generate proof: %v", com)
-	fmt.Println("comProof after generate proof: %v", comProof)
+
+	// // Display channel parameters for debugging
+	fmt.Println("\n\nchannelToken as string =", string(channelTokenByteArr))
+
+	comBytesArr, err := json.Marshal(com)
+	fmt.Println("\n\ncom as string =", string(comBytesArr))
+
+	comProofBytesArr, err := json.Marshal(comProof)
+	fmt.Println("\n\ncomProof as string =", string(comProofBytesArr))
+
+	custStateBytesArr, err := json.Marshal(custState)
+	fmt.Println("\n\ncustState as string =", string(custStateBytesArr))
+
+	fmt.Println("Controlled close for debugging")
+	os.Exit(1)
 
 	// Darius TODO: Find out how to add ZkChannelParams as a field in
 	// OpenChannelRequest in rpc.proto. Also, would it be able to handle
 	// struct of structs as data types?
-	req.ZkChannelParams = ZkChannelParams{
-		channelToken:    channelToken,
-		commitment:      com,
-		commitmentProof: comProof,
-		custPkc:         custState.PkC,
-	}
+	// req.ZkChannelParams = ZkChannelParams{
+	// 	channelToken:    channelToken,
+	// 	commitment:      com,
+	// 	commitmentProof: comProof,
+	// 	custPkc:         custState.PkC,
+	// }
 
-	fmt.Println("ZkChannelParams: %v", ZkChannelParams)
+	// fmt.Println("ZkChannelParams: %v", ZkChannelParams)
 	// ########### zkChannels end ###########
 
 	req.Private = ctx.Bool("private")
