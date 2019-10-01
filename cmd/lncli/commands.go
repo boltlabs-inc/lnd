@@ -673,20 +673,6 @@ var openChannelCommand = cli.Command{
 }
 
 // ########### zkChannels ###########
-// TEMPORARY workaround for not loading ChannelToken properly. Can be deleted
-// func libboltTempFixSetup(b0Cust int, b0Merch int) (libbolt.ChannelState, libbolt.ChannelToken, libbolt.MerchState, libbolt.CustState, error) {
-// 	channelState, err := libbolt.BidirectionalChannelSetup("Test Channel", false)
-// 	if err != nil {
-// 		return libbolt.ChannelState{}, libbolt.ChannelToken{}, libbolt.MerchState{}, libbolt.CustState{}, err
-// 	}
-// 	channelToken, merchState, channelState, err := libbolt.BidirectionalInitMerchant(channelState, "Bob")
-// 	if err != nil {
-// 		return libbolt.ChannelState{}, libbolt.ChannelToken{}, libbolt.MerchState{}, libbolt.CustState{}, err
-// 	}
-// 	channelToken, custState, err := libbolt.BidirectionalInitCustomer(channelToken, b0Cust, b0Merch, "Alice")
-// 	return channelState, channelToken, merchState, custState, err
-// }
-
 // ZkChannelParams are the parameters the customer needs to send to the
 // merchant in order to open a channel.
 // TODO: Have this struct defined in libbolt instead?
@@ -810,8 +796,6 @@ func openChannel(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("push_amt (merchant initial balance) is missing")
 	}
-	// Temporary fix while loading channelToken from flag wasnt working. Delete if it does work:
-	// _, channelToken, _, custState, err := libboltTempFixSetup(int(req.LocalFundingAmount), int(req.PushSat))
 
 	// // req.LocalFundingAmount, req.PushSat are equivalent to
 	// // initial customer and merchant balances
@@ -829,7 +813,7 @@ func openChannel(ctx *cli.Context) error {
 		return err
 	}
 
-	// // Display channel parameters for debugging
+	// // zkchannels DEBUGGING start: Display channel parameters
 	fmt.Println("\n\nchannelToken as string =", string(channelTokenByteArr))
 
 	comBytesArr, err := json.Marshal(com)
@@ -843,6 +827,7 @@ func openChannel(ctx *cli.Context) error {
 
 	fmt.Println("Controlled close for debugging")
 	os.Exit(1)
+	// // zkchannels DEBUGGING end
 
 	// Darius TODO: Find out how to add ZkChannelParams as a field in
 	// OpenChannelRequest in rpc.proto. Also, would it be able to handle
