@@ -676,10 +676,10 @@ var openChannelCommand = cli.Command{
 // merchant in order to open a channel.
 // TODO: Have this struct defined in libbolt instead?
 type ZkChannelParams struct {
-	channelToken    libbolt.ChannelToken
-	commitment      libbolt.Commitment
-	commitmentProof libbolt.CommitmentProof
-	custPkc         string
+	ChannelToken    libbolt.ChannelToken    `json:"chantoken"`
+	Commitment      libbolt.Commitment      `json:"commitment"`
+	CommitmentProof libbolt.CommitmentProof `json:"commproof"`
+	CustPkc         string                  `json:"custstatepkc"`
 }
 
 // ########### zkChannels ###########
@@ -815,8 +815,6 @@ func openChannel(ctx *cli.Context) error {
 	custStateBytesArr, err := json.Marshal(custState)
 	fmt.Println("\n\ncustState as string =", string(custStateBytesArr))
 
-	fmt.Println("Controlled close for debugging")
-	os.Exit(1)
 	// // DEBUGGING end ###
 
 	// Darius TODO: Find out how to add ZkChannelParams as a field in
@@ -829,6 +827,22 @@ func openChannel(ctx *cli.Context) error {
 	// 	custPkc:         custState.PkC,
 	// }
 
+	DebuggingZkChannelParams := ZkChannelParams{
+		ChannelToken:    channelToken,
+		Commitment:      com,
+		CommitmentProof: comProof,
+		CustPkc:         custState.PkC,
+	}
+
+	fmt.Println("\n\nDebuggingZkChannelParams as string =", DebuggingZkChannelParams)
+
+	DebuggingZkChannelParamsBytesArr, err := json.Marshal(DebuggingZkChannelParams)
+	fmt.Println("\n\nDebuggingZkChannelParams byte array raw =", DebuggingZkChannelParamsBytesArr)
+
+	fmt.Println("\n\nDebuggingZkChannelParams as string =", string(DebuggingZkChannelParamsBytesArr))
+
+	fmt.Println("\n\nControlled close for debugging")
+	os.Exit(1)
 	// fmt.Println("ZkChannelParams: %v", ZkChannelParams)
 	// ########### zkChannels end ###########
 
