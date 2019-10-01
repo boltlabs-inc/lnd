@@ -800,12 +800,10 @@ func openChannel(ctx *cli.Context) error {
 	// // req.LocalFundingAmount, req.PushSat are equivalent to
 	// // initial customer and merchant balances
 	// // Initialize customer state
-
 	channelToken, custState, err := libbolt.BidirectionalInitCustomer(channelToken, int(req.LocalFundingAmount), int(req.PushSat), "Alice")
-	// if err != nil {
-	// 	return fmt.Errorf("Unable to initialize customer: %v", err)
-	// }
-	// zkchLog.Infof("initialized custState: %s", custState)
+	if err != nil {
+		return fmt.Errorf("Unable to initialize customer: %v", err)
+	}
 
 	// Generate commitment and commitment proof
 	channelToken, custState, com, comProof, err := libbolt.BidirectionalEstablishCustomerGenerateProof(channelToken, custState)
@@ -813,7 +811,7 @@ func openChannel(ctx *cli.Context) error {
 		return err
 	}
 
-	// // zkchannels DEBUGGING start: Display channel parameters
+	// // DEBUGGING start: Display channel parameters
 	fmt.Println("\n\nchannelToken as string =", string(channelTokenByteArr))
 
 	comBytesArr, err := json.Marshal(com)
@@ -827,7 +825,7 @@ func openChannel(ctx *cli.Context) error {
 
 	fmt.Println("Controlled close for debugging")
 	os.Exit(1)
-	// // zkchannels DEBUGGING end
+	// // DEBUGGING end ###
 
 	// Darius TODO: Find out how to add ZkChannelParams as a field in
 	// OpenChannelRequest in rpc.proto. Also, would it be able to handle
