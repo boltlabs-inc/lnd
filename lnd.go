@@ -164,6 +164,12 @@ func Main(lisCfg ListenerCfg) error {
 			return err
 		}
 
+		file, err := json.MarshalIndent(channelToken, "", " ")
+		if err != nil {
+			return err
+		}
+		_ = ioutil.WriteFile("zkchannelToken_for_customers.json", file, 0644)
+
 		_ = merchState
 		_ = channelState
 

@@ -661,10 +661,9 @@ var openChannelCommand = cli.Command{
 
 		// ########### zkChannels ###########
 		cli.StringFlag{
-			Name: "zkchannel_token",
+			Name: "zkchannel_token_json",
 			Usage: "creates a zero knowledge channel using the " +
-				"zkchannel token provided by the merchant, and" +
-				"the customer's state for the channel",
+				"zkchannel token json provided by the merchant",
 		},
 		// ########### zkChannels ###########
 
@@ -776,7 +775,7 @@ func openChannel(ctx *cli.Context) error {
 
 	// ########### zkChannels start ###########
 	// Check all necessary parameters are set
-	if !ctx.IsSet("zkchannel_token") {
+	if !ctx.IsSet("zkchannel_token_json") {
 		return fmt.Errorf("channel token is missing")
 	}
 	if !ctx.IsSet("local_amt") {
@@ -786,16 +785,11 @@ func openChannel(ctx *cli.Context) error {
 		return fmt.Errorf("push_amt (merchant initial balance) is missing")
 	}
 
-	// Channel token provided by Merchant
-	// NOTE: the quotation marks in the channelToken flag, ' " ', must be
-	// preceeded by "\" so that they are read in properly
-	channelTokenByteArr := []byte(ctx.String("zkchannel_token"))
-
+	// Load channel token provided by Merchant
+	chanTokenFile, err := ioutil.ReadFile(ctx.String("zkchannel_token_json"))
+	fmt.Println("\n\nread zkchannelToken_for_customers.json file as string =", string(chanTokenFile))
 	var channelToken libbolt.ChannelToken
-	err = json.Unmarshal(channelTokenByteArr, &channelToken)
-	if err != nil {
-		return fmt.Errorf("push_amt (merchant initial balance) is missing")
-	}
+	err = json.Unmarshal(chanTokenFile, &channelToken)
 
 	// // req.LocalFundingAmount, req.PushSat are equivalent to
 	// // initial customer and merchant balances
@@ -812,8 +806,6 @@ func openChannel(ctx *cli.Context) error {
 	}
 
 	// // DEBUGGING start: Display channel parameters
-	fmt.Println("\n\nchannelToken as string =", string(channelTokenByteArr))
-
 	comBytesArr, err := json.Marshal(com)
 	fmt.Println("\n\ncom as string =", string(comBytesArr))
 
