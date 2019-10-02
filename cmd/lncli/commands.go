@@ -671,19 +671,6 @@ var openChannelCommand = cli.Command{
 	Action: actionDecorator(openChannel),
 }
 
-// ########### zkChannels ###########
-// ZkChannelParams are the parameters the customer needs to send to the
-// merchant in order to open a channel.
-// TODO: Have this struct defined in libbolt instead?
-type ZkChannelParams struct {
-	ChannelToken    libbolt.ChannelToken    `json:"chantoken"`
-	Commitment      libbolt.Commitment      `json:"commitment"`
-	CommitmentProof libbolt.CommitmentProof `json:"commproof"`
-	CustPkc         string                  `json:"custstatepkc"`
-}
-
-// ########### zkChannels ###########
-
 func openChannel(ctx *cli.Context) error {
 	// TODO(roasbeef): add deadline to context
 	ctxb := context.Background()
@@ -805,44 +792,39 @@ func openChannel(ctx *cli.Context) error {
 		return err
 	}
 
-	// // DEBUGGING start: Display channel parameters
-	comBytesArr, err := json.Marshal(com)
-	fmt.Println("\n\ncom as string =", string(comBytesArr))
+	// // // DEBUGGING: Display channel parameters
+	// comBytesArr, err := json.Marshal(com)
+	// fmt.Println("\n\ncom as string =", string(comBytesArr))
+	// comProofBytesArr, err := json.Marshal(comProof)
+	// fmt.Println("\n\ncomProof as string =", string(comProofBytesArr))
+	// custStateBytesArr, err := json.Marshal(custState)
+	// fmt.Println("\n\ncustState as string =", string(custStateBytesArr))
 
-	comProofBytesArr, err := json.Marshal(comProof)
-	fmt.Println("\n\ncomProof as string =", string(comProofBytesArr))
-
-	custStateBytesArr, err := json.Marshal(custState)
-	fmt.Println("\n\ncustState as string =", string(custStateBytesArr))
-
-	// // DEBUGGING end ###
-
-	// Darius TODO: Find out how to add ZkChannelParams as a field in
-	// OpenChannelRequest in rpc.proto. Also, would it be able to handle
-	// struct of structs as data types?
-	// req.ZkChannelParams = ZkChannelParams{
-	// 	channelToken:    channelToken,
-	// 	commitment:      com,
-	// 	commitmentProof: comProof,
-	// 	custPkc:         custState.PkC,
-	// }
-
-	DebuggingZkChannelParams := ZkChannelParams{
+	zkChannelParams := libbolt.ZkChannelParams{
 		ChannelToken:    channelToken,
 		Commitment:      com,
 		CommitmentProof: comProof,
-		CustPkc:         custState.PkC,
+		CustPkC:         custState.PkC,
 	}
 
-	fmt.Println("\n\nDebuggingZkChannelParams as string =", DebuggingZkChannelParams)
+	// fmt.Println("\n\nZkChannelParams as string =", zkChannelParams)
 
-	DebuggingZkChannelParamsBytesArr, err := json.Marshal(DebuggingZkChannelParams)
-	fmt.Println("\n\nDebuggingZkChannelParams byte array raw =", DebuggingZkChannelParamsBytesArr)
+	zkChannelParamsBytes, err := json.Marshal(zkChannelParams.CustPkC)
+	if err != nil {
+		return err
+	}
+	// fmt.Println("\nzkChannelParams byte array raw =", zkChannelParamsBytes)
+	fmt.Println("\nzkChannelParams as string =", string(zkChannelParamsBytes))
 
-	fmt.Println("\n\nDebuggingZkChannelParams as string =", string(DebuggingZkChannelParamsBytesArr))
+	req.ZkchannelParams = string(zkChannelParamsBytes)
 
-	fmt.Println("\n\nControlled close for debugging")
-	os.Exit(1)
+	// // Debugging: In case we want to save zkChannelParams as json
+	// file, err := json.MarshalIndent(zkChannelParams, "", " ")
+	// if err != nil {
+	// 	return err
+	// }
+	// _ = ioutil.WriteFile("nZkChannelParams_in_openChannel.json", file, 0644)
+
 	// fmt.Println("ZkChannelParams: %v", ZkChannelParams)
 	// ########### zkChannels end ###########
 

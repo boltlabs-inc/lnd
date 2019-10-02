@@ -123,6 +123,9 @@ type InitFundingReserveMsg struct {
 	//
 	// NOTE: In order to avoid deadlocks, this channel MUST be buffered.
 	resp chan *ChannelReservation
+
+	// ZkChannelParams contains channelToken, com, comProof, custPkC.
+	ZkChannelParams string
 }
 
 // fundingReserveCancelMsg is a message reserved for cancelling an existing

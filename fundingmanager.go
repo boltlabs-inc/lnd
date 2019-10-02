@@ -3,10 +3,12 @@ package lnd
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/boltlabs-inc/libbolt-go"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
@@ -1109,6 +1111,11 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	msg := fmsg.msg
 	amt := msg.FundingAmount
 
+	// ########### zkChannels ###########
+	zkchLog.Infof("ZkChannelParams from openChannel msg: %v", msg.ZkChannelParams)
+	zkchLog.Infof("ZkChannelParams from openChannel msg as string: %v", string(msg.ZkChannelParams))
+	// ########### zkChannels ###########
+
 	// We count the number of pending channels for this peer. This is the
 	// sum of the active reservations and the channels pending open in the
 	// database.
@@ -1235,6 +1242,7 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 		Flags:            msg.ChannelFlags,
 		MinConfs:         1,
 		Tweakless:        tweaklessCommitment,
+		ZkChannelParams:  msg.ZkChannelParams,
 	}
 
 	reservation, err := f.cfg.Wallet.InitChannelReservation(req)
@@ -1282,7 +1290,16 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	minHtlc := f.cfg.DefaultRoutingPolicy.MinHTLC
 
 	// ########### zkChannels ###########
+	// TODO: Allow for standard payment channel to be set up.
 	// if ZkChannelParams exists:
+
+	channelTokenBytes := []byte(msg.ZkChannelParams)
+
+	var ZkChannelParams libbolt.ZkChannelParams
+	err = json.Unmarshal(channelTokenBytes, &ZkChannelParams)
+	fmt.Println("chanToken after Unmarshal:", ZkChannelParams)
+	zkchLog.Infof("ZkChannelParams.CommitmentProof.T after Unmarshal: %v", ZkChannelParams.CommitmentProof.T)
+	zkchLog.Infof("ZkChannelParams.CustPkC after Unmarshal: %v", ZkChannelParams.CustPkC)
 	// 	TODO: Unpack ZkChannelParams into: channelState, com, comProof, custState.PkC
 	// 	closeToken, err := BidirectionalEstablishMerchantIssueCloseToken(
 	// 	channelState, com, comProof, custState.PkC, amt, msg.PushAmount, merchState)
@@ -2931,6 +2948,7 @@ func (f *fundingManager) handleInitFundingMsg(msg *initFundingMsg) {
 		Flags:            channelFlags,
 		MinConfs:         msg.minConfs,
 		Tweakless:        tweaklessCommitment,
+		ZkChannelParams:  msg.zkChannelParams,
 	}
 
 	reservation, err := f.cfg.Wallet.InitChannelReservation(req)
@@ -3021,6 +3039,7 @@ func (f *fundingManager) handleInitFundingMsg(msg *initFundingMsg) {
 		DelayedPaymentPoint:  ourContribution.DelayBasePoint.PubKey,
 		FirstCommitmentPoint: ourContribution.FirstCommitmentPoint,
 		ChannelFlags:         channelFlags,
+		ZkChannelParams:      msg.zkChannelParams,
 	}
 	if err := msg.peer.SendMessage(false, &fundingOpen); err != nil {
 		e := fmt.Errorf("Unable to send funding request message: %v",

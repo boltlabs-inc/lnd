@@ -2929,6 +2929,10 @@
           "type": "boolean",
           "format": "boolean",
           "description": "/ Whether unconfirmed outputs should be used as inputs for the funding transaction."
+        },
+        "zkchannel_params": {
+          "type": "string",
+          "description": "/ Additional parameters needed to request a zkchannel with a merchant: channelToken, commitment, commitmentProof, cust.PkC."
         }
       }
     },
