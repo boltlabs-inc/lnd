@@ -807,19 +807,16 @@ func openChannel(ctx *cli.Context) error {
 		CustPkC:         custState.PkC,
 	}
 
-	// fmt.Println("\n\nZkChannelParams as string =", zkChannelParams)
-
 	zkChannelParamsBytes, err := json.Marshal(zkChannelParams.CustPkC)
 	if err != nil {
 		return err
 	}
-	// fmt.Println("\nzkChannelParams byte array raw =", zkChannelParamsBytes)
+	fmt.Println("\nzkChannelParams byte array raw =", zkChannelParamsBytes)
 	fmt.Println("\nzkChannelParams as string =", string(zkChannelParamsBytes))
 
-	// req.ZkchannelParams = string(zkChannelParamsBytes)
-
-	//Debugging: replacing zkChannelParamsBytes with a single character
-	req.ZkchannelParams = "a"
+	// req.ZkchannelParams = zkChannelParamsBytes
+	// debugging: try with one bye
+	req.ZkchannelParams = []byte("testzkchannelparams")
 
 	// // Debugging: In case we want to save zkChannelParams as json
 	// file, err := json.MarshalIndent(zkChannelParams, "", " ")

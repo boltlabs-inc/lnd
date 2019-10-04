@@ -2932,6 +2932,7 @@
         },
         "zkchannel_params": {
           "type": "string",
+          "format": "byte",
           "description": "/ Additional parameters needed to request a zkchannel with a merchant: channelToken, commitment, commitmentProof, cust.PkC."
         }
       }

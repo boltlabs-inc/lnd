@@ -30,6 +30,12 @@ type PkScript []byte
 // when connecting to a node at a particular address.
 type addressType uint8
 
+// ########### zkChannels ###########
+
+// ZkChannelParams contains parameters needed to open a zk payment channel:
+// channelToken, commitment, commitmentProof, custPkC.
+type ZkChannelParams []byte
+
 const (
 	// noAddr denotes a blank address. An address of this type indicates
 	// that a node doesn't have any advertised addresses.
@@ -418,6 +424,15 @@ func WriteElement(w io.Writer, element interface{}) error {
 		if _, err := w.Write(b[:]); err != nil {
 			return err
 		}
+	// ########### zkChannels end ###########
+	case ZkChannelParams:
+		// Darius: length copied from PkScript
+		ZkChannelParamsLength := len(e)
+		if ZkChannelParamsLength > 34 {
+			return fmt.Errorf("'ZkChannelParams' too long")
+		}
+	// ########### zkChannels end ###########
+
 	default:
 		return fmt.Errorf("Unknown type in WriteElement: %T", e)
 	}

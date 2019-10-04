@@ -127,7 +127,7 @@ type OpenChannel struct {
 	//	########### zkChannels ###########
 	// ZkChannelParams contains three additional parameters needed to
 	// establish a zkchannel: channelToken, commitment, commitment proof.
-	ZkChannelParams string
+	ZkChannelParams []byte
 	//	########### zkChannels ###########
 }
 

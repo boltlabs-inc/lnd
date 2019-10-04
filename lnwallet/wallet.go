@@ -125,7 +125,7 @@ type InitFundingReserveMsg struct {
 	resp chan *ChannelReservation
 
 	// ZkChannelParams contains channelToken, com, comProof, custPkC.
-	ZkChannelParams string
+	ZkChannelParams []byte
 }
 
 // fundingReserveCancelMsg is a message reserved for cancelling an existing

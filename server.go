@@ -3047,7 +3047,7 @@ type openChanReq struct {
 	minConfs int32
 
 	// ########### zkChannels ###########
-	zkChannelParams string
+	zkChannelParams []byte
 	// ########### zkChannels ###########
 
 	// TODO(roasbeef): add ability to specify channel constraints as well

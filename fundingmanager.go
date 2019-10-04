@@ -682,7 +682,6 @@ func (f *fundingManager) failFundingFlow(peer lnpeer.Peer, tempChanID [32]byte,
 	fndgLog.Debugf("Failing funding flow for pendingID=%x: %v",
 		tempChanID, fundingErr)
 
-	will probably have to change the way this works for tx to be unlinkable */
 	ctx, err := f.cancelReservationCtx(peer.IdentityKey(), tempChanID)
 	if err != nil {
 		fndgLog.Errorf("unable to cancel reservation: %v", err)
@@ -1102,7 +1101,7 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	amt := msg.FundingAmount
 
 	// ########### zkChannels ###########
-	zkchLog.Infof("ZkChannelParams from openChannel msg: %v", msg.ZkChannelParams)
+	zkchLog.Infof("ZkChannelParams from openChannel msg raw: %v", msg.ZkChannelParams)
 	zkchLog.Infof("ZkChannelParams from openChannel msg as string: %v", string(msg.ZkChannelParams))
 	// ########### zkChannels ###########
 

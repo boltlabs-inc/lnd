@@ -1514,7 +1514,7 @@ message OpenChannelRequest {
     bool spend_unconfirmed = 12 [json_name = "spend_unconfirmed"];
 
     /// Additional parameters needed to request a zkchannel with a merchant: channelToken, commitment, commitmentProof, cust.PkC.
-     string zkchannel_params = 13 [json_name = "zkchannel_params"];
+    bytes zkchannel_params = 13 [json_name = "zkchannel_params"];
 }
 message OpenStatusUpdate {
     oneof update {
