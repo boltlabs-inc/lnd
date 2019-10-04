@@ -157,7 +157,6 @@ func Main(lisCfg ListenerCfg) error {
 			return err
 		}
 
-		// Darius TODO: make a more elegant solution for displaying channelToken
 		byteArray, err := json.Marshal(channelToken)
 		fmt.Println("ChannelToken as a string (to be given to customers) = ", string(byteArray))
 		if err != nil {

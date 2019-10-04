@@ -816,7 +816,10 @@ func openChannel(ctx *cli.Context) error {
 	// fmt.Println("\nzkChannelParams byte array raw =", zkChannelParamsBytes)
 	fmt.Println("\nzkChannelParams as string =", string(zkChannelParamsBytes))
 
-	req.ZkchannelParams = string(zkChannelParamsBytes)
+	// req.ZkchannelParams = string(zkChannelParamsBytes)
+
+	//Debugging: replacing zkChannelParamsBytes with a single character
+	req.ZkchannelParams = "a"
 
 	// // Debugging: In case we want to save zkChannelParams as json
 	// file, err := json.MarshalIndent(zkChannelParams, "", " ")

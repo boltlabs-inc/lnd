@@ -118,8 +118,6 @@ type OpenChannel struct {
 	// within the commitment transaction of the sender.
 	FirstCommitmentPoint *btcec.PublicKey
 
-	/* Darius: in ChannelFlags we would want to add a flag to say whether we
-	are opening a BOLT channel */
 	// ChannelFlags is a bit-field which allows the initiator of the
 	// channel to specify further behavior surrounding the channel.
 	// Currently, the least significant bit of this bit field indicates the
@@ -137,7 +135,6 @@ type OpenChannel struct {
 // interface.
 var _ Message = (*OpenChannel)(nil)
 
-/* Darius: New fields from above to be added here too */
 // Encode serializes the target OpenChannel into the passed io.Writer
 // implementation. Serialization will observe the rules defined by the passed
 // protocol version.
@@ -163,6 +160,8 @@ func (o *OpenChannel) Encode(w io.Writer, pver uint32) error {
 		o.HtlcPoint,
 		o.FirstCommitmentPoint,
 		o.ChannelFlags,
+		//	########### zkChannels ###########
+		o.ZkChannelParams,
 	)
 }
 
@@ -191,6 +190,8 @@ func (o *OpenChannel) Decode(r io.Reader, pver uint32) error {
 		&o.HtlcPoint,
 		&o.FirstCommitmentPoint,
 		&o.ChannelFlags,
+		//	########### zkChannels ###########
+		&o.ZkChannelParams,
 	)
 }
 
@@ -202,12 +203,17 @@ func (o *OpenChannel) MsgType() MessageType {
 	return MsgOpenChannel
 }
 
-/* Darius: increase MaxPayloadLength to include extra fields */
 // MaxPayloadLength returns the maximum allowed payload length for a
 // OpenChannel message.
 //
 // This is part of the lnwire.Message interface.
 func (o *OpenChannel) MaxPayloadLength(uint32) uint32 {
 	// (32 * 2) + (8 * 6) + (4 * 1) + (2 * 2) + (33 * 6) + 1
-	return 319
+	// return 319
+
+	//	########### zkChannels ###########
+	// Darius: originally 'return 319'. Arbitrarily increasing to include
+	// zkchannelparams
+	return 400
+
 }

@@ -34,8 +34,7 @@ import (
 const (
 	// TODO(roasbeef): tune
 	msgBufferSize = 50
-	/* Darius: CSV = CheckSequenceVerify. Presumably each currency would have
-	it's own value  */
+
 	// minBtcRemoteDelay and maxBtcRemoteDelay is the extremes of the
 	// Bitcoin CSV delay we will require the remote to use for its
 	// commitment transaction. The actual delay we will require will be
@@ -50,9 +49,6 @@ const (
 	minLtcRemoteDelay uint16 = 576
 	maxLtcRemoteDelay uint16 = 8064
 
-	/* Darius: not essential, but we might want to wait for more blocks
-	depending on the block times of different currencies.
-	Also, things like max funding amount should depend on currency*/
 	// maxWaitNumBlocksFundingConf is the maximum number of blocks to wait
 	// for the funding transaction to be confirmed before forgetting
 	// channels that aren't initiated by us. 2016 blocks is ~2 weeks.
@@ -218,7 +214,6 @@ func newSerializedKey(pubKey *btcec.PublicKey) serializedPubKey {
 	return s
 }
 
-/* Darius: IDKey has to change for the customer to keep it anonymous? */
 // fundingConfig defines the configuration for the FundingManager. All elements
 // within the configuration MUST be non-nil for the FundingManager to carry out
 // its duties.
@@ -235,8 +230,6 @@ type fundingConfig struct {
 	// transaction to the network.
 	PublishTransaction func(*wire.MsgTx) error
 
-	/* Darius: Fee estimator for shielded outputs (when it's ready) will be
-	constant */
 	// FeeEstimator calculates appropriate fee rates based on historical
 	// transaction information.
 	FeeEstimator lnwallet.FeeEstimator
@@ -246,7 +239,6 @@ type fundingConfig struct {
 	// so that the channel creation process can be completed.
 	Notifier chainntnfs.ChainNotifier
 
-	/* Darius: btcsuite used here */
 	// SignMessage signs an arbitrary message with a given public key. The
 	// actual digest signed is the double sha-256 of the message. In the
 	// case that the private key corresponding to the passed public key
@@ -601,7 +593,6 @@ func (f *fundingManager) nextPendingChanID() [32]byte {
 	return nextChanID
 }
 
-/* Darius: btcsuite used here */
 type pendingChannel struct {
 	identityPub   *btcec.PublicKey
 	channelPoint  *wire.OutPoint
@@ -691,7 +682,6 @@ func (f *fundingManager) failFundingFlow(peer lnpeer.Peer, tempChanID [32]byte,
 	fndgLog.Debugf("Failing funding flow for pendingID=%x: %v",
 		tempChanID, fundingErr)
 
-	/* Darius TODO: find function of peer.IdentityKey()
 	will probably have to change the way this works for tx to be unlinkable */
 	ctx, err := f.cancelReservationCtx(peer.IdentityKey(), tempChanID)
 	if err != nil {
@@ -1525,8 +1515,6 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 	fndgLog.Debugf("Remote party accepted commitment constraints: %v",
 		spew.Sdump(remoteContribution.ChannelConfig.ChannelConstraints))
 
-	// Darius: resCtx stands for reservation Commitment tx.
-
 	// Now that we have their contribution, we can extract, then send over
 	// both the funding out point and our signature for their version of
 	// the commitment transaction to the remote peer.
@@ -1552,7 +1540,6 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 	// escrowTx, custSigEscrowTx, custSignMerchCloseTx := BidirectionalCustSignMerchCloseTx (...)
 	// ZkChannelFundingtx := [escrowTx, custSigEscrowTx, custSignMerchCloseTx]
 
-	// // Darius: I'm not sure how this will work for blind signatures, or for MPC.
 	// outpoint = the previous output transaction reference (the funding tx)
 	// sig = the signature for the customer's side of the commitment tx
 	//
