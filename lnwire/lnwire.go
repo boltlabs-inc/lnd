@@ -424,12 +424,15 @@ func WriteElement(w io.Writer, element interface{}) error {
 		if _, err := w.Write(b[:]); err != nil {
 			return err
 		}
-	// ########### zkChannels end ###########
+	// ########### zkChannels start ###########
 	case ZkChannelParams:
 		// Darius: length copied from PkScript
 		ZkChannelParamsLength := len(e)
 		if ZkChannelParamsLength > 34 {
 			return fmt.Errorf("'ZkChannelParams' too long")
+		}
+		if err := wire.WriteVarBytes(w, 0, e); err != nil {
+			return err
 		}
 	// ########### zkChannels end ###########
 
@@ -839,6 +842,16 @@ func ReadElement(r io.Reader, element interface{}) error {
 			return err
 		}
 		*e = addrBytes[:length]
+
+	// ########### zkChannels ###########
+	case *ZkChannelParams:
+		zkChannelParams, err := wire.ReadVarBytes(r, 0, 34, "zkchannelparams")
+		if err != nil {
+			return err
+		}
+		*e = zkChannelParams
+	// ########### zkChannels ###########
+
 	default:
 		return fmt.Errorf("Unknown type in ReadElement: %T", e)
 	}

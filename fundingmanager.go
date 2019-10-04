@@ -1280,18 +1280,14 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 
 	// ########### zkChannels ###########
 	// TODO: Allow for standard payment channel to be set up.
-	// if ZkChannelParams exists:
-
-	channelTokenBytes := []byte(msg.ZkChannelParams)
+	// if msg.ZkChannelParams exists:
 
 	var ZkChannelParams libbolt.ZkChannelParams
-	err = json.Unmarshal(channelTokenBytes, &ZkChannelParams)
-	fmt.Println("chanToken after Unmarshal:", ZkChannelParams)
-	zkchLog.Infof("ZkChannelParams.CommitmentProof.T after Unmarshal: %v", ZkChannelParams.CommitmentProof.T)
-	zkchLog.Infof("ZkChannelParams.CustPkC after Unmarshal: %v", ZkChannelParams.CustPkC)
-	// 	TODO: Unpack ZkChannelParams into: channelState, com, comProof, custState.PkC
-	// 	closeToken, err := BidirectionalEstablishMerchantIssueCloseToken(
-	// 	channelState, com, comProof, custState.PkC, amt, msg.PushAmount, merchState)
+	err = json.Unmarshal(msg.ZkChannelParams, &ZkChannelParams)
+
+	// darius TODO: Load channelState and merchstate
+	// closeToken, err := BidirectionalEstablishMerchantIssueCloseToken(
+	// channelState, ZkChannelParams.Commitment, ZkChannelParams.CommitmentProof, ZkChannelParams.CustPkC, amt, msg.PushAmount, merchState)
 
 	// 	if err != nil {
 	// 		fndgLog.Errorf("Customer was not validated: %v", err)

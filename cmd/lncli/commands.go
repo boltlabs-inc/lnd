@@ -816,7 +816,7 @@ func openChannel(ctx *cli.Context) error {
 
 	// req.ZkchannelParams = zkChannelParamsBytes
 	// debugging: try with one bye
-	// req.ZkchannelParams = []byte("testzkchannelparams")
+	req.ZkchannelParams = []byte("a")
 
 	// // Debugging: In case we want to save zkChannelParams as json
 	// file, err := json.MarshalIndent(zkChannelParams, "", " ")
