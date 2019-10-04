@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"sync"
 	"time"
 
@@ -1101,8 +1102,16 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	amt := msg.FundingAmount
 
 	// ########### zkChannels ###########
-	zkchLog.Infof("ZkChannelParams from openChannel msg raw: %v", msg.ZkChannelParams)
-	zkchLog.Infof("ZkChannelParams from openChannel msg as string: %v", string(msg.ZkChannelParams))
+	dat, err := ioutil.ReadFile("ZkChannelParams_in_openChannel.json")
+	zkchLog.Infof("read ZkChannelParams_in_openChannel.json file as string: %v", string(dat))
+
+	var ZkChannelParams libbolt.ZkChannelParams
+	err = json.Unmarshal(dat, &ZkChannelParams)
+
+	zkchLog.Infof("ZkChannelParams.Commitment after Unmarshal: %v", ZkChannelParams.Commitment)
+
+	// zkchLog.Infof("ZkChannelParams from openChannel msg raw: %v", msg.ZkChannelParams)
+	// zkchLog.Infof("ZkChannelParams from openChannel msg as string: %v", string(msg.ZkChannelParams))
 	// ########### zkChannels ###########
 
 	// We count the number of pending channels for this peer. This is the
@@ -1282,8 +1291,8 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	// TODO: Allow for standard payment channel to be set up.
 	// if msg.ZkChannelParams exists:
 
-	var ZkChannelParams libbolt.ZkChannelParams
-	err = json.Unmarshal(msg.ZkChannelParams, &ZkChannelParams)
+	// var ZkChannelParams libbolt.ZkChannelParams
+	// err = json.Unmarshal(msg.ZkChannelParams, &ZkChannelParams)
 
 	// darius TODO: Load channelState and merchstate
 	// closeToken, err := BidirectionalEstablishMerchantIssueCloseToken(
