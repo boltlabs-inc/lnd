@@ -773,8 +773,8 @@ func openChannel(ctx *cli.Context) error {
 	}
 
 	// Load channel token provided by Merchant
-	chanTokenFile, err := ioutil.ReadFile(ctx.String("zkchannel_token_json"))
-	fmt.Println("\n\nread zkchannelToken_for_customers.json file as string =", string(chanTokenFile))
+	chanTokenFile, err := ioutil.ReadFile("receivedFromBob/" + ctx.String("zkchannel_token_json"))
+	fmt.Println("\n\nread zkchannelToken.json file as string =", string(chanTokenFile))
 	var channelToken libbolt.ChannelToken
 	err = json.Unmarshal(chanTokenFile, &channelToken)
 
@@ -823,7 +823,7 @@ func openChannel(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	_ = ioutil.WriteFile("ZkChannelParams_in_openChannel.json", file, 0644)
+	_ = ioutil.WriteFile("../bob/receivedFromAlice/ZkChannelParams.json", file, 0644)
 
 	// fmt.Println("ZkChannelParams: %v", ZkChannelParams)
 	// ########### zkChannels end ###########

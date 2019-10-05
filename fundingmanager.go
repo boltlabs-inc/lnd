@@ -1101,18 +1101,52 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	msg := fmsg.msg
 	amt := msg.FundingAmount
 
-	// ########### zkChannels ###########
-	dat, err := ioutil.ReadFile("ZkChannelParams_in_openChannel.json")
-	zkchLog.Infof("read ZkChannelParams_in_openChannel.json file as string: %v", string(dat))
+	// ########### zkChannels start ###########
+	// TODO: skip this step for normal LN setup
 
+	// darius: Temporary solution to load zkchannelparams from json
+	dat, err := ioutil.ReadFile("receivedFromAlice/ZkChannelParams.json")
+	zkchLog.Infof("read ZkChannelParams.json file as string: %v", string(dat))
+
+	// For final solution, replace 'dat' with msg.ZkChannelParams
 	var ZkChannelParams libbolt.ZkChannelParams
 	err = json.Unmarshal(dat, &ZkChannelParams)
 
+	// just making sure it was loaded properly
 	zkchLog.Infof("ZkChannelParams.Commitment after Unmarshal: %v", ZkChannelParams.Commitment)
-
 	// zkchLog.Infof("ZkChannelParams from openChannel msg raw: %v", msg.ZkChannelParams)
 	// zkchLog.Infof("ZkChannelParams from openChannel msg as string: %v", string(msg.ZkChannelParams))
-	// ########### zkChannels ###########
+
+	// darius TODO: Load channelState and merchstate from Bolt.db instead
+	dat, err = ioutil.ReadFile("merchState.json")
+	var merchState libbolt.MerchState
+	err = json.Unmarshal(dat, &merchState)
+
+	dat, err = ioutil.ReadFile("channelState.json")
+	var channelState libbolt.ChannelState
+	err = json.Unmarshal(dat, &channelState)
+
+	closeToken, err := libbolt.BidirectionalEstablishMerchantIssueCloseToken(
+		channelState, ZkChannelParams.Commitment, ZkChannelParams.CommitmentProof, ZkChannelParams.CustPkC, int(amt), int(msg.PushAmount), merchState)
+
+	if err != nil {
+		zkchLog.Errorf("Customer Commitment Proof not validated: %v", err)
+		f.failFundingFlow(fmsg.peer, fmsg.msg.PendingChannelID, err)
+		return
+	}
+	zkchLog.Infof("Customer Commitment Proof validated.")
+
+	// darius: temporary solution - savings closeToken as json
+	file, err := json.MarshalIndent(closeToken, "", " ")
+	if err != nil {
+		// darius: not sure why the line below doesn't work
+		// return err
+	}
+	_ = ioutil.WriteFile("../alice/receivedFromBob/closeToken.json", file, 0644)
+
+	zkchLog.Infof("Customer CloseToken issued.")
+
+	// ########### zkChannels end ###########
 
 	// We count the number of pending channels for this peer. This is the
 	// sum of the active reservations and the channels pending open in the
@@ -1286,24 +1320,6 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	maxValue := f.cfg.RequiredRemoteMaxValue(amt)
 	maxHtlcs := f.cfg.RequiredRemoteMaxHTLCs(amt)
 	minHtlc := f.cfg.DefaultRoutingPolicy.MinHTLC
-
-	// ########### zkChannels ###########
-	// TODO: Allow for standard payment channel to be set up.
-	// if msg.ZkChannelParams exists:
-
-	// var ZkChannelParams libbolt.ZkChannelParams
-	// err = json.Unmarshal(msg.ZkChannelParams, &ZkChannelParams)
-
-	// darius TODO: Load channelState and merchstate
-	// closeToken, err := BidirectionalEstablishMerchantIssueCloseToken(
-	// channelState, ZkChannelParams.Commitment, ZkChannelParams.CommitmentProof, ZkChannelParams.CustPkC, amt, msg.PushAmount, merchState)
-
-	// 	if err != nil {
-	// 		fndgLog.Errorf("Customer was not validated: %v", err)
-	// 		f.failFundingFlow(fmsg.peer, fmsg.msg.PendingChannelID, err)
-	// 		return
-	// 	}
-	// ########### zkChannels ###########
 
 	// Once the reservation has been created successfully, we add it to
 	// this peer's map of pending reservations to track this particular
