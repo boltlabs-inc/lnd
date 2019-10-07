@@ -792,6 +792,13 @@ func openChannel(ctx *cli.Context) error {
 		return err
 	}
 
+	// Update channelToken
+	file, err := json.MarshalIndent(custState, "", " ")
+	if err != nil {
+		return err
+	}
+	_ = ioutil.WriteFile("custState.json", file, 0644)
+
 	// // // DEBUGGING: Display channel parameters
 	// comBytesArr, err := json.Marshal(com)
 	// fmt.Println("\n\ncom as string =", string(comBytesArr))
@@ -819,7 +826,7 @@ func openChannel(ctx *cli.Context) error {
 	req.ZkchannelParams = []byte("a")
 
 	// Debugging: In case we want to save zkChannelParams as json
-	file, err := json.MarshalIndent(zkChannelParams, "", " ")
+	file, err = json.MarshalIndent(zkChannelParams, "", " ")
 	if err != nil {
 		return err
 	}

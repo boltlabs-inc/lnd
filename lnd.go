@@ -182,6 +182,7 @@ func Main(lisCfg ListenerCfg) error {
 			return err
 		}
 		_ = ioutil.WriteFile("channelState.json", file, 0644)
+		_ = ioutil.WriteFile("../alice/receivedFromBob/channelState.json", file, 0644)
 
 	}
 	// ########### zkChannels end ###########

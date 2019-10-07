@@ -1274,7 +1274,8 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 		Flags:            msg.ChannelFlags,
 		MinConfs:         1,
 		Tweakless:        tweaklessCommitment,
-		ZkChannelParams:  msg.ZkChannelParams,
+		// Darius TODO: check if this belongs here
+		// ZkChannelParams:  msg.ZkChannelParams,
 	}
 
 	reservation, err := f.cfg.Wallet.InitChannelReservation(req)
@@ -1487,6 +1488,7 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 	maxHtlcs := f.cfg.RequiredRemoteMaxHTLCs(resCtx.chanAmt)
 
 	// ########### zkChannels ###########
+	// Darius TODO: Ignore zkChannel parts for normal LN Mode
 	// if CloseToken does NOT exist (i.e. normal LN channel):
 	// ########### zkChannels ###########
 
@@ -1543,23 +1545,40 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 
 	// ########### zkChannels ###########
 	// else (if CloseToken DOES exist):
-	// // We (Customer) need to verify the Merchant's close token
-	// isTokenValid, channelState, custState, err :=
-	// 	BidirectionalVerifyCloseToken(channelState, custState, closeToken)
-	// if err != nil {
-	// 	fndgLog.Errorf("Unable to process close token from %v: %v",
-	// 		peerKey, err)
-	// 	f.failFundingFlow(fmsg.peer, msg.PendingChannelID, err)
-	// }
-	// if isTokenValid == false {
-	// 	fndgLog.Errorf("CloseToken was not valid")
-	// 	f.failFundingFlow(fmsg.peer, msg.PendingChannelID, "Funding failed: close token invalid")
-	// 	return
-	// }
-	// // Here is where the wagyu is used and transactions are signed e.g.
+
+	// darius TODO: Load channelState and custState from Bolt.db instead
+	dat, err := ioutil.ReadFile("receivedFromBob/channelState.json")
+	var channelState libbolt.ChannelState
+	err = json.Unmarshal(dat, &channelState)
+
+	dat, err = ioutil.ReadFile("custState.json")
+	var custState libbolt.CustState
+	err = json.Unmarshal(dat, &custState)
+
+	dat, err = ioutil.ReadFile("receivedFromBob/closeToken.json")
+	var closeToken libbolt.Signature
+	err = json.Unmarshal(dat, &closeToken)
+
+	isTokenValid, channelState, custState, err :=
+		libbolt.BidirectionalVerifyCloseToken(channelState, custState, closeToken)
+	if err != nil {
+		fndgLog.Errorf("Unable to process close token from %v: %v",
+			peerKey, err)
+		f.failFundingFlow(fmsg.peer, msg.PendingChannelID, err)
+	}
+	if isTokenValid == false {
+		fndgLog.Errorf("CloseToken was invalid")
+		// Darius TODO: Replace err with actual error msg
+		f.failFundingFlow(fmsg.peer, msg.PendingChannelID, err)
+		return
+	}
+	fndgLog.Infof("Close token was verified")
+
+	// Here is where the wagyu is used and transactions are signed e.g.
 	// escrowTx, custSigEscrowTx, custSignMerchCloseTx := BidirectionalCustSignMerchCloseTx (...)
 	// ZkChannelFundingtx := [escrowTx, custSigEscrowTx, custSignMerchCloseTx]
 
+	// Darius:
 	// outpoint = the previous output transaction reference (the funding tx)
 	// sig = the signature for the customer's side of the commitment tx
 	//
