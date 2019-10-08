@@ -773,14 +773,14 @@ func openChannel(ctx *cli.Context) error {
 	}
 
 	// Load channel token provided by Merchant
-	chanTokenFile, err := ioutil.ReadFile("receivedFromBob/" + ctx.String("zkchannel_token_json"))
+	chanTokenFile, err := ioutil.ReadFile("../" + ctx.String("zkchannel_token_json"))
 	fmt.Println("\n\nread zkchannelToken.json file as string =", string(chanTokenFile))
 	var channelToken libbolt.ChannelToken
 	err = json.Unmarshal(chanTokenFile, &channelToken)
 
-	// // req.LocalFundingAmount, req.PushSat are equivalent to
-	// // initial customer and merchant balances
-	// // Initialize customer state
+	// req.LocalFundingAmount, req.PushSat are equivalent to
+	// initial customer and merchant balances
+	// Initialize customer state
 	channelToken, custState, err := libbolt.BidirectionalInitCustomer(channelToken, int(req.LocalFundingAmount), int(req.PushSat), "Alice")
 	if err != nil {
 		return fmt.Errorf("Unable to initialize customer: %v", err)
@@ -797,7 +797,7 @@ func openChannel(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	_ = ioutil.WriteFile("custState.json", file, 0644)
+	_ = ioutil.WriteFile("../custState.json", file, 0644)
 
 	// // // DEBUGGING: Display channel parameters
 	// comBytesArr, err := json.Marshal(com)
@@ -830,7 +830,7 @@ func openChannel(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	_ = ioutil.WriteFile("../bob/receivedFromAlice/ZkChannelParams.json", file, 0644)
+	_ = ioutil.WriteFile("../ZkChannelParams.json", file, 0644)
 
 	// fmt.Println("ZkChannelParams: %v", ZkChannelParams)
 	// ########### zkChannels end ###########

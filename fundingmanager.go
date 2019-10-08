@@ -1109,7 +1109,7 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	// TODO: skip this step for normal LN setup
 
 	// darius: Temporary solution to load zkchannelparams from json
-	dat, err := ioutil.ReadFile("receivedFromAlice/ZkChannelParams.json")
+	dat, err := ioutil.ReadFile("../ZkChannelParams.json")
 	zkchLog.Infof("read ZkChannelParams.json file as string: %v", string(dat))
 
 	// For final solution, replace 'dat' with msg.ZkChannelParams
@@ -1122,11 +1122,11 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	// zkchLog.Infof("ZkChannelParams from openChannel msg as string: %v", string(msg.ZkChannelParams))
 
 	// darius TODO: Load channelState and merchstate from Bolt.db instead
-	dat, err = ioutil.ReadFile("merchState.json")
+	dat, err = ioutil.ReadFile("../merchState.json")
 	var merchState libbolt.MerchState
 	err = json.Unmarshal(dat, &merchState)
 
-	dat, err = ioutil.ReadFile("channelState.json")
+	dat, err = ioutil.ReadFile("../channelState.json")
 	var channelState libbolt.ChannelState
 	err = json.Unmarshal(dat, &channelState)
 
@@ -1146,7 +1146,7 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 		// darius: not sure why the line below doesn't work
 		// return err
 	}
-	_ = ioutil.WriteFile("../alice/receivedFromBob/closeToken.json", file, 0644)
+	_ = ioutil.WriteFile("../closeToken.json", file, 0644)
 
 	zkchLog.Infof("Customer CloseToken issued.")
 
@@ -1551,15 +1551,15 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 	// else (if CloseToken DOES exist):
 
 	// darius TODO: Load channelState and custState from Bolt.db instead
-	dat, err := ioutil.ReadFile("receivedFromBob/channelState.json")
+	dat, err := ioutil.ReadFile("../channelState.json")
 	var channelState libbolt.ChannelState
 	err = json.Unmarshal(dat, &channelState)
 
-	dat, err = ioutil.ReadFile("custState.json")
+	dat, err = ioutil.ReadFile("../custState.json")
 	var custState libbolt.CustState
 	err = json.Unmarshal(dat, &custState)
 
-	dat, err = ioutil.ReadFile("receivedFromBob/closeToken.json")
+	dat, err = ioutil.ReadFile("../closeToken.json")
 	var closeToken libbolt.Signature
 	err = json.Unmarshal(dat, &closeToken)
 
@@ -1577,6 +1577,12 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 		return
 	}
 	zkchLog.Infof("Close token was verified")
+
+	file, err := json.MarshalIndent(custState, "", " ")
+	if err != nil {
+		// return err
+	}
+	_ = ioutil.WriteFile("../custState.json", file, 0644)
 
 	// Here is where the wagyu is used and transactions are signed e.g.
 	// escrowTx, custSigEscrowTx, custSignMerchCloseTx := BidirectionalCustSignMerchCloseTx (...)
@@ -2264,15 +2270,15 @@ func (f *fundingManager) sendFundingLocked(
 	if f.cfg.ZkMerchant {
 		fndgLog.Infof("This node (Merchant) generating PayToken")
 
-		dat, _ := ioutil.ReadFile("channelState.json")
+		dat, _ := ioutil.ReadFile("../channelState.json")
 		var channelState libbolt.ChannelState
 		err = json.Unmarshal(dat, &channelState)
 
-		dat, err = ioutil.ReadFile("receivedFromAlice/zkChannelParams.json")
+		dat, err = ioutil.ReadFile("../zkChannelParams.json")
 		var zkChannelParams libbolt.ZkChannelParams
 		err = json.Unmarshal(dat, &zkChannelParams)
 
-		dat, err = ioutil.ReadFile("merchState.json")
+		dat, err = ioutil.ReadFile("../merchState.json")
 		var merchState libbolt.MerchState
 		err = json.Unmarshal(dat, &merchState)
 
@@ -2290,7 +2296,7 @@ func (f *fundingManager) sendFundingLocked(
 			return err
 		}
 
-		_ = ioutil.WriteFile("../alice/receivedFromBob/payToken.json", file, 0644)
+		_ = ioutil.WriteFile("../payToken.json", file, 0644)
 		zkchLog.Infof("payToken issued to Customer")
 
 	}
@@ -2678,16 +2684,16 @@ func (f *fundingManager) handleFundingLocked(fmsg *fundingLockedMsg) {
 	// if !f.cfg.LNMode && !f.cfg.ZkMerchant {   // darius TODO: add all !LNMode cases
 	if !f.cfg.ZkMerchant {
 
-		dat, _ := ioutil.ReadFile("receivedFromBob/channelState.json")
+		dat, _ := ioutil.ReadFile("../channelState.json")
 		var channelState libbolt.ChannelState
 		err := json.Unmarshal(dat, &channelState)
 		_ = err
 
-		dat, _ = ioutil.ReadFile("custState.json")
+		dat, _ = ioutil.ReadFile("../custState.json")
 		var custState libbolt.CustState
 		err = json.Unmarshal(dat, &custState)
 
-		dat, _ = ioutil.ReadFile("receivedFromBob/payToken.json")
+		dat, _ = ioutil.ReadFile("../payToken.json")
 		var payToken libbolt.Signature
 		err = json.Unmarshal(dat, &payToken)
 

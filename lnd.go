@@ -167,7 +167,7 @@ func Main(lisCfg ListenerCfg) error {
 		if err != nil {
 			return err
 		}
-		_ = ioutil.WriteFile("../alice/receivedFromBob/zkchannelToken.json", file, 0644)
+		_ = ioutil.WriteFile("../zkchannelToken.json", file, 0644)
 
 		// Save merchState and channelState in json files.
 		// TODO. Save them in Bolt.db instead
@@ -175,14 +175,14 @@ func Main(lisCfg ListenerCfg) error {
 		if err != nil {
 			return err
 		}
-		_ = ioutil.WriteFile("merchState.json", file, 0644)
+		_ = ioutil.WriteFile("../merchState.json", file, 0644)
 
 		file, err = json.MarshalIndent(channelState, "", " ")
 		if err != nil {
 			return err
 		}
-		_ = ioutil.WriteFile("channelState.json", file, 0644)
-		_ = ioutil.WriteFile("../alice/receivedFromBob/channelState.json", file, 0644)
+		// _ = ioutil.WriteFile("channelState.json", file, 0644)
+		_ = ioutil.WriteFile("../channelState.json", file, 0644)
 
 	}
 	// ########### zkChannels end ###########
