@@ -1566,7 +1566,7 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 	isTokenValid, channelState, custState, err :=
 		libbolt.BidirectionalVerifyCloseToken(channelState, custState, closeToken)
 	if err != nil {
-		fndgLog.Errorf("Unable to process close token from %v: %v",
+		zkchLog.Errorf("Unable to process close token from %v: %v",
 			peerKey, err)
 		f.failFundingFlow(fmsg.peer, msg.PendingChannelID, err)
 	}
@@ -1576,7 +1576,7 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 		f.failFundingFlow(fmsg.peer, msg.PendingChannelID, err)
 		return
 	}
-	fndgLog.Infof("Close token was verified")
+	zkchLog.Infof("Close token was verified")
 
 	// Here is where the wagyu is used and transactions are signed e.g.
 	// escrowTx, custSigEscrowTx, custSignMerchCloseTx := BidirectionalCustSignMerchCloseTx (...)
@@ -2261,7 +2261,6 @@ func (f *fundingManager) sendFundingLocked(
 	// ########### zkChannels LN Mode end ###########
 
 	// ########### zkChannels start ###########
-
 	if f.cfg.ZkMerchant {
 		fndgLog.Infof("This node (Merchant) generating PayToken")
 
@@ -2279,7 +2278,6 @@ func (f *fundingManager) sendFundingLocked(
 
 		payToken, err := libbolt.BidirectionalEstablishMerchantIssuePayToken(
 			channelState, zkChannelParams.Commitment, merchState)
-		_ = payToken
 
 		if err != nil {
 			zkchLog.Errorf("PayToken could not be generated: %v", err)
@@ -2573,20 +2571,6 @@ func (f *fundingManager) processFundingLocked(msg *lnwire.FundingLocked,
 // channel to enter normal operating mode.
 func (f *fundingManager) handleFundingLocked(fmsg *fundingLockedMsg) {
 
-	// // ########### zkChannels ###########
-	// if !cfg.LNMode & zkChannel_Customer {
-	// 	isChannelEstablished, channelState, custState, err := BidirectionalEstablishCustomerFinal(
-	// 	channelState, custState, fmsg.PayToken)
-	// }
-	// if !isChannelEstablished {
-	// 	err := fmt.Errorf("Unable to verify payToken. "+
-	// 	"chan_id=%x", fmsg.msg.ChanID)
-	// 	fndgLog.Warnf(err.Error())
-	// 	f.failFundingFlow(fmsg.peer, fmsg.msg.ChanID, err)
-	// 	return
-	// }
-	// // ########### zkChannels ###########
-
 	defer f.wg.Done()
 	fndgLog.Debugf("Received FundingLocked for ChannelID(%v) from "+
 		"peer %x", fmsg.msg.ChanID,
@@ -2689,6 +2673,46 @@ func (f *fundingManager) handleFundingLocked(fmsg *fundingLockedMsg) {
 			fmsg.peer.IdentityKey().SerializeCompressed(),
 			channel.FundingOutpoint, err)
 	}
+
+	// ########### zkChannels start ###########
+	// if !f.cfg.LNMode && !f.cfg.ZkMerchant {   // darius TODO: add all !LNMode cases
+	if !f.cfg.ZkMerchant {
+
+		dat, _ := ioutil.ReadFile("receivedFromBob/channelState.json")
+		var channelState libbolt.ChannelState
+		err := json.Unmarshal(dat, &channelState)
+		_ = err
+
+		dat, _ = ioutil.ReadFile("custState.json")
+		var custState libbolt.CustState
+		err = json.Unmarshal(dat, &custState)
+
+		dat, _ = ioutil.ReadFile("receivedFromBob/payToken.json")
+		var payToken libbolt.Signature
+		err = json.Unmarshal(dat, &payToken)
+
+		isChannelEstablished, channelState, custState, err := libbolt.BidirectionalEstablishCustomerFinal(
+			channelState, custState, payToken)
+
+		// darius TODO: find out why payToken is not verified
+		zkchLog.Infof("isChannelEstablished: %v", isChannelEstablished)
+
+		if err != nil {
+			zkchLog.Infof("error during BidirectionalEstablishCustomerFinal: %v", err)
+		}
+
+		if !isChannelEstablished {
+			err := fmt.Errorf("Unable to verify payToken "+
+				"chan_id=%x", fmsg.msg.ChanID)
+			zkchLog.Warnf(err.Error())
+			// f.failFundingFlow(fmsg.peer, fmsg.msg.ChanID, err)
+			return
+		}
+
+		zkchLog.Info("payToken from merchant was verified")
+
+	}
+	// ########### zkChannels end ###########
 }
 
 // chanAnnouncement encapsulates the two authenticated announcements that we
