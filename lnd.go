@@ -139,7 +139,7 @@ func Main(lisCfg ListenerCfg) error {
 
 	// ########### zkChannels start ###########
 	// Do merchant initialization if merchant flag was set
-	if cfg.Merchant {
+	if cfg.ZkMerchant {
 		zkchLog.Infof("Initializing merchant setup")
 		// // Darius TODO: Check for existing file with merchstate, otherwise create one
 		// 	If filepath/Bolt.db exists {

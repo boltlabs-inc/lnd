@@ -353,6 +353,10 @@ type fundingConfig struct {
 	// and on the requesting node's public key that returns a bool which tells
 	// the funding manager whether or not to accept the channel.
 	OpenChannelPredicate chanacceptor.ChannelAcceptor
+
+	// ############## zkchannels ##############
+	LNMode     bool
+	ZkMerchant bool
 }
 
 // fundingManager acts as an orchestrator/bridge between the wallet's
@@ -2257,11 +2261,16 @@ func (f *fundingManager) sendFundingLocked(
 	// ########### zkChannels LN Mode end ###########
 
 	// ########### zkChannels start ###########
-	// // For customers, just send msg that funding was confirmed
-	// if zkChan_Customer {
-	// fundingLockedMsg := lnwire.NewFundingLocked(c
-	// }
-	// // For Merchants, generate and send payToken to customer
+	// For customers, just send msg that funding was confirmed
+
+	if f.cfg.ZkMerchant {
+		fndgLog.Infof("Yes, this is the Merchant's node")
+		// fundingLockedMsg := lnwire.NewFundingLocked(c
+	} else {
+		fndgLog.Infof("Yes, this is the Customer's node")
+	}
+
+	// For Merchants, generate and send payToken to customer
 	// if zkChan_Merchant {
 	// payToken, err := BidirectionalEstablishMerchantIssuePayToken(
 	// channelState, com, merchState)
