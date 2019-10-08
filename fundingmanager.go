@@ -2261,21 +2261,41 @@ func (f *fundingManager) sendFundingLocked(
 	// ########### zkChannels LN Mode end ###########
 
 	// ########### zkChannels start ###########
-	// For customers, just send msg that funding was confirmed
 
 	if f.cfg.ZkMerchant {
-		fndgLog.Infof("Yes, this is the Merchant's node")
-		// fundingLockedMsg := lnwire.NewFundingLocked(c
-	} else {
-		fndgLog.Infof("Yes, this is the Customer's node")
-	}
+		fndgLog.Infof("This node (Merchant) generating PayToken")
 
-	// For Merchants, generate and send payToken to customer
-	// if zkChan_Merchant {
-	// payToken, err := BidirectionalEstablishMerchantIssuePayToken(
-	// channelState, com, merchState)
-	// fundingLockedMsg := lnwire.NewFundingLockedWithPayToken(chanID, payToken)
-	// }
+		dat, _ := ioutil.ReadFile("channelState.json")
+		var channelState libbolt.ChannelState
+		err = json.Unmarshal(dat, &channelState)
+
+		dat, err = ioutil.ReadFile("receivedFromAlice/zkChannelParams.json")
+		var zkChannelParams libbolt.ZkChannelParams
+		err = json.Unmarshal(dat, &zkChannelParams)
+
+		dat, err = ioutil.ReadFile("merchState.json")
+		var merchState libbolt.MerchState
+		err = json.Unmarshal(dat, &merchState)
+
+		payToken, err := libbolt.BidirectionalEstablishMerchantIssuePayToken(
+			channelState, zkChannelParams.Commitment, merchState)
+		_ = payToken
+
+		if err != nil {
+			zkchLog.Errorf("PayToken could not be generated: %v", err)
+		} else {
+			zkchLog.Info("PayToken successfully generated")
+		}
+
+		file, err := json.MarshalIndent(payToken, "", " ")
+		if err != nil {
+			return err
+		}
+
+		_ = ioutil.WriteFile("../alice/receivedFromBob/payToken.json", file, 0644)
+		zkchLog.Infof("payToken issued to Customer")
+
+	}
 
 	// If the peer has disconnected before we reach this point, we will need
 	// to wait for him to come back online before sending the fundingLocked
