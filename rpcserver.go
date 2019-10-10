@@ -1642,6 +1642,9 @@ func (r *rpcServer) OpenChannelSync(ctx context.Context,
 		private:         in.Private,
 		remoteCsvDelay:  remoteCsvDelay,
 		minConfs:        minConfs,
+		//	########### zkChannels ###########
+		zkChannelParams: in.ZkchannelParams,
+		//	########### zkChannels ###########
 	}
 
 	updateChan, errChan := r.server.OpenChannel(req)

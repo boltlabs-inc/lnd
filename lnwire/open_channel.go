@@ -161,7 +161,7 @@ func (o *OpenChannel) Encode(w io.Writer, pver uint32) error {
 		o.FirstCommitmentPoint,
 		o.ChannelFlags,
 		//	########### zkChannels ###########
-		// o.ZkChannelParams,
+		o.ZkChannelParams,
 	)
 }
 

@@ -1108,6 +1108,14 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	// ########### zkChannels start ###########
 	// TODO: skip this step for normal LN setup
 
+	// debugging: make sure bytes were loaded properly
+	zkchLog.Infof("ZkChannelParams example bytes raw: %v", msg.ZkChannelParams)
+	zkchLog.Infof("ZkChannelParams example bytes string: %v", msg.ZkChannelParams)
+
+	// // To load from rpc message
+	// var ZkChannelParams libbolt.ZkChannelParams
+	// err := json.Unmarshal(msg.ZkChannelParams, &ZkChannelParams)
+
 	// darius: Temporary solution to load zkchannelparams from json
 	dat, err := ioutil.ReadFile("../ZkChannelParams.json")
 	zkchLog.Infof("read ZkChannelParams.json file as string: %v", string(dat))
