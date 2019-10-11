@@ -32,9 +32,9 @@ type addressType uint8
 
 // ########### zkChannels ###########
 
-// ZkChannelParams contains parameters needed to open a zk payment channel:
+// ZkChannelParamsType contains parameters needed to open a zk payment channel:
 // channelToken, commitment, commitmentProof, custPkC.
-type ZkChannelParams []byte
+type ZkChannelParamsType []byte
 
 const (
 	// noAddr denotes a blank address. An address of this type indicates
@@ -425,7 +425,7 @@ func WriteElement(w io.Writer, element interface{}) error {
 			return err
 		}
 	// ########### zkChannels start ###########
-	case ZkChannelParams:
+	case ZkChannelParamsType:
 		// Darius: length copied from PkScript
 		ZkChannelParamsLength := len(e)
 		if ZkChannelParamsLength > 34 {
@@ -844,7 +844,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 		*e = addrBytes[:length]
 
 	// ########### zkChannels ###########
-	case *ZkChannelParams:
+	case *ZkChannelParamsType:
 		zkChannelParams, err := wire.ReadVarBytes(r, 0, 34, "zkchannelparams")
 		if err != nil {
 			return err

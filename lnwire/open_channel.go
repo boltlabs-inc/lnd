@@ -127,7 +127,8 @@ type OpenChannel struct {
 	//	########### zkChannels ###########
 	// ZkChannelParams contains three additional parameters needed to
 	// establish a zkchannel: channelToken, commitment, commitment proof.
-	ZkChannelParams []byte
+	// ZkChannelParams []byte // this didnt work
+	ZkChannelParams ZkChannelParamsType
 	//	########### zkChannels ###########
 }
 
@@ -191,7 +192,7 @@ func (o *OpenChannel) Decode(r io.Reader, pver uint32) error {
 		&o.FirstCommitmentPoint,
 		&o.ChannelFlags,
 		//	########### zkChannels ###########
-		o.ZkChannelParams,
+		&o.ZkChannelParams,
 	)
 }
 
