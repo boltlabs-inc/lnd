@@ -213,8 +213,10 @@ func (o *OpenChannel) MaxPayloadLength(uint32) uint32 {
 	// return 319
 
 	//	########### zkChannels ###########
-	// Darius: originally 'return 319'. Arbitrarily increasing to include
-	// zkchannelparams
-	return 400
+	// zkchannelparams is 68 bytes (11th Oct 2019)
+	// (32 * 2) + (8 * 6) + (4 * 1) + (2 * 2) + (33 * 6) + 1 + 2999
+	// return 387
 
+	// darius: didnt work with adding 2999 or 3000, so setting it to 9999
+	return 9999
 }

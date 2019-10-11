@@ -799,7 +799,7 @@ func openChannel(ctx *cli.Context) error {
 	}
 	_ = ioutil.WriteFile("../custState.json", file, 0644)
 
-	// // // DEBUGGING: Display channel parameters
+	// // debugging: Display channel parameters
 	// comBytesArr, err := json.Marshal(com)
 	// fmt.Println("\n\ncom as string =", string(comBytesArr))
 	// comProofBytesArr, err := json.Marshal(comProof)
@@ -814,25 +814,26 @@ func openChannel(ctx *cli.Context) error {
 		CustPkC:         custState.PkC,
 	}
 
-	zkChannelParamsBytes, err := json.Marshal(zkChannelParams.CustPkC)
+	zkChannelParamsBytes, err := json.Marshal(zkChannelParams)
 	if err != nil {
 		return err
 	}
-	fmt.Println("\nzkChannelParams byte array raw =", zkChannelParamsBytes)
-	fmt.Println("\nzkChannelParams as string =", string(zkChannelParamsBytes))
+	// // debugging:
+	// fmt.Println("\nzkChannelParams byte array raw =", zkChannelParamsBytes)
+	// fmt.Println("\nzkChannelParams as string =", string(zkChannelParamsBytes))
 
-	// req.ZkchannelParams = zkChannelParamsBytes
-	// debugging: try with one bye
-	req.ZkchannelParams = []byte("123")
+	req.ZkchannelParams = zkChannelParamsBytes
+	// // debugging: try with one bye
+	// req.ZkchannelParams = []byte("123")
 
-	fmt.Printf("\n\n kChannelParams type =%T ", req.ZkchannelParams)
+	fmt.Println("\n\n zkChannelParamsBytes has length ", len(zkChannelParamsBytes))
 
-	// Debugging: In case we want to save zkChannelParams as json
-	file, err = json.MarshalIndent(zkChannelParams, "", " ")
-	if err != nil {
-		return err
-	}
-	_ = ioutil.WriteFile("../ZkChannelParams.json", file, 0644)
+	// // debugging: In case we want to save zkChannelParams as json
+	// file, err = json.MarshalIndent(zkChannelParams, "", " ")
+	// if err != nil {
+	// 	return err
+	// }
+	// _ = ioutil.WriteFile("../ZkChannelParams.json", file, 0644)
 
 	// fmt.Println("ZkChannelParams: %v", ZkChannelParams)
 	// ########### zkChannels end ###########

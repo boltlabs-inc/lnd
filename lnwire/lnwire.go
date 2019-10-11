@@ -426,9 +426,9 @@ func WriteElement(w io.Writer, element interface{}) error {
 		}
 	// ########### zkChannels start ###########
 	case ZkChannelParamsType:
-		// Darius: length copied from PkScript
+		// zkChannelParams has length 2999 bytes (11th Oct 2019)
 		ZkChannelParamsLength := len(e)
-		if ZkChannelParamsLength > 34 {
+		if ZkChannelParamsLength > 2999 {
 			return fmt.Errorf("'ZkChannelParams' too long")
 		}
 		if err := wire.WriteVarBytes(w, 0, e); err != nil {
@@ -845,7 +845,8 @@ func ReadElement(r io.Reader, element interface{}) error {
 
 	// ########### zkChannels ###########
 	case *ZkChannelParamsType:
-		zkChannelParams, err := wire.ReadVarBytes(r, 0, 34, "zkchannelparams")
+		// zkChannelParams has length 2999 bytes (11th Oct 2019)
+		zkChannelParams, err := wire.ReadVarBytes(r, 0, 2999, "zkchannelparams")
 		if err != nil {
 			return err
 		}
