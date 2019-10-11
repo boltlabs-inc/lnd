@@ -191,7 +191,7 @@ func (o *OpenChannel) Decode(r io.Reader, pver uint32) error {
 		&o.FirstCommitmentPoint,
 		&o.ChannelFlags,
 		//	########### zkChannels ###########
-		// &o.ZkChannelParams,
+		o.ZkChannelParams,
 	)
 }
 
