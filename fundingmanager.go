@@ -1127,6 +1127,10 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	// zkchLog.Infof("ZkChannelParams after Unmarshal: %v", ZkChannelParams)
 	// zkchLog.Infof("ZkChannelParams.Commitment after Unmarshal: %v", ZkChannelParams.Commitment)
 
+	// darius TODO: save ZkChannelParams in the db file instead of json
+	file, err := json.MarshalIndent(ZkChannelParams, "", " ")
+	_ = ioutil.WriteFile("../ZkChannelParams.json", file, 0644)
+
 	// darius TODO: Load channelState and merchstate from Bolt.db instead
 	dat, err := ioutil.ReadFile("../merchState.json")
 	var merchState libbolt.MerchState
@@ -2257,30 +2261,13 @@ func (f *fundingManager) sendFundingLocked(
 	var peerKey [33]byte
 	copy(peerKey[:], completeChan.IdentityPub.SerializeCompressed())
 
-	// ########### zkChannels LN Mode start ###########
-	// if cfg.LNMode {  //
-	// ########### zkChannels ###########
-	// Next, we'll send over the funding locked message which marks that we
-	// consider the channel open by presenting the remote party with our
-	// next revocation key. Without the revocation key, the remote party
-	// will be unable to propose state transitions.
-	nextRevocation, err := channel.NextRevocationKey()
-	if err != nil {
-		return fmt.Errorf("unable to create next revocation: %v", err)
-	}
-	fundingLockedMsg := lnwire.NewFundingLocked(chanID, nextRevocation)
-
-	// ########### zkChannels ###########
-	// }
-	// ########### zkChannels LN Mode end ###########
-
 	// ########### zkChannels start ###########
-	if f.cfg.ZkMerchant {
-		fndgLog.Infof("This node (Merchant) generating PayToken")
+	var payTokenBytes []byte
 
+	if f.cfg.ZkMerchant {
 		dat, _ := ioutil.ReadFile("../channelState.json")
 		var channelState libbolt.ChannelState
-		err = json.Unmarshal(dat, &channelState)
+		err := json.Unmarshal(dat, &channelState)
 
 		dat, err = ioutil.ReadFile("../zkChannelParams.json")
 		var zkChannelParams libbolt.ZkChannelParams
@@ -2299,15 +2286,26 @@ func (f *fundingManager) sendFundingLocked(
 			zkchLog.Info("PayToken successfully generated")
 		}
 
-		file, err := json.MarshalIndent(payToken, "", " ")
-		if err != nil {
-			return err
-		}
+		payTokenBytes, err = json.Marshal(payToken)
 
-		_ = ioutil.WriteFile("../payToken.json", file, 0644)
-		zkchLog.Infof("payToken issued to Customer")
-
+		// // to save payToken as json
+		// file, err := json.MarshalIndent(payToken, "", " ")
+		// if err != nil {
+		// 	return err
+		// }
+		// _ = ioutil.WriteFile("../payToken.json", file, 0644)
+		zkchLog.Infof("payToken generated for Customer")
 	}
+
+	// Next, we'll send over the funding locked message which marks that we
+	// consider the channel open by presenting the remote party with our
+	// next revocation key. Without the revocation key, the remote party
+	// will be unable to propose state transitions.
+	nextRevocation, err := channel.NextRevocationKey()
+	if err != nil {
+		return fmt.Errorf("unable to create next revocation: %v", err)
+	}
+	fundingLockedMsg := lnwire.NewFundingLocked(chanID, nextRevocation, payTokenBytes)
 
 	// If the peer has disconnected before we reach this point, we will need
 	// to wait for him to come back online before sending the fundingLocked
@@ -2701,9 +2699,8 @@ func (f *fundingManager) handleFundingLocked(fmsg *fundingLockedMsg) {
 		var custState libbolt.CustState
 		err = json.Unmarshal(dat, &custState)
 
-		dat, _ = ioutil.ReadFile("../payToken.json")
 		var payToken libbolt.Signature
-		err = json.Unmarshal(dat, &payToken)
+		err = json.Unmarshal(fmsg.msg.PayToken, &payToken)
 
 		isChannelEstablished, channelState, custState, err := libbolt.BidirectionalEstablishCustomerFinal(
 			channelState, custState, payToken)

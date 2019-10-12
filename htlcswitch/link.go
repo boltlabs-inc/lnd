@@ -652,8 +652,13 @@ func (l *channelLink) syncChanStates() error {
 					"revocation: %v", err)
 			}
 
+			// ########### zkChannels ###########
+			// darius TODO: Find a better solution for this.
+			// Since we modified NewFundingLocked
+			// to include PayToken, we put in a dummy
+			// []byte{0} value so the function works.
 			fundingLockedMsg := lnwire.NewFundingLocked(
-				l.ChanID(), nextRevocation,
+				l.ChanID(), nextRevocation, []byte{0},
 			)
 			err = l.cfg.Peer.SendMessage(false, fundingLockedMsg)
 			if err != nil {

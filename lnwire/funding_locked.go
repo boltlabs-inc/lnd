@@ -22,29 +22,19 @@ type FundingLocked struct {
 
 	// ########### zkChannels ###########
 	// Merchant sends PayToken to customer after funding has been locked
-	// PayToken string
+	PayToken ZkChannelSigType
 	// ########### zkChannels ###########
 }
 
 // NewFundingLocked creates a new FundingLocked message, populating it with the
 // necessary IDs and revocation secret.
-func NewFundingLocked(cid ChannelID, npcp *btcec.PublicKey) *FundingLocked {
+func NewFundingLocked(cid ChannelID, npcp *btcec.PublicKey, paytkn ZkChannelSigType) *FundingLocked {
 	return &FundingLocked{
 		ChanID:                 cid,
 		NextPerCommitmentPoint: npcp,
+		PayToken:               paytkn,
 	}
 }
-
-// ########### zkChannels ###########
-// NewFundingLockedWithPayToken creates a new FundingLocked message, populating it
-// with the necessary IDs and PayToken
-// func NewFundingLockedWithPayToken(cid ChannelID, paytkn string) *FundingLocked {
-// 	return &FundingLocked{
-// 		ChanID:   cid,
-// 		PayToken: paytkn,
-// 	}
-// }
-// ########### zkChannels ###########
 
 // A compile time check to ensure FundingLocked implements the lnwire.Message
 // interface.
@@ -58,7 +48,8 @@ var _ Message = (*FundingLocked)(nil)
 func (c *FundingLocked) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
 		&c.ChanID,
-		&c.NextPerCommitmentPoint)
+		&c.NextPerCommitmentPoint,
+		&c.PayToken)
 }
 
 // Encode serializes the target FundingLocked message into the passed io.Writer
@@ -69,7 +60,8 @@ func (c *FundingLocked) Decode(r io.Reader, pver uint32) error {
 func (c *FundingLocked) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
 		c.ChanID,
-		c.NextPerCommitmentPoint)
+		c.NextPerCommitmentPoint,
+		c.PayToken)
 }
 
 // MsgType returns the uint32 code which uniquely identifies this message as a
@@ -86,14 +78,18 @@ func (c *FundingLocked) MsgType() MessageType {
 //
 // This is part of the lnwire.Message interface.
 func (c *FundingLocked) MaxPayloadLength(uint32) uint32 {
-	var length uint32
+	// var length uint32
 
-	// ChanID - 32 bytes
-	length += 32
+	// // ChanID - 32 bytes
+	// length += 32
 
-	// NextPerCommitmentPoint - 33 bytes
-	length += 33
+	// // NextPerCommitmentPoint - 33 bytes
+	// length += 33
 
-	// 65 bytes
-	return length
+	// // 65 bytes
+	// // return length
+
+	// ########### zkChannels ###########
+	// increase payload for PayToken
+	return 9999
 }
