@@ -92,7 +92,7 @@ type AcceptChannel struct {
 	// Customer to close the channel unilaterally, paying out to each party
 	// the channel balances specified in the Customer's original openChannel
 	// request.
-	CloseToken string
+	CloseToken ZkChannelSigType
 	// ########### zkChannels ###########
 }
 
@@ -121,6 +121,8 @@ func (a *AcceptChannel) Encode(w io.Writer, pver uint32) error {
 		a.DelayedPaymentPoint,
 		a.HtlcPoint,
 		a.FirstCommitmentPoint,
+		// ########### zkChannels ###########
+		a.CloseToken,
 	)
 }
 
@@ -145,6 +147,8 @@ func (a *AcceptChannel) Decode(r io.Reader, pver uint32) error {
 		&a.DelayedPaymentPoint,
 		&a.HtlcPoint,
 		&a.FirstCommitmentPoint,
+		// ########### zkChannels ###########
+		&a.CloseToken,
 	)
 }
 
@@ -161,6 +165,10 @@ func (a *AcceptChannel) MsgType() MessageType {
 //
 // This is part of the lnwire.Message interface.
 func (a *AcceptChannel) MaxPayloadLength(uint32) uint32 {
-	// 32 + (8 * 4) + (4 * 1) + (2 * 2) + (33 * 6)
-	return 270
+	// // 32 + (8 * 4) + (4 * 1) + (2 * 2) + (33 * 6)
+	// return 270
+
+	// ########### zkChannels ###########
+	// increase to 478 for zkChannelSig
+	return 478
 }

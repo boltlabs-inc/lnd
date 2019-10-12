@@ -1146,15 +1146,17 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	}
 	zkchLog.Infof("Customer Commitment Proof validated.")
 
-	// darius: temporary solution - savings closeToken as json
-	file, err := json.MarshalIndent(closeToken, "", " ")
-	if err != nil {
-		// darius: not sure why the line below doesn't work
-		// return err
-	}
-	_ = ioutil.WriteFile("../closeToken.json", file, 0644)
+	CloseTokenBytes, err := json.Marshal(closeToken)
 
-	zkchLog.Infof("Customer CloseToken issued.")
+	// // darius: temporary solution - savings closeToken as json
+	// file, err := json.MarshalIndent(closeToken, "", " ")
+	// if err != nil {
+	// 	// darius: not sure why the line below doesn't work
+	// 	// return err
+	// }
+	// _ = ioutil.WriteFile("../closeToken.json", file, 0644)
+
+	// zkchLog.Infof("Customer CloseToken issued.")
 
 	// ########### zkChannels end ###########
 
@@ -1415,7 +1417,7 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 		HtlcPoint:            ourContribution.HtlcBasePoint.PubKey,
 		FirstCommitmentPoint: ourContribution.FirstCommitmentPoint,
 		// ########### zkChannels ###########
-		// CloseToken:			  closeToken,
+		CloseToken: CloseTokenBytes,
 		// ########### zkChannels ###########
 
 	}
@@ -1565,9 +1567,9 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 	var custState libbolt.CustState
 	err = json.Unmarshal(dat, &custState)
 
-	dat, err = ioutil.ReadFile("../closeToken.json")
+	// // To load from rpc message
 	var closeToken libbolt.Signature
-	err = json.Unmarshal(dat, &closeToken)
+	err = json.Unmarshal(msg.CloseToken, &closeToken)
 
 	isTokenValid, channelState, custState, err :=
 		libbolt.BidirectionalVerifyCloseToken(channelState, custState, closeToken)

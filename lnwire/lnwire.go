@@ -36,6 +36,10 @@ type addressType uint8
 // channelToken, commitment, commitmentProof, custPkC.
 type ZkChannelParamsType []byte
 
+// ZkChannelSigType is the type for signatures on zkChannels. It is the type for
+// CloseToken, CustPkC
+type ZkChannelSigType []byte
+
 const (
 	// noAddr denotes a blank address. An address of this type indicates
 	// that a node doesn't have any advertised addresses.
@@ -430,6 +434,16 @@ func WriteElement(w io.Writer, element interface{}) error {
 		ZkChannelParamsLength := len(e)
 		if ZkChannelParamsLength > 2999 {
 			return fmt.Errorf("'ZkChannelParams' too long")
+		}
+		if err := wire.WriteVarBytes(w, 0, e); err != nil {
+			return err
+		}
+
+	case ZkChannelSigType:
+		// darius TODO: put in the actual length of CloseToken and CustPkC
+		ZkSigLength := len(e)
+		if ZkSigLength > 2999 {
+			return fmt.Errorf("'ZkChannelSignature' too long")
 		}
 		if err := wire.WriteVarBytes(w, 0, e); err != nil {
 			return err
@@ -851,6 +865,15 @@ func ReadElement(r io.Reader, element interface{}) error {
 			return err
 		}
 		*e = zkChannelParams
+
+	case *ZkChannelSigType:
+		// zkChannelParams has length 2999 bytes (11th Oct 2019)
+		// darius: not sure what the field name at the end is for
+		zkChannelSig, err := wire.ReadVarBytes(r, 0, 2999, "zkchannelsig")
+		if err != nil {
+			return err
+		}
+		*e = zkChannelSig
 	// ########### zkChannels ###########
 
 	default:

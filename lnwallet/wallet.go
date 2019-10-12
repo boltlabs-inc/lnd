@@ -125,6 +125,7 @@ type InitFundingReserveMsg struct {
 	resp chan *ChannelReservation
 
 	// ZkChannelParams contains channelToken, com, comProof, custPkC.
+	// darius TODO: check if this belongs here
 	ZkChannelParams []byte
 }
 
