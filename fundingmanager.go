@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"sync"
 	"time"
 
+	"github.com/boltdb/bolt"
 	"github.com/boltlabs-inc/libbolt-go"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -29,6 +31,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/routing"
+	"github.com/lightningnetwork/lnd/zkchanneldb"
 	"golang.org/x/crypto/salsa20"
 )
 
@@ -1131,12 +1134,33 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	file, err := json.MarshalIndent(ZkChannelParams, "", " ")
 	_ = ioutil.WriteFile("../ZkChannelParams.json", file, 0644)
 
-	// darius TODO: Load channelState and merchstate from Bolt.db instead
-	dat, err := ioutil.ReadFile("../merchState.json")
-	var merchState libbolt.MerchState
-	err = json.Unmarshal(dat, &merchState)
+	// open/load zkMerchDB
+	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
 
-	dat, err = ioutil.ReadFile("../channelState.json")
+	var merchStateBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		k, v := c.Seek([]byte("merchStateKey"))
+		merchStateBytes = v
+
+		// zkchLog.Infof("Loaded merchState in zkMerchDB. key and value: %v : %v", k, v)
+		_ = k
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var merchState libbolt.MerchState
+	err = json.Unmarshal(merchStateBytes, &merchState)
+
+	// darius: Old method for Loading channelState and merchstate from json instead
+	// dat, err := ioutil.ReadFile("../merchState.json")
+	// var merchState libbolt.MerchState
+	// err = json.Unmarshal(dat, &merchState)
+
+	dat, err := ioutil.ReadFile("../channelState.json")
 	var channelState libbolt.ChannelState
 	err = json.Unmarshal(dat, &channelState)
 

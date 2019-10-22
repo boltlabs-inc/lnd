@@ -57,6 +57,7 @@ import (
 	"github.com/lightningnetwork/lnd/walletunlocker"
 	"github.com/lightningnetwork/lnd/watchtower"
 	"github.com/lightningnetwork/lnd/watchtower/wtdb"
+	"github.com/lightningnetwork/lnd/zkchanneldb"
 )
 
 const (
@@ -138,52 +139,87 @@ func Main(lisCfg ListenerCfg) error {
 		build.Version(), build.Deployment, build.LoggingType)
 
 	// ########### zkChannels start ###########
+	var merchStateBytes []byte
 	// Do merchant initialization if merchant flag was set
-	if cfg.ZkMerchant {
-		zkchLog.Infof("Initializing merchant setup")
-		// // Darius TODO: Check for existing file with merchstate, otherwise create one
-		// 	If filepath/Bolt.db exists {
-		// 		Load Bolt.db
-		// 	}
-		channelState, _ := libbolt.BidirectionalChannelSetup("zkChannel", false)
+	if !cfg.LNMode {
+		if cfg.ZkMerchant {
+			zkchLog.Infof("Initializing merchant setup")
 
-		merchName := cfg.Alias
-		if merchName == "" {
-			merchName = "Merchant"
+			zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+			if err != nil {
+				return err
+			}
+			// defer zkMerchDB.Close()
+
+			// // Darius TODO: Check for existing file with merchstate, otherwise create one
+			// 	If filepath/Bolt.db exists {
+			// 		Load Bolt.db
+			// 	}
+			channelState, _ := libbolt.BidirectionalChannelSetup("zkChannel", false)
+
+			merchName := cfg.Alias
+			if merchName == "" {
+				merchName = "Merchant"
+			}
+
+			channelToken, merchState, channelState, err := libbolt.BidirectionalInitMerchant(channelState, merchName)
+			if err != nil {
+				return err
+			}
+
+			// // debugging
+			// byteArray, err := json.Marshal(channelToken)
+			// fmt.Println("ChannelToken as a string (to be given to customers) = ", string(byteArray))
+			// if err != nil {
+			// 	return err
+			// }
+
+			file, err := json.MarshalIndent(channelToken, "", " ")
+			if err != nil {
+				return err
+			}
+			_ = ioutil.WriteFile("../zkchannelToken.json", file, 0644)
+
+			// save merchStateBytes in zkMerchDB
+			merchStateBytes, _ = json.Marshal(merchState)
+			zkchanneldb.AddmerchState(zkMerchDB, merchStateBytes)
+
+			// // debugging
+			// err = zkMerchDB.View(func(tx *bolt.Tx) error {
+			// 	b := tx.Bucket(zkchanneldb.MerchBucket)
+			// 	b.ForEach(func(k, v []byte) error {
+			// 		zkchLog.Infof("Saved this as merchState in zkMerchDB. key and value: %v : %v", k, v)
+			// 		return nil
+			// 	})
+			// 	return nil
+			// })
+
+			// Save merchState and channelState in json files.
+			// TODO. Save them in Bolt.db instead
+			file, err = json.MarshalIndent(merchState, "", " ")
+			if err != nil {
+				return err
+			}
+			_ = ioutil.WriteFile("../merchState.json", file, 0644)
+
+			file, err = json.MarshalIndent(channelState, "", " ")
+			if err != nil {
+				return err
+			}
+			// _ = ioutil.WriteFile("channelState.json", file, 0644)
+			_ = ioutil.WriteFile("../channelState.json", file, 0644)
+
+			zkMerchDB.Close()
+		} else { // if not zk merchant, then create customer db.
+			zkchLog.Infof("Creating customer zkchannel db")
+
+			zkCustDB, err := zkchanneldb.SetupZkCustDB()
+			if err != nil {
+				return err
+			}
+			zkCustDB.Close()
+			// defer zkCustDB.Close()
 		}
-
-		channelToken, merchState, channelState, err := libbolt.BidirectionalInitMerchant(channelState, merchName)
-		if err != nil {
-			return err
-		}
-
-		byteArray, err := json.Marshal(channelToken)
-		fmt.Println("ChannelToken as a string (to be given to customers) = ", string(byteArray))
-		if err != nil {
-			return err
-		}
-
-		file, err := json.MarshalIndent(channelToken, "", " ")
-		if err != nil {
-			return err
-		}
-		_ = ioutil.WriteFile("../zkchannelToken.json", file, 0644)
-
-		// Save merchState and channelState in json files.
-		// TODO. Save them in Bolt.db instead
-		file, err = json.MarshalIndent(merchState, "", " ")
-		if err != nil {
-			return err
-		}
-		_ = ioutil.WriteFile("../merchState.json", file, 0644)
-
-		file, err = json.MarshalIndent(channelState, "", " ")
-		if err != nil {
-			return err
-		}
-		// _ = ioutil.WriteFile("channelState.json", file, 0644)
-		_ = ioutil.WriteFile("../channelState.json", file, 0644)
-
 	}
 	// ########### zkChannels end ###########
 

@@ -5,6 +5,7 @@ require (
 	github.com/NebulousLabs/fastrand v0.0.0-20181203155948-6fb6489aac4e // indirect
 	github.com/NebulousLabs/go-upnp v0.0.0-20180202185039-29b680b06c82
 	github.com/Yawning/aez v0.0.0-20180114000226-4dad034d9db2
+	github.com/boltdb/bolt v1.3.1
 	github.com/boltlabs-inc/libbolt-go v0.0.0-20190928180757-7e5a4054d4c0
 	github.com/btcsuite/btcd v0.0.0-20190824003749-130ea5bddde3
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
