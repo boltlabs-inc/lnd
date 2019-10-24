@@ -24,6 +24,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/routerrpc"
 	"github.com/lightningnetwork/lnd/walletunlocker"
+	"github.com/lightningnetwork/lnd/zkchanneldb"
 	"github.com/urfave/cli"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/context"
@@ -792,16 +793,18 @@ func openChannel(ctx *cli.Context) error {
 		return err
 	}
 
-	// zkCustDB, err := zkchanneldb.SetupZkCustDB()
+	// zkDB add custState and channelToken
+	zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
-	// // save merchState and channelToken in zkCustDB
-	// custStateBytes, _ := json.Marshal(custState)
-	// zkchanneldb.AddCustState(zkCustDB, custStateBytes)
+	custStateBytes, _ := json.Marshal(custState)
 
-	// channelTokenBytes, _ := json.Marshal(channelToken)
-	// zkchanneldb.AddCustChannelToken(zkCustDB, channelTokenBytes)
+	zkchanneldb.AddCustState(zkCustDB, custStateBytes)
 
-	// zkCustDB.Close()
+	channelTokenBytes, _ := json.Marshal(channelToken)
+
+	zkchanneldb.AddCustChannelToken(zkCustDB, channelTokenBytes)
+
+	zkCustDB.Close()
 
 	file, err := json.MarshalIndent(channelToken, "", " ")
 	if err != nil {

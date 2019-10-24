@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"sync"
 	"time"
 
+	"github.com/boltdb/bolt"
 	"github.com/boltlabs-inc/libbolt-go"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -29,6 +31,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/routing"
+	"github.com/lightningnetwork/lnd/zkchanneldb"
 	"golang.org/x/crypto/salsa20"
 )
 
@@ -1567,45 +1570,49 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 
 	// ########### zkChannels ###########
 
-	// zkCustDB, err := zkchanneldb.SetupZkCustDB()
+	// zkDB open custState
+	zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
-	// // read custState from ZkCustDB
-	// var custStateBytes []byte
-	// err = zkCustDB.View(func(tx *bolt.Tx) error {
-	// 	c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-	// 	k, v := c.Seek([]byte("custStateKey"))
-	// 	custStateBytes = v
-	// 	_ = k
-	// 	return nil
-	// })
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	// read custState from ZkCustDB
+	var custStateBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		k, v := c.Seek([]byte("custStateKey"))
+		custStateBytes = v
+		_ = k
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// var custState libbolt.CustState
-	// err = json.Unmarshal(custStateBytes, &custState)
+	var custState2 libbolt.CustState
+	err = json.Unmarshal(custStateBytes, &custState2)
 
-	// zkCustDB.Close()
+	zkCustDB.Close()
 
 	dat, err := ioutil.ReadFile("../custState.json")
 	var custState libbolt.CustState
 	err = json.Unmarshal(dat, &custState)
+
+	// zkDB test
+	if custState.PkC == custState2.PkC {
+		zkchLog.Infof("handFundingAccept: custState.PkC a custState2.PkC are equal")
+	} else {
+		zkchLog.Infof("handFundingAccept: custState.PkC a custState2.PkC are NOT equal")
+	}
 
 	// darius TODO: Load channelState and custState from Bolt.db instead
 	dat, err = ioutil.ReadFile("../channelState.json")
 	var channelState libbolt.ChannelState
 	err = json.Unmarshal(dat, &channelState)
 
-	// dat, err = ioutil.ReadFile("../custState.json")
-	// var custState libbolt.CustState
-	// err = json.Unmarshal(dat, &custState)
-
 	// // To load from rpc message
 	var closeToken libbolt.Signature
 	err = json.Unmarshal(msg.CloseToken, &closeToken)
 
 	isTokenValid, channelState, custState, err :=
-		libbolt.BidirectionalVerifyCloseToken(channelState, custState, closeToken)
+		libbolt.BidirectionalVerifyCloseToken(channelState, custState2, closeToken)
 	if err != nil {
 		zkchLog.Errorf("Unable to process close token from %v: %v",
 			peerKey, err)
@@ -2734,45 +2741,48 @@ func (f *fundingManager) handleFundingLocked(fmsg *fundingLockedMsg) {
 	// if !f.cfg.LNMode && !f.cfg.ZkMerchant {   // darius TODO: add all !LNMode cases
 	if !f.cfg.ZkMerchant {
 
-		// // Load custState from DB
-		// zkCustDB, err := zkchanneldb.SetupZkCustDB()
+		// Load custState from DB
+		zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
-		// // read custState from ZkCustDB
-		// var custStateBytes []byte
-		// err = zkCustDB.View(func(tx *bolt.Tx) error {
-		// 	c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-		// 	k, v := c.Seek([]byte("custStateKey"))
-		// 	custStateBytes = v
-		// 	_ = k
-		// 	return nil
-		// })
-		// if err != nil {
-		// 	log.Fatal(err)
-		// }
+		// read custState from ZkCustDB
+		var custStateBytes []byte
+		err = zkCustDB.View(func(tx *bolt.Tx) error {
+			c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+			k, v := c.Seek([]byte("custStateKey"))
+			custStateBytes = v
+			_ = k
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		// var custState libbolt.CustState
-		// err = json.Unmarshal(custStateBytes, &custState)
+		var custState2 libbolt.CustState
+		err = json.Unmarshal(custStateBytes, &custState2)
 
-		// zkCustDB.Close()
+		zkCustDB.Close()
 
 		dat, _ := ioutil.ReadFile("../channelState.json")
 		var channelState libbolt.ChannelState
-		err := json.Unmarshal(dat, &channelState)
+		err = json.Unmarshal(dat, &channelState)
 		_ = err
 
 		dat, err = ioutil.ReadFile("../custState.json")
 		var custState libbolt.CustState
 		err = json.Unmarshal(dat, &custState)
 
-		// dat, _ = ioutil.ReadFile("../custState.json")
-		// var custState libbolt.CustState
-		// err = json.Unmarshal(dat, &custState)
+		// zkDB test
+		if custState.PkC == custState2.PkC {
+			zkchLog.Infof("handFundingLocked: custState.PkC a custState2.PkC are equal")
+		} else {
+			zkchLog.Infof("handFundingLocked: custState.PkC a custState2.PkC are NOT equal")
+		}
 
 		var payToken libbolt.Signature
 		err = json.Unmarshal(fmsg.msg.PayToken, &payToken)
 
 		isChannelEstablished, channelState, custState, err := libbolt.BidirectionalEstablishCustomerFinal(
-			channelState, custState, payToken)
+			channelState, custState2, payToken)
 
 		// darius TODO: find out why payToken is not verified
 		zkchLog.Infof("isChannelEstablished: %v", isChannelEstablished)
@@ -2790,6 +2800,12 @@ func (f *fundingManager) handleFundingLocked(fmsg *fundingLockedMsg) {
 		}
 
 		zkchLog.Info("payToken from merchant was verified")
+
+		// zkDB add update custState
+		zkCustDB, err = zkchanneldb.SetupZkCustDB()
+		custStateBytes, _ = json.Marshal(custState)
+		zkchanneldb.AddCustState(zkCustDB, custStateBytes)
+		zkCustDB.Close()
 
 	}
 	// ########### zkChannels end ###########
