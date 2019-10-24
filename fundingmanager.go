@@ -1584,16 +1584,35 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 	_, sig := resCtx.reservation.OurSignatures()
 
 	// ########### zkChannels ###########
-	// else (if CloseToken DOES exist):
+
+	zkCustDB, err := zkchanneldb.SetupZkCustDB()
+
+	// read custState from ZkCustDB
+	var custStateBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		k, v := c.Seek([]byte("custStateKey"))
+		custStateBytes = v
+		_ = k
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var custState libbolt.CustState
+	err = json.Unmarshal(custStateBytes, &custState)
+
+	zkCustDB.Close()
 
 	// darius TODO: Load channelState and custState from Bolt.db instead
 	dat, err := ioutil.ReadFile("../channelState.json")
 	var channelState libbolt.ChannelState
 	err = json.Unmarshal(dat, &channelState)
 
-	dat, err = ioutil.ReadFile("../custState.json")
-	var custState libbolt.CustState
-	err = json.Unmarshal(dat, &custState)
+	// dat, err = ioutil.ReadFile("../custState.json")
+	// var custState libbolt.CustState
+	// err = json.Unmarshal(dat, &custState)
 
 	// // To load from rpc message
 	var closeToken libbolt.Signature
@@ -2333,6 +2352,8 @@ func (f *fundingManager) sendFundingLocked(
 
 		payTokenBytes, err = json.Marshal(payToken)
 
+		zkMerchDB.Close()
+
 		// // to save payToken as json
 		// file, err := json.MarshalIndent(payToken, "", " ")
 		// if err != nil {
@@ -2740,9 +2761,30 @@ func (f *fundingManager) handleFundingLocked(fmsg *fundingLockedMsg) {
 		err := json.Unmarshal(dat, &channelState)
 		_ = err
 
-		dat, _ = ioutil.ReadFile("../custState.json")
+		// Load custState from DB
+		zkCustDB, err := zkchanneldb.SetupZkCustDB()
+
+		// read custState from ZkCustDB
+		var custStateBytes []byte
+		err = zkCustDB.View(func(tx *bolt.Tx) error {
+			c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+			k, v := c.Seek([]byte("custStateKey"))
+			custStateBytes = v
+			_ = k
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		var custState libbolt.CustState
-		err = json.Unmarshal(dat, &custState)
+		err = json.Unmarshal(custStateBytes, &custState)
+
+		zkCustDB.Close()
+
+		// dat, _ = ioutil.ReadFile("../custState.json")
+		// var custState libbolt.CustState
+		// err = json.Unmarshal(dat, &custState)
 
 		var payToken libbolt.Signature
 		err = json.Unmarshal(fmsg.msg.PayToken, &payToken)

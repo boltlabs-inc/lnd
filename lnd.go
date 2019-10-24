@@ -182,7 +182,7 @@ func Main(lisCfg ListenerCfg) error {
 
 			// save merchStateBytes in zkMerchDB
 			merchStateBytes, _ = json.Marshal(merchState)
-			zkchanneldb.AddmerchState(zkMerchDB, merchStateBytes)
+			zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
 
 			// // debugging
 			// err = zkMerchDB.View(func(tx *bolt.Tx) error {
