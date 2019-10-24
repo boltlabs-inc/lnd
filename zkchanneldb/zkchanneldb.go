@@ -127,3 +127,33 @@ func AddMerchChannelToken(db *bolt.DB, channelTokenBytes []byte) error {
 	fmt.Println("Added merch channelToken Entry")
 	return err
 }
+
+// AddCustChannelState adds merchState to the zkMerchDB
+func AddCustChannelState(db *bolt.DB, channelStateBytes []byte) error {
+
+	err := db.Update(func(tx *bolt.Tx) error {
+		err := tx.Bucket(CustBucket).Put([]byte("channelStateKey"), channelStateBytes)
+		if err != nil {
+			return fmt.Errorf("could not insert entry: %v", err)
+		}
+
+		return nil
+	})
+	fmt.Println("Added cust channelState Entry")
+	return err
+}
+
+// AddMerchChannelState adds merchState to the zkMerchDB
+func AddMerchChannelState(db *bolt.DB, channelStateBytes []byte) error {
+
+	err := db.Update(func(tx *bolt.Tx) error {
+		err := tx.Bucket(MerchBucket).Put([]byte("channelStateKey"), channelStateBytes)
+		if err != nil {
+			return fmt.Errorf("could not insert entry: %v", err)
+		}
+
+		return nil
+	})
+	fmt.Println("Added merch channelState Entry")
+	return err
+}

@@ -206,7 +206,6 @@ func Main(lisCfg ListenerCfg) error {
 			if err != nil {
 				return err
 			}
-			// _ = ioutil.WriteFile("channelState.json", file, 0644)
 			_ = ioutil.WriteFile("../channelState.json", file, 0644)
 
 			zkMerchDB.Close()
