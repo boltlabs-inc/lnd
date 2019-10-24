@@ -196,11 +196,11 @@ func Main(lisCfg ListenerCfg) error {
 
 			// Save merchState and channelState in json files.
 			// TODO. Save them in Bolt.db instead
-			file, err = json.MarshalIndent(merchState, "", " ")
-			if err != nil {
-				return err
-			}
-			_ = ioutil.WriteFile("../merchState.json", file, 0644)
+			// file, err = json.MarshalIndent(merchState, "", " ")
+			// if err != nil {
+			// 	return err
+			// }
+			// _ = ioutil.WriteFile("../merchState.json", file, 0644)
 
 			file, err = json.MarshalIndent(channelState, "", " ")
 			if err != nil {

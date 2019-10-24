@@ -2289,17 +2289,38 @@ func (f *fundingManager) sendFundingLocked(
 	var payTokenBytes []byte
 
 	if f.cfg.ZkMerchant {
+
+		// open/load zkMerchDB
+		zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
 		dat, _ := ioutil.ReadFile("../channelState.json")
 		var channelState libbolt.ChannelState
-		err := json.Unmarshal(dat, &channelState)
+		err = json.Unmarshal(dat, &channelState)
 
 		dat, err = ioutil.ReadFile("../zkChannelParams.json")
 		var zkChannelParams libbolt.ZkChannelParams
 		err = json.Unmarshal(dat, &zkChannelParams)
 
-		dat, err = ioutil.ReadFile("../merchState.json")
+		// darius: old method loading from json
+		// dat, err = ioutil.ReadFile("../merchState.json")
+
+		var merchStateBytes []byte
+		err = zkMerchDB.View(func(tx *bolt.Tx) error {
+			c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+			k, v := c.Seek([]byte("merchStateKey"))
+			merchStateBytes = v
+
+			// zkchLog.Infof("Loaded merchState in zkMerchDB. key and value: %v : %v", k, v)
+			_ = k
+
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		var merchState libbolt.MerchState
-		err = json.Unmarshal(dat, &merchState)
+		err = json.Unmarshal(merchStateBytes, &merchState)
 
 		payToken, err := libbolt.BidirectionalEstablishMerchantIssuePayToken(
 			channelState, zkChannelParams.Commitment, merchState)
