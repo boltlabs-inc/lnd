@@ -1111,24 +1111,9 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	// ########### zkChannels start ###########
 	// TODO: skip this step for normal LN setup
 
-	// // debugging: make sure bytes were loaded properly
-	// zkchLog.Infof("ZkChannelParams example bytes raw: %v", msg.ZkChannelParams)
-	// zkchLog.Infof("ZkChannelParams example bytes string: %v", string(msg.ZkChannelParams))
-
 	// // To load from rpc message
 	var ZkChannelParams libbolt.ZkChannelParams
 	err := json.Unmarshal(msg.ZkChannelParams, &ZkChannelParams)
-
-	// // darius: Temporary solution to load zkchannelparams from json
-	// dat, err := ioutil.ReadFile("../ZkChannelParams.json")
-	// zkchLog.Infof("read ZkChannelParams.json file as string: %v", string(dat))
-
-	// var ZkChannelParams libbolt.ZkChannelParams
-	// err = json.Unmarshal(dat, &ZkChannelParams)
-
-	// // debugging: just making sure it was loaded properly
-	// zkchLog.Infof("ZkChannelParams after Unmarshal: %v", ZkChannelParams)
-	// zkchLog.Infof("ZkChannelParams.Commitment after Unmarshal: %v", ZkChannelParams.Commitment)
 
 	// darius TODO: save ZkChannelParams in the db file instead of json
 	file, err := json.MarshalIndent(ZkChannelParams, "", " ")
@@ -2320,17 +2305,11 @@ func (f *fundingManager) sendFundingLocked(
 		var zkChannelParams libbolt.ZkChannelParams
 		err = json.Unmarshal(dat, &zkChannelParams)
 
-		// darius: old method loading from json
-		// dat, err = ioutil.ReadFile("../merchState.json")
-
 		var merchStateBytes []byte
 		err = zkMerchDB.View(func(tx *bolt.Tx) error {
 			c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
-			k, v := c.Seek([]byte("merchStateKey"))
+			_, v := c.Seek([]byte("merchStateKey"))
 			merchStateBytes = v
-
-			// zkchLog.Infof("Loaded merchState in zkMerchDB. key and value: %v : %v", k, v)
-			_ = k
 
 			return nil
 		})
@@ -2354,12 +2333,6 @@ func (f *fundingManager) sendFundingLocked(
 
 		zkMerchDB.Close()
 
-		// // to save payToken as json
-		// file, err := json.MarshalIndent(payToken, "", " ")
-		// if err != nil {
-		// 	return err
-		// }
-		// _ = ioutil.WriteFile("../payToken.json", file, 0644)
 		zkchLog.Infof("payToken generated for Customer")
 	}
 
