@@ -24,7 +24,6 @@ import (
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/routerrpc"
 	"github.com/lightningnetwork/lnd/walletunlocker"
-	"github.com/lightningnetwork/lnd/zkchanneldb"
 	"github.com/urfave/cli"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/context"
@@ -793,24 +792,28 @@ func openChannel(ctx *cli.Context) error {
 		return err
 	}
 
-	// // Update channelToken json
-	// file, err := json.MarshalIndent(custState, "", " ")
-	// if err != nil {
-	// 	return err
-	// }
-	// _ = ioutil.WriteFile("../custState.json", file, 0644)
+	// zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
-	// open db
-	zkCustDB, err := zkchanneldb.SetupZkCustDB()
+	// // save merchState and channelToken in zkCustDB
+	// custStateBytes, _ := json.Marshal(custState)
+	// zkchanneldb.AddCustState(zkCustDB, custStateBytes)
 
-	// save merchState and channelToken in zkCustDB
-	custStateBytes, _ := json.Marshal(custState)
-	zkchanneldb.AddCustState(zkCustDB, custStateBytes)
+	// channelTokenBytes, _ := json.Marshal(channelToken)
+	// zkchanneldb.AddCustChannelToken(zkCustDB, channelTokenBytes)
 
-	channelTokenBytes, _ := json.Marshal(channelToken)
-	zkchanneldb.AddCustChannelToken(zkCustDB, channelTokenBytes)
+	// zkCustDB.Close()
 
-	zkCustDB.Close()
+	file, err := json.MarshalIndent(channelToken, "", " ")
+	if err != nil {
+		return err
+	}
+	_ = ioutil.WriteFile("../zkchannelToken.json", file, 0644)
+
+	file, err = json.MarshalIndent(custState, "", " ")
+	if err != nil {
+		return err
+	}
+	_ = ioutil.WriteFile("../custState.json", file, 0644)
 
 	zkChannelParams := libbolt.ZkChannelParams{
 		ChannelToken:    channelToken,
@@ -823,24 +826,11 @@ func openChannel(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	// // debugging:
-	// fmt.Println("\nzkChannelParams byte array raw =", zkChannelParamsBytes)
-	// fmt.Println("\nzkChannelParams as string =", string(zkChannelParamsBytes))
 
 	req.ZkchannelParams = zkChannelParamsBytes
-	// // debugging: try with one bye
-	// req.ZkchannelParams = []byte("123")
 
 	fmt.Println("\n\n zkChannelParamsBytes has length ", len(zkChannelParamsBytes))
 
-	// // debugging: In case we want to save zkChannelParams as json
-	// file, err = json.MarshalIndent(zkChannelParams, "", " ")
-	// if err != nil {
-	// 	return err
-	// }
-	// _ = ioutil.WriteFile("../ZkChannelParams.json", file, 0644)
-
-	// fmt.Println("ZkChannelParams: %v", ZkChannelParams)
 	// ########### zkChannels end ###########
 
 	req.Private = ctx.Bool("private")

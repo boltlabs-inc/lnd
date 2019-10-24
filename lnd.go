@@ -168,9 +168,15 @@ func Main(lisCfg ListenerCfg) error {
 			}
 			_ = ioutil.WriteFile("../zkchannelToken.json", file, 0644)
 
-			// save merchStateBytes in zkMerchDB
-			merchStateBytes, _ := json.Marshal(merchState)
-			zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+			file, err = json.MarshalIndent(merchState, "", " ")
+			if err != nil {
+				return err
+			}
+			_ = ioutil.WriteFile("../merchState.json", file, 0644)
+
+			// // save merchStateBytes in zkMerchDB
+			// merchStateBytes, _ := json.Marshal(merchState)
+			// zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
 
 			file, err = json.MarshalIndent(channelState, "", " ")
 			if err != nil {

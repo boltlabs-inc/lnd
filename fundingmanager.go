@@ -6,11 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"sync"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/boltlabs-inc/libbolt-go"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -31,7 +29,6 @@ import (
 	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/routing"
-	"github.com/lightningnetwork/lnd/zkchanneldb"
 	"golang.org/x/crypto/salsa20"
 )
 
@@ -1119,33 +1116,33 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	file, err := json.MarshalIndent(ZkChannelParams, "", " ")
 	_ = ioutil.WriteFile("../ZkChannelParams.json", file, 0644)
 
-	// open/load zkMerchDB
-	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	// // open/load zkMerchDB
+	// zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
 
-	var merchStateBytes []byte
-	err = zkMerchDB.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
-		k, v := c.Seek([]byte("merchStateKey"))
-		merchStateBytes = v
+	// var merchStateBytes []byte
+	// err = zkMerchDB.View(func(tx *bolt.Tx) error {
+	// 	c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+	// 	k, v := c.Seek([]byte("merchStateKey"))
+	// 	merchStateBytes = v
 
-		// zkchLog.Infof("Loaded merchState in zkMerchDB. key and value: %v : %v", k, v)
-		_ = k
+	// 	// zkchLog.Infof("Loaded merchState in zkMerchDB. key and value: %v : %v", k, v)
+	// 	_ = k
 
-		return nil
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
+	// 	return nil
+	// })
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	var merchState libbolt.MerchState
-	err = json.Unmarshal(merchStateBytes, &merchState)
+	// var merchState2 libbolt.MerchState
+	// err = json.Unmarshal(merchStateBytes, &merchState2)
 
 	// darius: Old method for Loading channelState and merchstate from json instead
-	// dat, err := ioutil.ReadFile("../merchState.json")
-	// var merchState libbolt.MerchState
-	// err = json.Unmarshal(dat, &merchState)
+	dat, err := ioutil.ReadFile("../merchState.json")
+	var merchState libbolt.MerchState
+	err = json.Unmarshal(dat, &merchState)
 
-	dat, err := ioutil.ReadFile("../channelState.json")
+	dat, err = ioutil.ReadFile("../channelState.json")
 	var channelState libbolt.ChannelState
 	err = json.Unmarshal(dat, &channelState)
 
@@ -1570,28 +1567,32 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 
 	// ########### zkChannels ###########
 
-	zkCustDB, err := zkchanneldb.SetupZkCustDB()
+	// zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
-	// read custState from ZkCustDB
-	var custStateBytes []byte
-	err = zkCustDB.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-		k, v := c.Seek([]byte("custStateKey"))
-		custStateBytes = v
-		_ = k
-		return nil
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
+	// // read custState from ZkCustDB
+	// var custStateBytes []byte
+	// err = zkCustDB.View(func(tx *bolt.Tx) error {
+	// 	c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+	// 	k, v := c.Seek([]byte("custStateKey"))
+	// 	custStateBytes = v
+	// 	_ = k
+	// 	return nil
+	// })
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
+	// var custState libbolt.CustState
+	// err = json.Unmarshal(custStateBytes, &custState)
+
+	// zkCustDB.Close()
+
+	dat, err := ioutil.ReadFile("../custState.json")
 	var custState libbolt.CustState
-	err = json.Unmarshal(custStateBytes, &custState)
-
-	zkCustDB.Close()
+	err = json.Unmarshal(dat, &custState)
 
 	// darius TODO: Load channelState and custState from Bolt.db instead
-	dat, err := ioutil.ReadFile("../channelState.json")
+	dat, err = ioutil.ReadFile("../channelState.json")
 	var channelState libbolt.ChannelState
 	err = json.Unmarshal(dat, &channelState)
 
@@ -2294,31 +2295,37 @@ func (f *fundingManager) sendFundingLocked(
 
 	if f.cfg.ZkMerchant {
 
-		// open/load zkMerchDB
-		zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+		// // open/load zkMerchDB
+		// zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
+		// var merchStateBytes []byte
+		// err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		// 	c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		// 	_, v := c.Seek([]byte("merchStateKey"))
+		// 	merchStateBytes = v
+
+		// 	return nil
+		// })
+		// if err != nil {
+		// 	log.Fatal(err)
+		// }
+
+		// zkMerchDB.Close()
+
+		// var merchState libbolt.MerchState
+		// err = json.Unmarshal(merchStateBytes, &merchState)
 
 		dat, _ := ioutil.ReadFile("../channelState.json")
 		var channelState libbolt.ChannelState
-		err = json.Unmarshal(dat, &channelState)
+		err := json.Unmarshal(dat, &channelState)
 
 		dat, err = ioutil.ReadFile("../zkChannelParams.json")
 		var zkChannelParams libbolt.ZkChannelParams
 		err = json.Unmarshal(dat, &zkChannelParams)
 
-		var merchStateBytes []byte
-		err = zkMerchDB.View(func(tx *bolt.Tx) error {
-			c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
-			_, v := c.Seek([]byte("merchStateKey"))
-			merchStateBytes = v
-
-			return nil
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-
+		dat, err = ioutil.ReadFile("../merchState.json")
 		var merchState libbolt.MerchState
-		err = json.Unmarshal(merchStateBytes, &merchState)
+		err = json.Unmarshal(dat, &merchState)
 
 		payToken, err := libbolt.BidirectionalEstablishMerchantIssuePayToken(
 			channelState, zkChannelParams.Commitment, merchState)
@@ -2330,8 +2337,6 @@ func (f *fundingManager) sendFundingLocked(
 		}
 
 		payTokenBytes, err = json.Marshal(payToken)
-
-		zkMerchDB.Close()
 
 		zkchLog.Infof("payToken generated for Customer")
 	}
@@ -2729,31 +2734,35 @@ func (f *fundingManager) handleFundingLocked(fmsg *fundingLockedMsg) {
 	// if !f.cfg.LNMode && !f.cfg.ZkMerchant {   // darius TODO: add all !LNMode cases
 	if !f.cfg.ZkMerchant {
 
+		// // Load custState from DB
+		// zkCustDB, err := zkchanneldb.SetupZkCustDB()
+
+		// // read custState from ZkCustDB
+		// var custStateBytes []byte
+		// err = zkCustDB.View(func(tx *bolt.Tx) error {
+		// 	c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		// 	k, v := c.Seek([]byte("custStateKey"))
+		// 	custStateBytes = v
+		// 	_ = k
+		// 	return nil
+		// })
+		// if err != nil {
+		// 	log.Fatal(err)
+		// }
+
+		// var custState libbolt.CustState
+		// err = json.Unmarshal(custStateBytes, &custState)
+
+		// zkCustDB.Close()
+
 		dat, _ := ioutil.ReadFile("../channelState.json")
 		var channelState libbolt.ChannelState
 		err := json.Unmarshal(dat, &channelState)
 		_ = err
 
-		// Load custState from DB
-		zkCustDB, err := zkchanneldb.SetupZkCustDB()
-
-		// read custState from ZkCustDB
-		var custStateBytes []byte
-		err = zkCustDB.View(func(tx *bolt.Tx) error {
-			c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-			k, v := c.Seek([]byte("custStateKey"))
-			custStateBytes = v
-			_ = k
-			return nil
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-
+		dat, err = ioutil.ReadFile("../custState.json")
 		var custState libbolt.CustState
-		err = json.Unmarshal(custStateBytes, &custState)
-
-		zkCustDB.Close()
+		err = json.Unmarshal(dat, &custState)
 
 		// dat, _ = ioutil.ReadFile("../custState.json")
 		// var custState libbolt.CustState
