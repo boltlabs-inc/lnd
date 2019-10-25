@@ -797,11 +797,9 @@ func openChannel(ctx *cli.Context) error {
 	zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
 	custStateBytes, _ := json.Marshal(custState)
-
 	zkchanneldb.AddCustState(zkCustDB, custStateBytes)
 
 	channelTokenBytes, _ := json.Marshal(channelToken)
-
 	zkchanneldb.AddCustChannelToken(zkCustDB, channelTokenBytes)
 
 	zkCustDB.Close()
@@ -812,11 +810,11 @@ func openChannel(ctx *cli.Context) error {
 	}
 	_ = ioutil.WriteFile("../zkchannelToken.json", file, 0644)
 
-	file, err = json.MarshalIndent(custState, "", " ")
-	if err != nil {
-		return err
-	}
-	_ = ioutil.WriteFile("../custState.json", file, 0644)
+	// file, err = json.MarshalIndent(custState, "", " ")
+	// if err != nil {
+	// 	return err
+	// }
+	// _ = ioutil.WriteFile("../custState.json", file, 0644)
 
 	zkChannelParams := libbolt.ZkChannelParams{
 		ChannelToken:    channelToken,

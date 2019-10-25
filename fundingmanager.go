@@ -1119,7 +1119,7 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	// zkDB save zkChannelParams
 	// zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
 	// ZkChannelParamsBytes, _ := json.Marshal(ZkChannelParams)
-	// zkchanneldb.AddCustState(zkMerchDB, ZkChannelParamsBytes)
+	// zkchanneldb.AddMerchState(zkMerchDB, ZkChannelParamsBytes)
 	// zkMerchDB.Close()
 
 	file, err := json.MarshalIndent(ZkChannelParams, "", " ")
@@ -1127,6 +1127,8 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 
 	// zkDB load merchState
 	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
+	zkchLog.Infof("handFundingOpen: open setupZkMerchDB")
 
 	var merchStateBytes []byte
 	err = zkMerchDB.View(func(tx *bolt.Tx) error {
@@ -1139,9 +1141,16 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	_ = merchStateBytes
 
 	var merchState2 libbolt.MerchState
 	err = json.Unmarshal(merchStateBytes, &merchState2)
+
+	zkMerchDB.Close()
+
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	// var channelStateBytes []byte
 	// err = zkMerchDB.View(func(tx *bolt.Tx) error {
@@ -1163,13 +1172,17 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	var merchState libbolt.MerchState
 	err = json.Unmarshal(dat, &merchState)
 
-	// zkDB test merchState fundingOpen
-	// darius TODO: Make comparison on byte slices
-	if merchState.Id == merchState.Id {
-		zkchLog.Infof("handFundingOpen: merchState.Id and merchState.Id are equal")
+	// zkDB test custState fundingAccept
+	merch1Bytes, err := json.Marshal(merchState)
+	merch2Bytes, err := json.Marshal(merchState2)
+	if bytes.Equal(merch1Bytes, merch2Bytes) {
+		zkchLog.Infof("handFundingOpen: merchState json and db are equal")
 	} else {
-		zkchLog.Infof("handFundingOpen: merchState.Id and merchState.Idare NOT equal")
+		zkchLog.Infof("handFundingOpen: merchState json and db are NOT equal")
 	}
+
+	zkchLog.Infof("merchState actual: %v", merchState)
+	// zkchLog.Infof("merchStateBytes db: %v", merchStateBytes)
 
 	dat, err = ioutil.ReadFile("../channelState.json")
 	var channelState libbolt.ChannelState
@@ -1603,35 +1616,35 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 	var custStateBytes []byte
 	err = zkCustDB.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-		k, v := c.Seek([]byte("custStateKey"))
+		_, v := c.Seek([]byte("custStateKey"))
 		custStateBytes = v
-		_ = k
 		return nil
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var custState2 libbolt.CustState
-	err = json.Unmarshal(custStateBytes, &custState2)
+	var custState libbolt.CustState
+	err = json.Unmarshal(custStateBytes, &custState)
 
 	zkCustDB.Close()
 
-	dat, err := ioutil.ReadFile("../custState.json")
-	var custState libbolt.CustState
-	err = json.Unmarshal(dat, &custState)
+	// // to load from json
+	// dat, err := ioutil.ReadFile("../custState.json")
+	// var custState2 libbolt.CustState
+	// err = json.Unmarshal(dat, &custState2)
 
-	// zkDB test custState fundingAccept
-	custJSONBytes, err := json.Marshal(custState)
-	custDbBytes, err := json.Marshal(custState2)
-	if bytes.Equal(custJSONBytes, custDbBytes) {
-		zkchLog.Infof("handFundingAccept: custState json and db are equal")
-	} else {
-		zkchLog.Infof("handFundingAccept: custState json and db are NOT equal")
-	}
+	// // zkDB test custState fundingAccept
+	// cust1Bytes, err := json.Marshal(custState)
+	// cust2Bytes, err := json.Marshal(custState2)
+	// if bytes.Equal(cust1Bytes, cust2Bytes) {
+	// 	zkchLog.Infof("handFundingAccept: custState json and db are equal")
+	// } else {
+	// 	zkchLog.Infof("handFundingAccept: custState json and db are NOT equal")
+	// }
 
 	// darius TODO: Load channelState and custState from Bolt.db instead
-	dat, err = ioutil.ReadFile("../channelState.json")
+	dat, err := ioutil.ReadFile("../channelState.json")
 	var channelState libbolt.ChannelState
 	err = json.Unmarshal(dat, &channelState)
 
@@ -1640,7 +1653,7 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 	err = json.Unmarshal(msg.CloseToken, &closeToken)
 
 	isTokenValid, channelState, custState, err :=
-		libbolt.BidirectionalVerifyCloseToken(channelState, custState2, closeToken)
+		libbolt.BidirectionalVerifyCloseToken(channelState, custState, closeToken)
 	if err != nil {
 		zkchLog.Errorf("Unable to process close token from %v: %v",
 			peerKey, err)
@@ -1654,11 +1667,11 @@ func (f *fundingManager) handleFundingAccept(fmsg *fundingAcceptMsg) {
 	}
 	zkchLog.Infof("Close token was verified")
 
-	file, err := json.MarshalIndent(custState, "", " ")
-	if err != nil {
-		// return err
-	}
-	_ = ioutil.WriteFile("../custState.json", file, 0644)
+	// file, err := json.MarshalIndent(custState, "", " ")
+	// if err != nil {
+	// 	// return err
+	// }
+	// _ = ioutil.WriteFile("../custState.json", file, 0644)
 
 	// zkDB update custState handleAccept
 	zkCustDB, err = zkchanneldb.SetupZkCustDB()
@@ -2357,15 +2370,18 @@ func (f *fundingManager) sendFundingLocked(
 		// var merchState2 libbolt.MerchState
 		// err = json.Unmarshal(merchStateBytes, &merchState2)
 
+		// zbDBMerch
 		dat, err := ioutil.ReadFile("../merchState.json")
 		var merchState libbolt.MerchState
 		err = json.Unmarshal(dat, &merchState)
 
-		// // zkDB test merchState fundingLocked
-		// if merchState.Id == merchState.Id {
-		// 	zkchLog.Infof("sendFundingLocked: merchState.Id and merchState.Id are equal")
+		// // zkDB test custState fundingAccept
+		// merch1Bytes, err := json.Marshal(merchState)
+		// merch2Bytes, err := json.Marshal(merchState2)
+		// if bytes.Equal(merch1Bytes, merch2Bytes) {
+		// 	zkchLog.Infof("sendFundingLocked: merchState json and db are equal")
 		// } else {
-		// 	zkchLog.Infof("sendFundingLocked: merchState.Id and merchState.Idare NOT equal")
+		// 	zkchLog.Infof("sendFundingLocked: merchState json and db are NOT equal")
 		// }
 
 		dat, _ = ioutil.ReadFile("../channelState.json")
@@ -2820,17 +2836,16 @@ func (f *fundingManager) handleFundingLocked(fmsg *fundingLockedMsg) {
 		var custStateBytes []byte
 		err = zkCustDB.View(func(tx *bolt.Tx) error {
 			c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-			k, v := c.Seek([]byte("custStateKey"))
+			_, v := c.Seek([]byte("custStateKey"))
 			custStateBytes = v
-			_ = k
 			return nil
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		var custState2 libbolt.CustState
-		err = json.Unmarshal(custStateBytes, &custState2)
+		var custState libbolt.CustState
+		err = json.Unmarshal(custStateBytes, &custState)
 
 		zkCustDB.Close()
 
@@ -2839,18 +2854,19 @@ func (f *fundingManager) handleFundingLocked(fmsg *fundingLockedMsg) {
 		err = json.Unmarshal(dat, &channelState)
 		_ = err
 
-		dat, err = ioutil.ReadFile("../custState.json")
-		var custState libbolt.CustState
-		err = json.Unmarshal(dat, &custState)
+		// // to load from json
+		// dat, err = ioutil.ReadFile("../custState.json")
+		// var custState2 libbolt.CustState
+		// err = json.Unmarshal(dat, &custState2)
 
-		// zkDB test custState fundingAccept
-		custJSONBytes, err := json.Marshal(custState)
-		custDbBytes, err := json.Marshal(custState2)
-		if bytes.Equal(custJSONBytes, custDbBytes) {
-			zkchLog.Infof("handFundingAccept: custState json and db are equal")
-		} else {
-			zkchLog.Infof("handFundingAccept: custState json and db are NOT equal")
-		}
+		// // zkDB test custState fundingAccept
+		// cust1Bytes, err := json.Marshal(custState)
+		// cust2Bytes, err := json.Marshal(custState2)
+		// if bytes.Equal(cust1Bytes, cust2Bytes) {
+		// 	zkchLog.Infof("handFundingAccept: custState json and db are equal")
+		// } else {
+		// 	zkchLog.Infof("handFundingAccept: custState json and db are NOT equal")
+		// }
 
 		var payToken libbolt.Signature
 		err = json.Unmarshal(fmsg.msg.PayToken, &payToken)

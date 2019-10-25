@@ -37,7 +37,7 @@ func SetupZkMerchDB() (*bolt.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not set up zk merch buckets, %v", err)
 	}
-	fmt.Println("ZKMerchDB Setup Done")
+	fmt.Println("ZKMerchDB opened")
 	return db, nil
 }
 
@@ -61,7 +61,7 @@ func SetupZkCustDB() (*bolt.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not set up zk merch buckets, %v", err)
 	}
-	fmt.Println("ZkCustDB Setup Done")
+	fmt.Println("ZkCustDB opened")
 	return db, nil
 }
 
