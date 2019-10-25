@@ -145,11 +145,6 @@ func Main(lisCfg ListenerCfg) error {
 		if cfg.ZkMerchant {
 			zkchLog.Infof("Initializing merchant setup")
 
-			zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
-			if err != nil {
-				return err
-			}
-
 			channelState, _ := libbolt.BidirectionalChannelSetup("zkChannel", false)
 
 			merchName := cfg.Alias
@@ -174,9 +169,21 @@ func Main(lisCfg ListenerCfg) error {
 			}
 			_ = ioutil.WriteFile("../merchState.json", file, 0644)
 
-			// // save merchStateBytes in zkMerchDB
-			// merchStateBytes, _ := json.Marshal(merchState)
-			// zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+			// zkDB add merchState & channelState
+			zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+			if err != nil {
+				return err
+			}
+
+			// save merchStateBytes in zkMerchDB
+			merchStateBytes, _ := json.Marshal(merchState)
+			zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+
+			// // save channelStateBytes in zkMerchDB
+			// channelStateBytes, _ := json.Marshal(channelState)
+			// zkchanneldb.AddMerchChannelState(zkMerchDB, channelStateBytes)
+
+			zkMerchDB.Close()
 
 			file, err = json.MarshalIndent(channelState, "", " ")
 			if err != nil {
@@ -184,7 +191,6 @@ func Main(lisCfg ListenerCfg) error {
 			}
 			_ = ioutil.WriteFile("../channelState.json", file, 0644)
 
-			zkMerchDB.Close()
 		} else { // if not zk merchant, then create customer db.
 			zkchLog.Infof("Creating customer zkchannel db")
 
