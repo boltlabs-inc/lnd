@@ -162,7 +162,7 @@ func AddMerchChannelState(db *bolt.DB, channelStateBytes []byte) error {
 func AddZkChannelParams(db *bolt.DB, zkChanParamsBytes []byte) error {
 
 	err := db.Update(func(tx *bolt.Tx) error {
-		err := tx.Bucket(MerchBucket).Put([]byte("zkChanParamsKey"), zkChanParamsBytes)
+		err := tx.Bucket(MerchBucket).Put([]byte("zkChannelParamsKey"), zkChanParamsBytes)
 		if err != nil {
 			return fmt.Errorf("could not insert entry: %v", err)
 		}

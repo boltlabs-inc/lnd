@@ -804,18 +804,6 @@ func openChannel(ctx *cli.Context) error {
 
 	zkCustDB.Close()
 
-	file, err := json.MarshalIndent(channelToken, "", " ")
-	if err != nil {
-		return err
-	}
-	_ = ioutil.WriteFile("../zkchannelToken.json", file, 0644)
-
-	// file, err = json.MarshalIndent(custState, "", " ")
-	// if err != nil {
-	// 	return err
-	// }
-	// _ = ioutil.WriteFile("../custState.json", file, 0644)
-
 	zkChannelParams := libbolt.ZkChannelParams{
 		ChannelToken:    channelToken,
 		Commitment:      com,
