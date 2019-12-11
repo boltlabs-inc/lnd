@@ -1137,26 +1137,22 @@ func (f *fundingManager) handleFundingOpen(fmsg *fundingOpenMsg) {
 	var merchState libbolt.MerchState
 	err = json.Unmarshal(merchStateBytes, &merchState)
 
-	zkMerchDB.Close()
+	var channelStateBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		_, v := c.Seek([]byte("channelStateKey"))
+		channelStateBytes = v
 
-	// var channelStateBytes []byte
-	// err = zkMerchDB.View(func(tx *bolt.Tx) error {
-	// 	c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
-	// 	_, v := c.Seek([]byte("channelStateKey"))
-	// 	channelStateBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// 	return nil
-	// })
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// var channelState2 libbolt.MerchState
-	// err = json.Unmarshal(channelStateBytes, &channelState2)
-
-	dat, err := ioutil.ReadFile("../channelState.json")
 	var channelState libbolt.ChannelState
-	err = json.Unmarshal(dat, &channelState)
+	err = json.Unmarshal(channelStateBytes, &channelState)
+
+	zkMerchDB.Close()
 
 	closeToken, err := libbolt.BidirectionalEstablishMerchantIssueCloseToken(
 		channelState, ZkChannelParams.Commitment, ZkChannelParams.CommitmentProof, ZkChannelParams.CustPkC, int(amt), int(msg.PushAmount), merchState)
@@ -2314,12 +2310,22 @@ func (f *fundingManager) sendFundingLocked(
 		var zkChannelParams libbolt.ZkChannelParams
 		err = json.Unmarshal(zkChannelParamsBytes, &zkChannelParams)
 
-		zkMerchDB.Close()
+		var channelStateBytes []byte
+		err = zkMerchDB.View(func(tx *bolt.Tx) error {
+			c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+			_, v := c.Seek([]byte("channelStateKey"))
+			channelStateBytes = v
 
-		// zkDB:TODO channelState to db
-		dat, _ := ioutil.ReadFile("../channelState.json")
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		var channelState libbolt.ChannelState
-		err = json.Unmarshal(dat, &channelState)
+		err = json.Unmarshal(channelStateBytes, &channelState)
+
+		zkMerchDB.Close()
 
 		payToken, err := libbolt.BidirectionalEstablishMerchantIssuePayToken(
 			channelState, zkChannelParams.Commitment, merchState)

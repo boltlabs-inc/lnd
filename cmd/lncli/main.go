@@ -298,6 +298,8 @@ func main() {
 		exportChanBackupCommand,
 		verifyChanBackupCommand,
 		restoreChanBackupCommand,
+		// ########### zkChannels ###########
+		// zkPayCommand,
 	}
 
 	// Add any extra commands determined by build flags.

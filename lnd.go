@@ -174,8 +174,8 @@ func Main(lisCfg ListenerCfg) error {
 			zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
 
 			// // save channelStateBytes in zkMerchDB
-			// channelStateBytes, _ := json.Marshal(channelState)
-			// zkchanneldb.AddMerchChannelState(zkMerchDB, channelStateBytes)
+			channelStateBytes, _ := json.Marshal(channelState)
+			zkchanneldb.AddMerchChannelState(zkMerchDB, channelStateBytes)
 
 			zkMerchDB.Close()
 
