@@ -63,3 +63,6 @@ profile.tmp
 .DS_Store
 
 .vscode
+go.mod
+go.sum
+libzkchannels/
