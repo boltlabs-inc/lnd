@@ -33,6 +33,7 @@ require (
 	github.com/jackpal/go-nat-pmp v0.0.0-20170405195558-28a68d0c24ad
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jessevdk/go-flags v1.4.0
+	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/jrick/logrotate v1.0.0
 	github.com/json-iterator/go v1.1.9 // indirect
@@ -54,6 +55,8 @@ require (
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/miekg/dns v0.0.0-20171125082028-79bfde677fa8
 	github.com/modern-go/reflect2 v1.0.1 // indirect
+	github.com/onsi/ginkgo v1.7.0 // indirect
+	github.com/onsi/gomega v1.4.3 // indirect
 	github.com/prometheus/client_golang v0.9.3
 	github.com/rogpeppe/fastuuid v1.2.0 // indirect
 	github.com/soheilhy/cmux v0.1.4 // indirect
