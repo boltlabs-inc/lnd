@@ -299,6 +299,8 @@ func main() {
 		verifyChanBackupCommand,
 		restoreChanBackupCommand,
 		bakeMacaroonCommand,
+		// ################## ln-zkmpc ##################
+		openZkChannelCommand,
 	}
 
 	// Add any extra commands determined by build flags.

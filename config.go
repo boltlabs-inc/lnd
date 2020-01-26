@@ -343,6 +343,13 @@ type config struct {
 	LegacyProtocol *lncfg.LegacyProtocol `group:"legacyprotocol" namespace:"legacyprotocol"`
 
 	AllowCircularRoute bool `long:"allow-circular-route" description:"If true, our node will allow htlc forwards that arrive and depart on the same channel."`
+
+	// ########### ln-mpc ###########
+	LNMode bool `long:"lnmode" description:"If true, the node will load as a standard Lightning Mode."`
+
+	ZkMerchant bool `long:"merchant" description:"If true, the node initialize as a merchant. Otherwise it'll initialize as a customer"`
+	// ########### ln-mpc ###########
+
 }
 
 // loadConfig initializes and parses the config using a config file and command

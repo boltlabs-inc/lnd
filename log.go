@@ -61,6 +61,9 @@ var (
 	utxnLog = build.NewSubLogger("UTXN", logWriter.GenSubLogger)
 	brarLog = build.NewSubLogger("BRAR", logWriter.GenSubLogger)
 	atplLog = build.NewSubLogger("ATPL", logWriter.GenSubLogger)
+	// ########### ln-mpc ###########
+	zkchLog = build.NewSubLogger("ZKCH", logWriter.GenSubLogger)
+	// ########### ln-mpc ###########
 )
 
 // Initialize package-global logger variables.
@@ -73,6 +76,9 @@ func init() {
 	setSubLogger("FNDG", fndgLog)
 	setSubLogger("UTXN", utxnLog)
 	setSubLogger("BRAR", brarLog)
+	// ########### ln-mpc ###########
+	setSubLogger("ZKCH", zkchLog)
+	// ########### ln-mpc ###########
 
 	addSubLogger("LNWL", lnwallet.UseLogger)
 	addSubLogger("DISC", discovery.UseLogger)
