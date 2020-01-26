@@ -66,3 +66,7 @@ profile.tmp
 
 # Coverage test
 coverage.txt
+
+go.mod
+go.sum
+libzkchannels/
