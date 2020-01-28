@@ -201,6 +201,85 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 		build.Version(), build.Commit, build.Deployment,
 		build.LoggingType)
 
+	// ################## ln-mpc start ##################
+	// If we are starting LND in standard LN mode (not zkchannel mode), then skip merchant steps
+	if !cfg.LNMode {
+		// Do merchant initialization if merchant flag was set
+		if cfg.ZkMerchant {
+			zkchLog.Infof("Initializing MPC merchant setup")
+
+			merchName := cfg.Alias
+			if merchName == "" {
+				merchName = "Merchant"
+			}
+
+			channelState, err := libzkchannels.ChannelSetup("channel", false)
+			// _ = channelState
+			// _ = err
+			zkchLog.Infof("libzkchannels.ChannelSetup done")
+
+			channelState, merchState, err := libzkchannels.InitMerchant(channelState, "merch")
+			zkchLog.Infof("InitMerchant done")
+
+
+
+			file, err := json.MarshalIndent(merchState.PkM, "", " ")
+			if err != nil {
+				return err
+			}
+			_ = ioutil.WriteFile("../zkchannelToken.json", file, 0644)
+			
+			// merchName := cfg.Alias
+			// if merchName == "" {
+			// 	merchName = "Merchant"
+			// }
+
+		// 		channelToken, merchState, channelState, err := libbolt.BidirectionalInitMerchant(channelState, merchName)
+		// 		if err != nil {
+		// 			return err
+		// 		}
+
+		// 		file, err := json.MarshalIndent(channelToken, "", " ")
+		// 		if err != nil {
+		// 			return err
+		// 		}
+		// 		_ = ioutil.WriteFile("../zkchannelToken.json", file, 0644)
+
+		// 		// zkDB add merchState & channelState
+		// 		zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+		// 		if err != nil {
+		// 			return err
+		// 		}
+
+		// 		// save merchStateBytes in zkMerchDB
+		// 		merchStateBytes, _ := json.Marshal(merchState)
+		// 		zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+
+		// 		// // save channelStateBytes in zkMerchDB
+		// 		channelStateBytes, _ := json.Marshal(channelState)
+		// 		zkchanneldb.AddMerchChannelState(zkMerchDB, channelStateBytes)
+
+		// 		zkMerchDB.Close()
+
+		// 		file, err = json.MarshalIndent(channelState, "", " ")
+		// 		if err != nil {
+		// 			return err
+		// 		}
+		// 		_ = ioutil.WriteFile("../channelState.json", file, 0644)
+
+		// 	} else { // if not zk merchant, then create customer db.
+		// 		zkchLog.Infof("Creating customer zkchannel db")
+
+		// 		zkCustDB, err := zkchanneldb.SetupZkCustDB()
+		// 		if err != nil {
+		// 			return err
+		// 		}
+		// 		zkCustDB.Close()
+		// 		// defer zkCustDB.Close()
+		// 	}
+	}
+
+	// ################## ln-mpc end ##################
 	var network string
 	switch {
 	case cfg.Bitcoin.TestNet3 || cfg.Litecoin.TestNet3:
