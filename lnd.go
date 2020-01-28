@@ -176,22 +176,35 @@ func Main(lisCfg ListenerCfg) error {
 	// ################## ln-mpc start ##################
 	// If we are starting LND in standard LN mode (not zkchannel mode), then skip merchant steps
 	if !cfg.LNMode {
-		// // Do merchant initialization if merchant flag was set
-		// 	if cfg.ZkMerchant {
-		zkchLog.Infof("Initializing MPC merchant setup")
+		// Do merchant initialization if merchant flag was set
+		if cfg.ZkMerchant {
+			zkchLog.Infof("Initializing MPC merchant setup")
 
-		channelState, err := libzkchannels.ChannelSetup("channel", false)
-		_ = channelState
-		_ = err
-		zkchLog.Infof("libzkchannels.ChannelSetup done")
+			merchName := cfg.Alias
+			if merchName == "" {
+				merchName = "Merchant"
+			}
 
-		// _, err := libbolt.BidirectionalChannelSetup("zkChannel", false)
-		// _ = err
+			channelState, err := libzkchannels.ChannelSetup("channel", false)
+			// _ = channelState
+			// _ = err
+			zkchLog.Infof("libzkchannels.ChannelSetup done")
 
-		// 		merchName := cfg.Alias
-		// 		if merchName == "" {
-		// 			merchName = "Merchant"
-		// 		}
+			channelState, merchState, err := libzkchannels.InitMerchant(channelState, "merch")
+			zkchLog.Infof("InitMerchant done")
+
+
+
+			file, err := json.MarshalIndent(merchState.PkM, "", " ")
+			if err != nil {
+				return err
+			}
+			_ = ioutil.WriteFile("../zkchannelToken.json", file, 0644)
+			
+			// merchName := cfg.Alias
+			// if merchName == "" {
+			// 	merchName = "Merchant"
+			// }
 
 		// 		channelToken, merchState, channelState, err := libbolt.BidirectionalInitMerchant(channelState, merchName)
 		// 		if err != nil {
