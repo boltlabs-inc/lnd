@@ -3543,8 +3543,6 @@ func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, cust_balance int64, merc
 func (s *server) ZkPay(pubKey *btcec.PublicKey, Amount int64) error {
 	zkchLog.Infof("zkPay initiated")
 
-	dariusprint()
-
 	pubBytes := pubKey.SerializeCompressed()
 	pubStr := string(pubBytes)
 
