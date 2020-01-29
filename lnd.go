@@ -242,24 +242,16 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 			zkchanneldb.AddMerchChannelState(zkMerchDB, channelStateBytes)
 
 			zkMerchDB.Close()
+
+		} else { // if not zk merchant, then create customer db.
+			zkchLog.Infof("Creating customer zkchannel db")
+
+			zkCustDB, err := zkchanneldb.SetupZkCustDB()
+			if err != nil {
+				return err
+			}
+			zkCustDB.Close()
 		}
-
-		// 		file, err = json.MarshalIndent(channelState, "", " ")
-		// 		if err != nil {
-		// 			return err
-		// 		}
-		// 		_ = ioutil.WriteFile("../channelState.json", file, 0644)
-
-		// 	} else { // if not zk merchant, then create customer db.
-		// 		zkchLog.Infof("Creating customer zkchannel db")
-
-		// 		zkCustDB, err := zkchanneldb.SetupZkCustDB()
-		// 		if err != nil {
-		// 			return err
-		// 		}
-		// 		zkCustDB.Close()
-		// 		// defer zkCustDB.Close()
-		// 	}
 	}
 
 	// ################## ln-mpc end ##################
