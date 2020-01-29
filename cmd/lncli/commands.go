@@ -4113,20 +4113,20 @@ var openZkChannelCommand = cli.Command{
 				"serialized in compressed format",
 		},
 		cli.IntFlag{
-			Name:  "local_amt",
-			Usage: "the number of satoshis the wallet should commit to the channel",
+			Name:  "cust_balance",
+			Usage: "the number of satoshis the wallet should commit to the customer's balance (local side)",
 		},
 		cli.IntFlag{
-			Name: "push_amt",
-			Usage: "the number of satoshis to give the remote side " +
+			Name: "merch_balance",
+			Usage: "the number of satoshis to give the merchant (remote side)" +
 				"as part of the initial commitment state, " +
 				"this is equivalent to first opening a " +
 				"channel and sending the remote party funds, " +
 				"but done all in one step",
 		},
 	},
-	Action: actionDecorator(openChannel),
-	// Action: actionDecorator(openZkChannel),
+	// Action: actionDecorator(openChannel),
+	Action: actionDecorator(openZkChannel),
 }
 
 // func openZkChannel(ctx *cli.Context) error {
@@ -4288,38 +4288,46 @@ var openZkChannelCommand = cli.Command{
 // 	}
 // }
 
-// func zkPay(ctx *cli.Context) error {
-// 	ctxb := context.Background()
-// 	client, cleanUp := getClient(ctx)
-// 	defer cleanUp()
+func openZkChannel(ctx *cli.Context) error {
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
 
-// 	var pubKey string
-// 	switch {
-// 	case ctx.IsSet("node_key"):
-// 		pubKey = ctx.String("node_key")
-// 	case ctx.Args().Present():
-// 		pubKey = ctx.Args().First()
-// 	default:
-// 		return fmt.Errorf("must specify target public key")
-// 	}
+	var pubKey string
+	switch {
+	case ctx.IsSet("node_key"):
+		pubKey = ctx.String("node_key")
+	case ctx.Args().Present():
+		pubKey = ctx.Args().First()
+	default:
+		return fmt.Errorf("must specify target public key")
+	}
 
-// 	var amt int64
-// 	if !ctx.IsSet("amt") {
-// 		return fmt.Errorf("must specify amount of satoshis to send")
-// 	} else {
-// 		amt = ctx.Int64("amt")
-// 	}
+	var cust_balance int64
+	if !ctx.IsSet("cust_balance") {
+		return fmt.Errorf("must specify amount of satoshis for customer balance")
+	} else {
+		cust_balance = ctx.Int64("cust_balance")
+	}
 
-// 	req := &lnrpc.ZkPayRequest{
-// 		PubKey: pubKey,
-// 		Amount: amt,
-// 	}
+	var merch_balance int64
+	if !ctx.IsSet("merch_balance") {
+		return fmt.Errorf("must specify amount of satoshis to send to the merchant")
+	} else {
+		merch_balance = ctx.Int64("merch_balance")
+	}
 
-// 	lnid, err := client.ZkPay(ctxb, req)
-// 	if err != nil {
-// 		return err
-// 	}
+	req := &lnrpc.OpenZkChannelRequest{
+		PubKey:       pubKey,
+		CustBalance:  cust_balance,
+		MerchBalance: merch_balance,
+	}
 
-// 	printRespJSON(lnid)
-// 	return nil
-// }
+	lnid, err := client.OpenZkChannel(ctxb, req)
+	if err != nil {
+		return err
+	}
+
+	printRespJSON(lnid)
+	return nil
+}

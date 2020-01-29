@@ -815,6 +815,16 @@ service Lightning {
             body: "*"
         };
     };
+
+    /** lncli: `openzkchannel`
+    OpenZkChannel establishes a zkchannel with a merchant.
+    */
+    rpc OpenZkChannel (OpenZkChannelRequest) returns (OpenZkChannelResponse) {
+        /// darius TODO: Figure out what this does. Copied from rpc disconnect
+        option (google.api.http) = {
+            delete: "/v1/peers/{pub_key}"
+        };
+    }
 }
 
 message Utxo {
@@ -3074,4 +3084,16 @@ message BakeMacaroonRequest {
 message BakeMacaroonResponse {
     /// The hex encoded macaroon, serialized in binary format.
     string macaroon = 1 [json_name = "macaroon"];
+}
+
+message OpenZkChannelRequest {
+    /// The pubkey of the node to pay
+    string pub_key = 1 [json_name = "pub_key"];
+    /// Customer balance
+    int64 cust_balance = 2 [json_name = "cust_balance"];
+    /// Merchant balance
+    int64 merch_balance = 3 [json_name = "merch_balance"];
+}
+
+message OpenZkChannelResponse {
 }

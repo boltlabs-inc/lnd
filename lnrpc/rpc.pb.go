@@ -10392,6 +10392,95 @@ func (m *BakeMacaroonResponse) GetMacaroon() string {
 	return ""
 }
 
+type OpenZkChannelRequest struct {
+	/// The pubkey of the node to pay
+	PubKey string `protobuf:"bytes,1,opt,name=pub_key,proto3" json:"pub_key,omitempty"`
+	/// Customer balance
+	CustBalance int64 `protobuf:"varint,2,opt,name=cust_balance,proto3" json:"cust_balance,omitempty"`
+	/// Merchant balance
+	MerchBalance         int64    `protobuf:"varint,3,opt,name=merch_balance,proto3" json:"merch_balance,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *OpenZkChannelRequest) Reset()         { *m = OpenZkChannelRequest{} }
+func (m *OpenZkChannelRequest) String() string { return proto.CompactTextString(m) }
+func (*OpenZkChannelRequest) ProtoMessage()    {}
+func (*OpenZkChannelRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{146}
+}
+
+func (m *OpenZkChannelRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_OpenZkChannelRequest.Unmarshal(m, b)
+}
+func (m *OpenZkChannelRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_OpenZkChannelRequest.Marshal(b, m, deterministic)
+}
+func (m *OpenZkChannelRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OpenZkChannelRequest.Merge(m, src)
+}
+func (m *OpenZkChannelRequest) XXX_Size() int {
+	return xxx_messageInfo_OpenZkChannelRequest.Size(m)
+}
+func (m *OpenZkChannelRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_OpenZkChannelRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_OpenZkChannelRequest proto.InternalMessageInfo
+
+func (m *OpenZkChannelRequest) GetPubKey() string {
+	if m != nil {
+		return m.PubKey
+	}
+	return ""
+}
+
+func (m *OpenZkChannelRequest) GetCustBalance() int64 {
+	if m != nil {
+		return m.CustBalance
+	}
+	return 0
+}
+
+func (m *OpenZkChannelRequest) GetMerchBalance() int64 {
+	if m != nil {
+		return m.MerchBalance
+	}
+	return 0
+}
+
+type OpenZkChannelResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *OpenZkChannelResponse) Reset()         { *m = OpenZkChannelResponse{} }
+func (m *OpenZkChannelResponse) String() string { return proto.CompactTextString(m) }
+func (*OpenZkChannelResponse) ProtoMessage()    {}
+func (*OpenZkChannelResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{147}
+}
+
+func (m *OpenZkChannelResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_OpenZkChannelResponse.Unmarshal(m, b)
+}
+func (m *OpenZkChannelResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_OpenZkChannelResponse.Marshal(b, m, deterministic)
+}
+func (m *OpenZkChannelResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OpenZkChannelResponse.Merge(m, src)
+}
+func (m *OpenZkChannelResponse) XXX_Size() int {
+	return xxx_messageInfo_OpenZkChannelResponse.Size(m)
+}
+func (m *OpenZkChannelResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_OpenZkChannelResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_OpenZkChannelResponse proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterEnum("lnrpc.AddressType", AddressType_name, AddressType_value)
 	proto.RegisterEnum("lnrpc.InvoiceHTLCState", InvoiceHTLCState_name, InvoiceHTLCState_value)
@@ -10565,6 +10654,8 @@ func init() {
 	proto.RegisterType((*MacaroonPermission)(nil), "lnrpc.MacaroonPermission")
 	proto.RegisterType((*BakeMacaroonRequest)(nil), "lnrpc.BakeMacaroonRequest")
 	proto.RegisterType((*BakeMacaroonResponse)(nil), "lnrpc.BakeMacaroonResponse")
+	proto.RegisterType((*OpenZkChannelRequest)(nil), "lnrpc.OpenZkChannelRequest")
+	proto.RegisterType((*OpenZkChannelResponse)(nil), "lnrpc.OpenZkChannelResponse")
 }
 
 func init() { proto.RegisterFile("rpc.proto", fileDescriptor_77a6da22d6a3feb1) }
@@ -11735,6 +11826,9 @@ type LightningClient interface {
 	//write permissions. No first-party caveats are added since this can be done
 	//offline.
 	BakeMacaroon(ctx context.Context, in *BakeMacaroonRequest, opts ...grpc.CallOption) (*BakeMacaroonResponse, error)
+	//* lncli: `openzkchannel`
+	//OpenZkChannel establishes a zkchannel with a merchant.
+	OpenZkChannel(ctx context.Context, in *OpenZkChannelRequest, opts ...grpc.CallOption) (*OpenZkChannelResponse, error)
 }
 
 type lightningClient struct {
@@ -12481,6 +12575,15 @@ func (c *lightningClient) BakeMacaroon(ctx context.Context, in *BakeMacaroonRequ
 	return out, nil
 }
 
+func (c *lightningClient) OpenZkChannel(ctx context.Context, in *OpenZkChannelRequest, opts ...grpc.CallOption) (*OpenZkChannelResponse, error) {
+	out := new(OpenZkChannelResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/OpenZkChannel", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LightningServer is the server API for Lightning service.
 type LightningServer interface {
 	//* lncli: `walletbalance`
@@ -12797,6 +12900,9 @@ type LightningServer interface {
 	//write permissions. No first-party caveats are added since this can be done
 	//offline.
 	BakeMacaroon(context.Context, *BakeMacaroonRequest) (*BakeMacaroonResponse, error)
+	//* lncli: `openzkchannel`
+	//OpenZkChannel establishes a zkchannel with a merchant.
+	OpenZkChannel(context.Context, *OpenZkChannelRequest) (*OpenZkChannelResponse, error)
 }
 
 func RegisterLightningServer(s *grpc.Server, srv LightningServer) {
@@ -13823,6 +13929,24 @@ func _Lightning_BakeMacaroon_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Lightning_OpenZkChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OpenZkChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).OpenZkChannel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/OpenZkChannel",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).OpenZkChannel(ctx, req.(*OpenZkChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Lightning_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "lnrpc.Lightning",
 	HandlerType: (*LightningServer)(nil),
@@ -13998,6 +14122,10 @@ var _Lightning_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BakeMacaroon",
 			Handler:    _Lightning_BakeMacaroon_Handler,
+		},
+		{
+			MethodName: "OpenZkChannel",
+			Handler:    _Lightning_OpenZkChannel_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
