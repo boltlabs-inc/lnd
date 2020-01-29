@@ -30,6 +30,17 @@ type PkScript []byte
 // when connecting to a node at a particular address.
 type addressType uint8
 
+// ZkChannelParamsType contains parameters needed to open a zk payment channel:
+// channelToken, commitment, commitmentProof, custPkC.
+type ZkChannelParamsType []byte
+
+// ZkChannelSigType is the type for signatures on zkChannels. It is the type for
+// CloseToken, CustPkC
+type ZkChannelSigType []byte
+
+// ZkPayProofPaymentType is the type for 'payment' on zkChannels.
+type ZkPayProofPaymentType []byte
+
 const (
 	// noAddr denotes a blank address. An address of this type indicates
 	// that a node doesn't have any advertised addresses.
@@ -418,6 +429,39 @@ func WriteElement(w io.Writer, element interface{}) error {
 		if _, err := w.Write(b[:]); err != nil {
 			return err
 		}
+
+		// ########### ln-mpc start ###########
+	case ZkChannelParamsType:
+		// zkChannelParams has length 2999 bytes (11th Oct 2019)
+		ZkChannelParamsLength := len(e)
+		if ZkChannelParamsLength > 2999 {
+			return fmt.Errorf("'ZkChannelParams' too long")
+		}
+		if err := wire.WriteVarBytes(w, 0, e); err != nil {
+			return err
+		}
+
+	case ZkChannelSigType:
+		// darius TODO: put in the actual length of CloseToken and CustPkC
+		ZkSigLength := len(e)
+		if ZkSigLength > 2999 {
+			return fmt.Errorf("'ZkChannelSignature' too long")
+		}
+		if err := wire.WriteVarBytes(w, 0, e); err != nil {
+			return err
+		}
+
+	case ZkPayProofPaymentType:
+		// zkpayment has length 34464 bytes (21sh Dec 2019)
+		// darius TODO: put in the actual length of CloseToken and CustPkC
+		Length := len(e)
+		if Length > 44464 {
+			return fmt.Errorf("'ZkPayProofPaymentType' too long")
+		}
+		if err := wire.WriteVarBytes(w, 0, e); err != nil {
+			return err
+		}
+		// ########### ln-mpc end ###########
 	default:
 		return fmt.Errorf("Unknown type in WriteElement: %T", e)
 	}
@@ -824,6 +868,35 @@ func ReadElement(r io.Reader, element interface{}) error {
 			return err
 		}
 		*e = addrBytes[:length]
+
+		// ########### ln-mpc start ###########
+	case *ZkChannelParamsType:
+		// zkChannelParams has length 2999 bytes (11th Oct 2019)
+		zkChannelParams, err := wire.ReadVarBytes(r, 0, 2999, "zkchannelparams")
+		if err != nil {
+			return err
+		}
+		*e = zkChannelParams
+
+	case *ZkChannelSigType:
+		// using same length as channelParamsType for now
+		// darius: not sure what the field name at the end is for
+		zkChannelSig, err := wire.ReadVarBytes(r, 0, 2999, "zkchannelsig")
+		if err != nil {
+			return err
+		}
+		*e = zkChannelSig
+
+	case *ZkPayProofPaymentType:
+		// zkpayment has length 34464 bytes (21sh Dec 2019)
+		// darius: not sure what the field name at the end is for
+		zkPayment, err := wire.ReadVarBytes(r, 0, 44464, "zkpayment")
+		if err != nil {
+			return err
+		}
+		*e = zkPayment
+	// ########### ln-mpc end ###########
+
 	default:
 		return fmt.Errorf("Unknown type in ReadElement: %T", e)
 	}
