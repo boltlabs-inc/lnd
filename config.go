@@ -347,7 +347,7 @@ type config struct {
 	// ########### ln-mpc ###########
 	LNMode bool `long:"lnmode" description:"If true, the node will load as a standard Lightning Mode."`
 
-	ZkMerchant bool `long:"merchant" description:"If true, the node initialize as a merchant. Otherwise it'll initialize as a customer"`
+	ZkMerchant bool `long:"zkmerchant" description:"If true, the node initialize as a merchant. Otherwise it'll initialize as a customer"`
 	// ########### ln-mpc ###########
 
 }

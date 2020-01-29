@@ -50,6 +50,7 @@ import (
 	"github.com/lightningnetwork/lnd/walletunlocker"
 	"github.com/lightningnetwork/lnd/watchtower"
 	"github.com/lightningnetwork/lnd/watchtower/wtdb"
+	"github.com/lightningnetwork/lnd/zkchanneldb"
 )
 
 var (
@@ -187,8 +188,6 @@ func Main(lisCfg ListenerCfg) error {
 			}
 
 			channelState, err := libzkchannels.ChannelSetup("channel", false)
-			// _ = channelState
-			// _ = err
 			zkchLog.Infof("libzkchannels.ChannelSetup done")
 
 			channelState, merchState, err := libzkchannels.InitMerchant(channelState, "merch")
@@ -198,39 +197,24 @@ func Main(lisCfg ListenerCfg) error {
 			if err != nil {
 				return err
 			}
-			_ = ioutil.WriteFile("../zkchannelToken.json", file, 0644)
+			_ = ioutil.WriteFile("../merchPubKey.json", file, 0644)
 
-			// merchName := cfg.Alias
-			// if merchName == "" {
-			// 	merchName = "Merchant"
+			// zkDB add merchState & channelState
+			zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+			if err != nil {
+				return err
+			}
+
+			// save merchStateBytes in zkMerchDB
+			merchStateBytes, _ := json.Marshal(merchState)
+			zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+
+			// // save channelStateBytes in zkMerchDB
+			channelStateBytes, _ := json.Marshal(channelState)
+			zkchanneldb.AddMerchChannelState(zkMerchDB, channelStateBytes)
+
+			zkMerchDB.Close()
 		}
-
-		// 		channelToken, merchState, channelState, err := libbolt.BidirectionalInitMerchant(channelState, merchName)
-		// 		if err != nil {
-		// 			return err
-		// 		}
-
-		// 		file, err := json.MarshalIndent(channelToken, "", " ")
-		// 		if err != nil {
-		// 			return err
-		// 		}
-		// 		_ = ioutil.WriteFile("../zkchannelToken.json", file, 0644)
-
-		// 		// zkDB add merchState & channelState
-		// 		zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
-		// 		if err != nil {
-		// 			return err
-		// 		}
-
-		// 		// save merchStateBytes in zkMerchDB
-		// 		merchStateBytes, _ := json.Marshal(merchState)
-		// 		zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
-
-		// 		// // save channelStateBytes in zkMerchDB
-		// 		channelStateBytes, _ := json.Marshal(channelState)
-		// 		zkchanneldb.AddMerchChannelState(zkMerchDB, channelStateBytes)
-
-		// 		zkMerchDB.Close()
 
 		// 		file, err = json.MarshalIndent(channelState, "", " ")
 		// 		if err != nil {
