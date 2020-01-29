@@ -203,6 +203,8 @@ type server struct {
 
 	fundingMgr *fundingManager
 
+	zkchannelMgr *zkChannelManager
+
 	chanDB *channeldb.DB
 
 	htlcSwitch *htlcswitch.Switch
@@ -3609,6 +3611,8 @@ func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, cust_balance int64, merc
 // identified by public key.
 func (s *server) ZkPay(pubKey *btcec.PublicKey, Amount int64) error {
 	zkchLog.Infof("zkPay initiated")
+
+	dariusprint()
 
 	pubBytes := pubKey.SerializeCompressed()
 	pubStr := string(pubBytes)

@@ -3,7 +3,6 @@ package lnd
 import (
 	"bytes"
 	"container/list"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -1210,11 +1209,15 @@ out:
 
 		// ########### zkChannels ###########
 		case *lnwire.ZkPayProof:
+			dariusprint()
+			p.server.zkchannelMgr.processZkPayProof(msg, p)
 
-			// // To load from rpc message
-			var payment string
-			err := json.Unmarshal(msg.Payment, &payment)
-			_ = err
+			// p.server.fundingMgr.processFundingOpen(msg, p)
+
+			// // // To load from rpc message
+			// var payment string
+			// err := json.Unmarshal(msg.Payment, &payment)
+			// _ = err
 			// // open the zkchanneldb to load merchState
 			// zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
 
@@ -1273,13 +1276,13 @@ out:
 			// zkchanneldb.AddMerchState(zkMerchDB, saveMerchStateBytes)
 			// zkMerchDB.Close()
 
-			// TEMPORARY dummy message
-			closeTokenBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+			// // TEMPORARY dummy message
+			// closeTokenBytes := []byte{'d', 'u', 'm', 'm', 'y'}
 
-			zkPayClose := lnwire.ZkPayClose{
-				CloseToken: closeTokenBytes,
-			}
-			p.SendMessage(false, &zkPayClose)
+			// zkPayClose := lnwire.ZkPayClose{
+			// 	CloseToken: closeTokenBytes,
+			// }
+			// p.SendMessage(false, &zkPayClose)
 
 		case *lnwire.ZkPayClose:
 
@@ -1412,7 +1415,7 @@ out:
 
 		case *lnwire.ZkPayToken:
 			zkchLog.Info("Just received ZkPayToken with length: ", len(msg.PayToken))
-
+			dariusprint()
 			// // Read payToken from rpc message
 			// var payToken libbolt.Signature
 			// err = json.Unmarshal(msg.PayToken, &payToken)
