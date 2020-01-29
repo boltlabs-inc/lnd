@@ -254,6 +254,9 @@ type Config struct {
 	// with the daemon.
 	registeredChains *chainRegistry
 
+	ZkMerchant bool `long:"zkmerchant" description:"If true, the node initialize as a merchant. Otherwise it'll initialize as a customer"`
+	// ########### ln-mpc ###########
+
 	// networkDir is the path to the directory of the currently active
 	// network. This path will hold the files related to each different
 	// network.
