@@ -3608,6 +3608,8 @@ func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, cust_balance int64, merc
 // ZkPay sends the request to server to close the connection with peer
 // identified by public key.
 func (s *server) ZkPay(pubKey *btcec.PublicKey, Amount int64) error {
+	zkchLog.Infof("zkPay initiated")
+
 	pubBytes := pubKey.SerializeCompressed()
 	pubStr := string(pubBytes)
 
@@ -3623,8 +3625,6 @@ func (s *server) ZkPay(pubKey *btcec.PublicKey, Amount int64) error {
 	}
 
 	_ = peer
-
-	zkchLog.Infof("zkPay xxxxxxxxxxxx")
 
 	// // open the zkchanneldb to load custState
 	// zkCustDB, err := zkchanneldb.SetupZkCustDB()
@@ -3684,14 +3684,14 @@ func (s *server) ZkPay(pubKey *btcec.PublicKey, Amount int64) error {
 	// paymentBytes, err := json.Marshal(payment)
 	// zkchLog.Info("\nlength of 'payment': ", len(payment))
 
-	// // TEMPORARY dummy message
-	// paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	// TEMPORARY dummy message
+	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
 
-	// zkpayproof := lnwire.ZkPayProof{
-	// 	Payment: paymentBytes,
-	// }
+	zkpayproof := lnwire.ZkPayProof{
+		Payment: paymentBytes,
+	}
 
-	// peer.SendMessage(false, &zkpayproof)
+	peer.SendMessage(false, &zkpayproof)
 
 	return nil
 }
