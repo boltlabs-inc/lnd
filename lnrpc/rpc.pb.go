@@ -10481,6 +10481,86 @@ func (m *OpenZkChannelResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_OpenZkChannelResponse proto.InternalMessageInfo
 
+type ZkPayRequest struct {
+	/// The pubkey of the node to pay
+	PubKey string `protobuf:"bytes,1,opt,name=pub_key,proto3" json:"pub_key,omitempty"`
+	/// The number of satoshis to send
+	Amount               int64    `protobuf:"varint,2,opt,name=amount,proto3" json:"amount,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ZkPayRequest) Reset()         { *m = ZkPayRequest{} }
+func (m *ZkPayRequest) String() string { return proto.CompactTextString(m) }
+func (*ZkPayRequest) ProtoMessage()    {}
+func (*ZkPayRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{148}
+}
+
+func (m *ZkPayRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ZkPayRequest.Unmarshal(m, b)
+}
+func (m *ZkPayRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ZkPayRequest.Marshal(b, m, deterministic)
+}
+func (m *ZkPayRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ZkPayRequest.Merge(m, src)
+}
+func (m *ZkPayRequest) XXX_Size() int {
+	return xxx_messageInfo_ZkPayRequest.Size(m)
+}
+func (m *ZkPayRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ZkPayRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ZkPayRequest proto.InternalMessageInfo
+
+func (m *ZkPayRequest) GetPubKey() string {
+	if m != nil {
+		return m.PubKey
+	}
+	return ""
+}
+
+func (m *ZkPayRequest) GetAmount() int64 {
+	if m != nil {
+		return m.Amount
+	}
+	return 0
+}
+
+type ZkPayResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ZkPayResponse) Reset()         { *m = ZkPayResponse{} }
+func (m *ZkPayResponse) String() string { return proto.CompactTextString(m) }
+func (*ZkPayResponse) ProtoMessage()    {}
+func (*ZkPayResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{149}
+}
+
+func (m *ZkPayResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ZkPayResponse.Unmarshal(m, b)
+}
+func (m *ZkPayResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ZkPayResponse.Marshal(b, m, deterministic)
+}
+func (m *ZkPayResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ZkPayResponse.Merge(m, src)
+}
+func (m *ZkPayResponse) XXX_Size() int {
+	return xxx_messageInfo_ZkPayResponse.Size(m)
+}
+func (m *ZkPayResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ZkPayResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ZkPayResponse proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterEnum("lnrpc.AddressType", AddressType_name, AddressType_value)
 	proto.RegisterEnum("lnrpc.InvoiceHTLCState", InvoiceHTLCState_name, InvoiceHTLCState_value)
@@ -10656,6 +10736,8 @@ func init() {
 	proto.RegisterType((*BakeMacaroonResponse)(nil), "lnrpc.BakeMacaroonResponse")
 	proto.RegisterType((*OpenZkChannelRequest)(nil), "lnrpc.OpenZkChannelRequest")
 	proto.RegisterType((*OpenZkChannelResponse)(nil), "lnrpc.OpenZkChannelResponse")
+	proto.RegisterType((*ZkPayRequest)(nil), "lnrpc.ZkPayRequest")
+	proto.RegisterType((*ZkPayResponse)(nil), "lnrpc.ZkPayResponse")
 }
 
 func init() { proto.RegisterFile("rpc.proto", fileDescriptor_77a6da22d6a3feb1) }
@@ -11829,6 +11911,10 @@ type LightningClient interface {
 	//* lncli: `openzkchannel`
 	//OpenZkChannel establishes a zkchannel with a merchant.
 	OpenZkChannel(ctx context.Context, in *OpenZkChannelRequest, opts ...grpc.CallOption) (*OpenZkChannelResponse, error)
+	//* lncli: `zkpay`
+	//ZkPay attempts to make a zk payment to a peer with whom we have established a
+	//zkChannel.
+	ZkPay(ctx context.Context, in *ZkPayRequest, opts ...grpc.CallOption) (*ZkPayResponse, error)
 }
 
 type lightningClient struct {
@@ -12584,6 +12670,15 @@ func (c *lightningClient) OpenZkChannel(ctx context.Context, in *OpenZkChannelRe
 	return out, nil
 }
 
+func (c *lightningClient) ZkPay(ctx context.Context, in *ZkPayRequest, opts ...grpc.CallOption) (*ZkPayResponse, error) {
+	out := new(ZkPayResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ZkPay", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LightningServer is the server API for Lightning service.
 type LightningServer interface {
 	//* lncli: `walletbalance`
@@ -12903,6 +12998,10 @@ type LightningServer interface {
 	//* lncli: `openzkchannel`
 	//OpenZkChannel establishes a zkchannel with a merchant.
 	OpenZkChannel(context.Context, *OpenZkChannelRequest) (*OpenZkChannelResponse, error)
+	//* lncli: `zkpay`
+	//ZkPay attempts to make a zk payment to a peer with whom we have established a
+	//zkChannel.
+	ZkPay(context.Context, *ZkPayRequest) (*ZkPayResponse, error)
 }
 
 func RegisterLightningServer(s *grpc.Server, srv LightningServer) {
@@ -13947,6 +14046,24 @@ func _Lightning_OpenZkChannel_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Lightning_ZkPay_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ZkPayRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).ZkPay(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/ZkPay",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).ZkPay(ctx, req.(*ZkPayRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Lightning_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "lnrpc.Lightning",
 	HandlerType: (*LightningServer)(nil),
@@ -14126,6 +14243,10 @@ var _Lightning_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "OpenZkChannel",
 			Handler:    _Lightning_OpenZkChannel_Handler,
+		},
+		{
+			MethodName: "ZkPay",
+			Handler:    _Lightning_ZkPay_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

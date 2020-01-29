@@ -816,6 +816,8 @@ service Lightning {
         };
     };
 
+    // ########### ln-mpc start ###########
+
     /** lncli: `openzkchannel`
     OpenZkChannel establishes a zkchannel with a merchant.
     */
@@ -825,6 +827,18 @@ service Lightning {
             delete: "/v1/peers/{pub_key}"
         };
     }
+
+    /** lncli: `zkpay`
+    ZkPay attempts to make a zk payment to a peer with whom we have established a
+    zkChannel.
+    */
+    rpc ZkPay (ZkPayRequest) returns (ZkPayResponse) {
+    /// darius TODO: figure out what this function does. Copied from rpc disconnect 
+        option (google.api.http) = {
+            delete: "/v1/peers/{pub_key}"
+        };
+    }
+    // ########### ln-mpc end ###########
 }
 
 message Utxo {
@@ -3086,6 +3100,8 @@ message BakeMacaroonResponse {
     string macaroon = 1 [json_name = "macaroon"];
 }
 
+// ########### ln-mpc start ###########
+
 message OpenZkChannelRequest {
     /// The pubkey of the node to pay
     string pub_key = 1 [json_name = "pub_key"];
@@ -3097,3 +3113,13 @@ message OpenZkChannelRequest {
 
 message OpenZkChannelResponse {
 }
+
+message ZkPayRequest {
+    /// The pubkey of the node to pay
+    string pub_key = 1 [json_name = "pub_key"];
+    /// The number of satoshis to send
+    int64 amount = 2 [json_name = "amount"];
+}
+message ZkPayResponse {
+}
+// ########### ln-mpc end ###########

@@ -1149,13 +1149,13 @@
     },
     "/v1/peers/{pub_key}": {
       "delete": {
-        "summary": "* lncli: `openzkchannel`\nOpenZkChannel establishes a zkchannel with a merchant.",
-        "operationId": "OpenZkChannel",
+        "summary": "* lncli: `zkpay`\nZkPay attempts to make a zk payment to a peer with whom we have established a\nzkChannel.",
+        "operationId": "ZkPay",
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/lnrpcOpenZkChannelResponse"
+              "$ref": "#/definitions/lnrpcZkPayResponse"
             }
           }
         },
@@ -4144,6 +4144,9 @@
           "title": "/ The unconfirmed balance of a wallet(with 0 confirmations)"
         }
       }
+    },
+    "lnrpcZkPayResponse": {
+      "type": "object"
     }
   }
 }
