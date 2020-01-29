@@ -21,7 +21,7 @@
         "operationId": "WalletBalance",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcWalletBalanceResponse"
             }
@@ -38,7 +38,7 @@
         "operationId": "ChannelBalance",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcChannelBalanceResponse"
             }
@@ -55,7 +55,7 @@
         "operationId": "ListChannels",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcListChannelsResponse"
             }
@@ -108,7 +108,7 @@
         "operationId": "OpenChannelSync",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcChannelPoint"
             }
@@ -135,7 +135,7 @@
         "operationId": "AbandonChannel",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcAbandonChannelResponse"
             }
@@ -177,7 +177,7 @@
         "operationId": "ExportAllChannelBackups",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcChanBackupSnapshot"
             }
@@ -194,7 +194,7 @@
         "operationId": "RestoreChannelBackups",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcRestoreBackupResponse"
             }
@@ -221,7 +221,7 @@
         "operationId": "VerifyChanBackup",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcVerifyChanBackupResponse"
             }
@@ -248,7 +248,7 @@
         "operationId": "ExportChannelBackup",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcChannelBackup"
             }
@@ -290,7 +290,7 @@
         "operationId": "ClosedChannels",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcClosedChannelsResponse"
             }
@@ -351,7 +351,7 @@
         "operationId": "PendingChannels",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcPendingChannelsResponse"
             }
@@ -368,7 +368,7 @@
         "operationId": "SendPaymentSync",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcSendResponse"
             }
@@ -395,7 +395,7 @@
         "operationId": "SendToRouteSync",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcSendResponse"
             }
@@ -422,9 +422,9 @@
         "operationId": "CloseChannel",
         "responses": {
           "200": {
-            "description": "A successful response.(streaming responses)",
+            "description": "(streaming responses)",
             "schema": {
-              "$ref": "#/x-stream-definitions/lnrpcCloseStatusUpdate"
+              "$ref": "#/definitions/lnrpcCloseStatusUpdate"
             }
           }
         },
@@ -495,7 +495,7 @@
         "operationId": "UpdateChannelPolicy",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcPolicyUpdateResponse"
             }
@@ -522,7 +522,7 @@
         "operationId": "FeeReport",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcFeeReportResponse"
             }
@@ -539,7 +539,7 @@
         "operationId": "GetInfo",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcGetInfoResponse"
             }
@@ -556,7 +556,7 @@
         "operationId": "DescribeGraph",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcChannelGraph"
             }
@@ -583,7 +583,7 @@
         "operationId": "GetChanInfo",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcChannelEdge"
             }
@@ -610,7 +610,7 @@
         "operationId": "GetNetworkInfo",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcNetworkInfo"
             }
@@ -627,7 +627,7 @@
         "operationId": "GetNodeInfo",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcNodeInfo"
             }
@@ -695,7 +695,7 @@
         "operationId": "QueryRoutes",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcQueryRoutesResponse"
             }
@@ -766,8 +766,7 @@
             "items": {
               "type": "string",
               "format": "byte"
-            },
-            "collectionFormat": "multi"
+            }
           },
           {
             "name": "source_pub_key",
@@ -835,8 +834,7 @@
                 "MPP_REQ",
                 "MPP_OPT"
               ]
-            },
-            "collectionFormat": "multi"
+            }
           }
         ],
         "tags": [
@@ -850,7 +848,7 @@
         "operationId": "LookupInvoice",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcInvoice"
             }
@@ -884,7 +882,7 @@
         "operationId": "ListInvoices",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcListInvoiceResponse"
             }
@@ -933,7 +931,7 @@
         "operationId": "AddInvoice",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcAddInvoiceResponse"
             }
@@ -960,9 +958,9 @@
         "operationId": "SubscribeInvoices",
         "responses": {
           "200": {
-            "description": "A successful response.(streaming responses)",
+            "description": "(streaming responses)",
             "schema": {
-              "$ref": "#/x-stream-definitions/lnrpcInvoice"
+              "$ref": "#/definitions/lnrpcInvoice"
             }
           }
         },
@@ -995,7 +993,7 @@
         "operationId": "BakeMacaroon",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcBakeMacaroonResponse"
             }
@@ -1022,7 +1020,7 @@
         "operationId": "NewAddress",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcNewAddressResponse"
             }
@@ -1055,7 +1053,7 @@
         "operationId": "ListPayments",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcListPaymentsResponse"
             }
@@ -1104,7 +1102,7 @@
         "operationId": "DeleteAllPayments",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcDeleteAllPaymentsResponse"
             }
@@ -1121,7 +1119,7 @@
         "operationId": "DecodePayReq",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcPayReq"
             }
@@ -1147,7 +1145,7 @@
         "operationId": "ListPeers",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcListPeersResponse"
             }
@@ -1172,7 +1170,7 @@
         "operationId": "ConnectPeer",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcConnectPeerResponse"
             }
@@ -1199,9 +1197,9 @@
         "operationId": "DisconnectPeer",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
-              "$ref": "#/definitions/lnrpcDisconnectPeerResponse"
+              "$ref": "#/definitions/lnrpcOpenZkChannelResponse"
             }
           }
         },
@@ -1225,7 +1223,7 @@
         "operationId": "SignMessage",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcSignMessageResponse"
             }
@@ -1253,7 +1251,7 @@
         "operationId": "ForwardingHistory",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcForwardingHistoryResponse"
             }
@@ -1280,7 +1278,7 @@
         "operationId": "GetTransactions",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcTransactionDetails"
             }
@@ -1313,7 +1311,7 @@
         "operationId": "SendCoins",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcSendCoinsResponse"
             }
@@ -1340,7 +1338,7 @@
         "operationId": "EstimateFee",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcEstimateFeeResponse"
             }
@@ -1367,7 +1365,7 @@
         "operationId": "ListUnspent",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcListUnspentResponse"
             }
@@ -1402,7 +1400,7 @@
         "operationId": "VerifyMessage",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "",
             "schema": {
               "$ref": "#/definitions/lnrpcVerifyMessageResponse"
             }
@@ -3684,6 +3682,9 @@
         }
       }
     },
+    "lnrpcOpenZkChannelResponse": {
+      "type": "object"
+    },
     "lnrpcOutPoint": {
       "type": "object",
       "properties": {
@@ -4555,165 +4556,6 @@
           "title": "The unconfirmed balance of a wallet(with 0 confirmations)"
         }
       }
-    },
-    "protobufAny": {
-      "type": "object",
-      "properties": {
-        "type_url": {
-          "type": "string"
-        },
-        "value": {
-          "type": "string",
-          "format": "byte"
-        }
-      }
-    },
-    "runtimeStreamError": {
-      "type": "object",
-      "properties": {
-        "grpc_code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "http_code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "message": {
-          "type": "string"
-        },
-        "http_status": {
-          "type": "string"
-        },
-        "details": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/protobufAny"
-          }
-        }
-      }
-    }
-  },
-  "x-stream-definitions": {
-    "lnrpcChanBackupSnapshot": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "$ref": "#/definitions/lnrpcChanBackupSnapshot"
-        },
-        "error": {
-          "$ref": "#/definitions/runtimeStreamError"
-        }
-      },
-      "title": "Stream result of lnrpcChanBackupSnapshot"
-    },
-    "lnrpcChannelAcceptRequest": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "$ref": "#/definitions/lnrpcChannelAcceptRequest"
-        },
-        "error": {
-          "$ref": "#/definitions/runtimeStreamError"
-        }
-      },
-      "title": "Stream result of lnrpcChannelAcceptRequest"
-    },
-    "lnrpcChannelEventUpdate": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "$ref": "#/definitions/lnrpcChannelEventUpdate"
-        },
-        "error": {
-          "$ref": "#/definitions/runtimeStreamError"
-        }
-      },
-      "title": "Stream result of lnrpcChannelEventUpdate"
-    },
-    "lnrpcCloseStatusUpdate": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "$ref": "#/definitions/lnrpcCloseStatusUpdate"
-        },
-        "error": {
-          "$ref": "#/definitions/runtimeStreamError"
-        }
-      },
-      "title": "Stream result of lnrpcCloseStatusUpdate"
-    },
-    "lnrpcGraphTopologyUpdate": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "$ref": "#/definitions/lnrpcGraphTopologyUpdate"
-        },
-        "error": {
-          "$ref": "#/definitions/runtimeStreamError"
-        }
-      },
-      "title": "Stream result of lnrpcGraphTopologyUpdate"
-    },
-    "lnrpcInvoice": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "$ref": "#/definitions/lnrpcInvoice"
-        },
-        "error": {
-          "$ref": "#/definitions/runtimeStreamError"
-        }
-      },
-      "title": "Stream result of lnrpcInvoice"
-    },
-    "lnrpcOpenStatusUpdate": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "$ref": "#/definitions/lnrpcOpenStatusUpdate"
-        },
-        "error": {
-          "$ref": "#/definitions/runtimeStreamError"
-        }
-      },
-      "title": "Stream result of lnrpcOpenStatusUpdate"
-    },
-    "lnrpcPeerEvent": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "$ref": "#/definitions/lnrpcPeerEvent"
-        },
-        "error": {
-          "$ref": "#/definitions/runtimeStreamError"
-        }
-      },
-      "title": "Stream result of lnrpcPeerEvent"
-    },
-    "lnrpcSendResponse": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "$ref": "#/definitions/lnrpcSendResponse"
-        },
-        "error": {
-          "$ref": "#/definitions/runtimeStreamError"
-        }
-      },
-      "title": "Stream result of lnrpcSendResponse"
-    },
-    "lnrpcTransaction": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "$ref": "#/definitions/lnrpcTransaction"
-        },
-        "error": {
-          "$ref": "#/definitions/runtimeStreamError"
-        }
-      },
-      "title": "Stream result of lnrpcTransaction"
     }
   }
 }

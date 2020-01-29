@@ -7,6 +7,7 @@ package lnd
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -221,18 +222,16 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 			channelState, merchState, err := libzkchannels.InitMerchant(channelState, "merch")
 			zkchLog.Infof("InitMerchant done")
 
-
-
 			file, err := json.MarshalIndent(merchState.PkM, "", " ")
 			if err != nil {
 				return err
 			}
 			_ = ioutil.WriteFile("../zkchannelToken.json", file, 0644)
-			
+
 			// merchName := cfg.Alias
 			// if merchName == "" {
 			// 	merchName = "Merchant"
-			// }
+		}
 
 		// 		channelToken, merchState, channelState, err := libbolt.BidirectionalInitMerchant(channelState, merchName)
 		// 		if err != nil {

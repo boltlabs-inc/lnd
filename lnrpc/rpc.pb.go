@@ -12702,6 +12702,9 @@ type LightningClient interface {
 	//write permissions. No first-party caveats are added since this can be done
 	//offline.
 	BakeMacaroon(ctx context.Context, in *BakeMacaroonRequest, opts ...grpc.CallOption) (*BakeMacaroonResponse, error)
+	//* lncli: `openzkchannel`
+	//OpenZkChannel establishes a zkchannel with a merchant.
+	OpenZkChannel(ctx context.Context, in *OpenZkChannelRequest, opts ...grpc.CallOption) (*OpenZkChannelResponse, error)
 }
 
 type lightningClient struct {
@@ -13459,6 +13462,15 @@ func (c *lightningClient) BakeMacaroon(ctx context.Context, in *BakeMacaroonRequ
 	return out, nil
 }
 
+func (c *lightningClient) OpenZkChannel(ctx context.Context, in *OpenZkChannelRequest, opts ...grpc.CallOption) (*OpenZkChannelResponse, error) {
+	out := new(OpenZkChannelResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/OpenZkChannel", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LightningServer is the server API for Lightning service.
 type LightningServer interface {
 	// lncli: `walletbalance`
@@ -13781,6 +13793,9 @@ type LightningServer interface {
 	//write permissions. No first-party caveats are added since this can be done
 	//offline.
 	BakeMacaroon(context.Context, *BakeMacaroonRequest) (*BakeMacaroonResponse, error)
+	//* lncli: `openzkchannel`
+	//OpenZkChannel establishes a zkchannel with a merchant.
+	OpenZkChannel(context.Context, *OpenZkChannelRequest) (*OpenZkChannelResponse, error)
 }
 
 func RegisterLightningServer(s *grpc.Server, srv LightningServer) {
@@ -14825,6 +14840,24 @@ func _Lightning_BakeMacaroon_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Lightning_OpenZkChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OpenZkChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).OpenZkChannel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/OpenZkChannel",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).OpenZkChannel(ctx, req.(*OpenZkChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Lightning_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "lnrpc.Lightning",
 	HandlerType: (*LightningServer)(nil),
@@ -15004,6 +15037,10 @@ var _Lightning_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BakeMacaroon",
 			Handler:    _Lightning_BakeMacaroon_Handler,
+		},
+		{
+			MethodName: "OpenZkChannel",
+			Handler:    _Lightning_OpenZkChannel_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
