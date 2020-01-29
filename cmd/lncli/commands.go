@@ -3219,165 +3219,6 @@ var openZkChannelCommand = cli.Command{
 	Action: actionDecorator(openZkChannel),
 }
 
-// func openZkChannel(ctx *cli.Context) error {
-// 	// TODO(roasbeef): add deadline to context
-// 	ctxb := context.Background()
-// 	client, cleanUp := getClient(ctx)
-// 	defer cleanUp()
-
-// 	args := ctx.Args()
-// 	var err error
-
-// 	// Show command help if no arguments provided
-// 	if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
-// 		cli.ShowCommandHelp(ctx, "openzkchannel")
-// 		return nil
-// 	}
-
-// 	// minConfs := int32(ctx.Uint64("min_confs"))
-// 	req := &lnrpc.OpenZkChannelRequest{
-// 		TargetConf:       int32(ctx.Int64("conf_target")),
-// 		SatPerByte:       ctx.Int64("sat_per_byte"),
-// 		MinHtlcMsat:      ctx.Int64("min_htlc_msat"),
-// 		RemoteCsvDelay:   uint32(ctx.Uint64("remote_csv_delay")),
-// 		MinConfs:         minConfs,
-// 		SpendUnconfirmed: minConfs == 0,
-// 		CloseAddress:     ctx.String("close_address"),
-// 	}
-
-// 	switch {
-// 	case ctx.IsSet("node_key"):
-// 		nodePubHex, err := hex.DecodeString(ctx.String("node_key"))
-// 		if err != nil {
-// 			return fmt.Errorf("unable to decode node public key: %v", err)
-// 		}
-// 		req.NodePubkey = nodePubHex
-
-// 	case args.Present():
-// 		nodePubHex, err := hex.DecodeString(args.First())
-// 		if err != nil {
-// 			return fmt.Errorf("unable to decode node public key: %v", err)
-// 		}
-// 		args = args.Tail()
-// 		req.NodePubkey = nodePubHex
-// 	default:
-// 		return fmt.Errorf("node id argument missing")
-// 	}
-
-// 	// As soon as we can confirm that the node's node_key was set, rather
-// 	// than the peer_id, we can check if the host:port was also set to
-// 	// connect to it before opening the channel.
-// 	if req.NodePubkey != nil && ctx.IsSet("connect") {
-// 		addr := &lnrpc.LightningAddress{
-// 			Pubkey: hex.EncodeToString(req.NodePubkey),
-// 			Host:   ctx.String("connect"),
-// 		}
-
-// 		req := &lnrpc.ConnectPeerRequest{
-// 			Addr: addr,
-// 			Perm: false,
-// 		}
-
-// 		// Check if connecting to the node was successful.
-// 		// We discard the peer id returned as it is not needed.
-// 		_, err := client.ConnectPeer(ctxb, req)
-// 		if err != nil &&
-// 			!strings.Contains(err.Error(), "already connected") {
-// 			return err
-// 		}
-// 	}
-
-// 	switch {
-// 	case ctx.IsSet("local_amt"):
-// 		req.LocalFundingAmount = int64(ctx.Int("local_amt"))
-// 	case args.Present():
-// 		req.LocalFundingAmount, err = strconv.ParseInt(args.First(), 10, 64)
-// 		if err != nil {
-// 			return fmt.Errorf("unable to decode local amt: %v", err)
-// 		}
-// 		args = args.Tail()
-// 	default:
-// 		return fmt.Errorf("local amt argument missing")
-// 	}
-
-// 	if ctx.IsSet("push_amt") {
-// 		req.PushSat = int64(ctx.Int("push_amt"))
-// 	} else if args.Present() {
-// 		req.PushSat, err = strconv.ParseInt(args.First(), 10, 64)
-// 		if err != nil {
-// 			return fmt.Errorf("unable to decode push amt: %v", err)
-// 		}
-// 	}
-
-// 	req.Private = ctx.Bool("private")
-
-// 	stream, err := client.OpenChannel(ctxb, req)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	for {
-// 		resp, err := stream.Recv()
-// 		if err == io.EOF {
-// 			return nil
-// 		} else if err != nil {
-// 			return err
-// 		}
-
-// 		switch update := resp.Update.(type) {
-// 		case *lnrpc.OpenStatusUpdate_ChanPending:
-// 			txid, err := chainhash.NewHash(update.ChanPending.Txid)
-// 			if err != nil {
-// 				return err
-// 			}
-
-// 			printJSON(struct {
-// 				FundingTxid string `json:"funding_txid"`
-// 			}{
-// 				FundingTxid: txid.String(),
-// 			},
-// 			)
-
-// 			if !ctx.Bool("block") {
-// 				return nil
-// 			}
-
-// 		case *lnrpc.OpenStatusUpdate_ChanOpen:
-// 			channelPoint := update.ChanOpen.ChannelPoint
-
-// 			// A channel point's funding txid can be get/set as a
-// 			// byte slice or a string. In the case it is a string,
-// 			// decode it.
-// 			var txidHash []byte
-// 			switch channelPoint.GetFundingTxid().(type) {
-// 			case *lnrpc.ChannelPoint_FundingTxidBytes:
-// 				txidHash = channelPoint.GetFundingTxidBytes()
-// 			case *lnrpc.ChannelPoint_FundingTxidStr:
-// 				s := channelPoint.GetFundingTxidStr()
-// 				h, err := chainhash.NewHashFromStr(s)
-// 				if err != nil {
-// 					return err
-// 				}
-
-// 				txidHash = h[:]
-// 			}
-
-// 			txid, err := chainhash.NewHash(txidHash)
-// 			if err != nil {
-// 				return err
-// 			}
-
-// 			index := channelPoint.OutputIndex
-// 			printJSON(struct {
-// 				ChannelPoint string `json:"channel_point"`
-// 			}{
-// 				ChannelPoint: fmt.Sprintf("%v:%v", txid, index),
-// 			},
-// 			)
-// 		}
-// 	}
-// }
-
 func openZkChannel(ctx *cli.Context) error {
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
@@ -3421,3 +3262,67 @@ func openZkChannel(ctx *cli.Context) error {
 	printRespJSON(lnid)
 	return nil
 }
+
+// ########### zkChannels ###########
+var zkPayCommand = cli.Command{
+	Name:     "zkpay",
+	Category: "Payments",
+	Usage:    "Send a zero-knowledge payment over zkChannel.",
+	Description: `
+	Send a zkPayment to a merchant over an already established zkChannel.`,
+	ArgsUsage: "--node_key= --amt=A",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name: "node_key",
+			Usage: "the identity public key of the target node/peer " +
+				"serialized in compressed format",
+		},
+		cli.IntFlag{
+			Name: "amt",
+			Usage: "the number of satoshis to give the remote side " +
+				"as part of the initial commitment state, " +
+				"this is equivalent to first opening a " +
+				"channel and sending the remote party funds, " +
+				"but done all in one step",
+		},
+	},
+	Action: actionDecorator(zkPay),
+}
+
+func zkPay(ctx *cli.Context) error {
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	var pubKey string
+	switch {
+	case ctx.IsSet("node_key"):
+		pubKey = ctx.String("node_key")
+	case ctx.Args().Present():
+		pubKey = ctx.Args().First()
+	default:
+		return fmt.Errorf("must specify target public key")
+	}
+
+	var amt int64
+	if !ctx.IsSet("amt") {
+		return fmt.Errorf("must specify amount of satoshis to send")
+	} else {
+		amt = ctx.Int64("amt")
+	}
+
+	req := &lnrpc.ZkPayRequest{
+		PubKey: pubKey,
+		Amount: amt,
+	}
+
+	lnid, err := client.ZkPay(ctxb, req)
+	if err != nil {
+		return err
+	}
+
+	printRespJSON(lnid)
+	return nil
+}
+
+// ########### ln-mpc end ###########

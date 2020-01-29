@@ -1199,7 +1199,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/lnrpcOpenZkChannelResponse"
+              "$ref": "#/definitions/lnrpcZkPayResponse"
             }
           }
         },
@@ -4556,6 +4556,9 @@
           "title": "The unconfirmed balance of a wallet(with 0 confirmations)"
         }
       }
+    },
+    "lnrpcZkPayResponse": {
+      "type": "object"
     }
   }
 }

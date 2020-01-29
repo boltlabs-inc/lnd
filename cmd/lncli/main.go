@@ -310,6 +310,9 @@ func main() {
 		bakeMacaroonCommand,
 		trackPaymentCommand,
 		versionCommand,
+		// ################## ln-zkmpc ##################
+		openZkChannelCommand,
+		zkPayCommand,
 	}
 
 	// Add any extra commands determined by build flags.

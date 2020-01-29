@@ -3520,7 +3520,7 @@ func newSweepPkScriptGen(
 
 // OpenZkChannel sends the request to establish a zkchannel with a merchant.
 //
-// ########### ln-mpc ###########
+// ########### ln-mpc start ###########
 func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, cust_balance int64, merch_balance int64) error {
 	pubBytes := pubKey.SerializeCompressed()
 	pubStr := string(pubBytes)
@@ -3605,4 +3605,95 @@ func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, cust_balance int64, merc
 	return nil
 }
 
-// ########### zkChannels ###########
+// ZkPay sends the request to server to close the connection with peer
+// identified by public key.
+func (s *server) ZkPay(pubKey *btcec.PublicKey, Amount int64) error {
+	pubBytes := pubKey.SerializeCompressed()
+	pubStr := string(pubBytes)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Check that were actually connected to this peer. If not, then we'll
+	// exit in an error as we can't disconnect from a peer that we're not
+	// currently connected to.
+	peer, err := s.findPeerByPubStr(pubStr)
+	if err == ErrPeerNotConnected {
+		return fmt.Errorf("peer %x is not connected", pubBytes)
+	}
+
+	_ = peer
+
+	zkchLog.Infof("zkPay xxxxxxxxxxxx")
+
+	// // open the zkchanneldb to load custState
+	// zkCustDB, err := zkchanneldb.SetupZkCustDB()
+
+	// // read custState from ZkCustDB
+	// var custStateBytes []byte
+	// err = zkCustDB.View(func(tx *bolt.Tx) error {
+	// 	c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+	// 	_, v := c.Seek([]byte("custStateKey"))
+	// 	custStateBytes = v
+	// 	return nil
+	// })
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// var custState libbolt.CustState
+	// err = json.Unmarshal(custStateBytes, &custState)
+
+	// // read channelState from ZkCustDB
+	// var channelStateBytes []byte
+	// err = zkCustDB.View(func(tx *bolt.Tx) error {
+	// 	c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+	// 	_, v := c.Seek([]byte("channelStateKey"))
+	// 	channelStateBytes = v
+
+	// 	return nil
+	// })
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// var channelState libbolt.ChannelState
+	// err = json.Unmarshal(channelStateBytes, &channelState)
+
+	// zkCustDB.Close()
+
+	// zkchLog.Infof("Generating payment proof")
+
+	// // zkChannel specific code
+	// // generate payment proof
+	// paymentAmount := int(Amount) // convert from int64 to int
+	// payment, newCustState, err := libbolt.BidirectionalPayGeneratePaymentProof(channelState, custState, paymentAmount)
+
+	// // save updated newCustState in zkCustDB
+	// newCustStateBytes, _ := json.Marshal(newCustState)
+
+	// // zkDB add newCustState
+	// zkCustDB, err = zkchanneldb.SetupZkCustDB()
+	// zkchanneldb.AddNewCustState(zkCustDB, newCustStateBytes)
+	// zkCustDB.Close()
+
+	// zkchLog.Info("\n\nlength of 'newCustStateBytes': ", len(newCustStateBytes), "\n")
+
+	// zkchLog.Infof("Sending Ping msg to %v", peer)
+
+	// paymentBytes, err := json.Marshal(payment)
+	// zkchLog.Info("\nlength of 'payment': ", len(payment))
+
+	// // TEMPORARY dummy message
+	// paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+
+	// zkpayproof := lnwire.ZkPayProof{
+	// 	Payment: paymentBytes,
+	// }
+
+	// peer.SendMessage(false, &zkpayproof)
+
+	return nil
+}
+
+// ########### ln-mpc end ###########
