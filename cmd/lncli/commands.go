@@ -3239,7 +3239,7 @@ func openZkChannel(ctx *cli.Context) error {
 	}
 
 	// Load Merchant's bitcoin pubkey
-	var merchPubKey string
+	var merchPubKey []byte
 	if !ctx.IsSet("merch_pubkey") {
 		return fmt.Errorf("(Temporary solution). Must specify json containing merchant's pubkey")
 	} else {
