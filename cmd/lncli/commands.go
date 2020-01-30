@@ -4148,13 +4148,16 @@ func openZkChannel(ctx *cli.Context) error {
 		return fmt.Errorf("must specify target public key")
 	}
 
+	// Load Merchant's bitcoin pubkey
 	var merchPubKey string
-	switch {
-	case ctx.IsSet("merch_pubkey"):
-		merchPubKey = ctx.String("merch_pubkey")
-	default:
-		return fmt.Errorf("must specify the merchant's bitcoin public key")
+	if !ctx.IsSet("merch_pubkey") {
+		return fmt.Errorf("(Temporary solution). Must specify json containing merchant's pubkey")
+	} else {
+		merchPubKeyFile, _ := ioutil.ReadFile("../" + ctx.String("merch_pubkey"))
+		_ = json.Unmarshal(merchPubKeyFile, &merchPubKey)
 	}
+
+	fmt.Println("\n\nConnecting to merchant with bitcoin PubKey:", merchPubKey)
 
 	var custBalance int64
 	if !ctx.IsSet("cust_balance") {
