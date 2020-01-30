@@ -204,7 +204,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 		build.LoggingType)
 
 	// ################## ln-mpc start ##################
-	// If we are starting LND in standard LN mode (not zkchannel mode), then skip merchant steps
+	// If we are starting LND in standard LN mode (not zkchannel mode), then skip zkchannel steps
 	if !cfg.LNMode {
 		// Do merchant initialization if merchant flag was set
 		if cfg.ZkMerchant {

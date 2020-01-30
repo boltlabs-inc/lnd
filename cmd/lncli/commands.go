@@ -3215,7 +3215,6 @@ var openZkChannelCommand = cli.Command{
 				"but done all in one step",
 		},
 	},
-	// Action: actionDecorator(openChannel),
 	Action: actionDecorator(openZkChannel),
 }
 

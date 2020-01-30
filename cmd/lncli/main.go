@@ -257,7 +257,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "zkmerchant",
-			Usage: "if set, lock macaroon to specific IP address",
+			Usage: "if set, initialize for zkmerchant. If not, initialize for customer",
 		},
 	}
 	app.Commands = []cli.Command{
