@@ -10395,10 +10395,12 @@ func (m *BakeMacaroonResponse) GetMacaroon() string {
 type OpenZkChannelRequest struct {
 	/// The pubkey of the node to pay
 	PubKey string `protobuf:"bytes,1,opt,name=pub_key,proto3" json:"pub_key,omitempty"`
+	/// The merchant's bitcoin pubkey
+	MerchPubKey string `protobuf:"bytes,2,opt,name=merch_pub_key,json=merch_pubkey,proto3" json:"merch_pub_key,omitempty"`
 	/// Customer balance
-	CustBalance int64 `protobuf:"varint,2,opt,name=cust_balance,proto3" json:"cust_balance,omitempty"`
+	CustBalance int64 `protobuf:"varint,3,opt,name=cust_balance,proto3" json:"cust_balance,omitempty"`
 	/// Merchant balance
-	MerchBalance         int64    `protobuf:"varint,3,opt,name=merch_balance,proto3" json:"merch_balance,omitempty"`
+	MerchBalance         int64    `protobuf:"varint,4,opt,name=merch_balance,proto3" json:"merch_balance,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -10432,6 +10434,13 @@ var xxx_messageInfo_OpenZkChannelRequest proto.InternalMessageInfo
 func (m *OpenZkChannelRequest) GetPubKey() string {
 	if m != nil {
 		return m.PubKey
+	}
+	return ""
+}
+
+func (m *OpenZkChannelRequest) GetMerchPubKey() string {
+	if m != nil {
+		return m.MerchPubKey
 	}
 	return ""
 }

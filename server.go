@@ -3454,7 +3454,7 @@ func newSweepPkScriptGen(
 // OpenZkChannel sends the request to establish a zkchannel with a merchant.
 //
 // ########### ln-mpc start ###########
-func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, cust_balance int64, merch_balance int64) error {
+func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, merchPubKey string, custBalance int64, merchBalance int64) error {
 	pubBytes := pubKey.SerializeCompressed()
 	pubStr := string(pubBytes)
 

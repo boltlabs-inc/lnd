@@ -3105,10 +3105,12 @@ message BakeMacaroonResponse {
 message OpenZkChannelRequest {
     /// The pubkey of the node to pay
     string pub_key = 1 [json_name = "pub_key"];
+    /// The merchant's bitcoin pubkey
+    string merch_pub_key = 2 [json_name = "merch_pubkey"];
     /// Customer balance
-    int64 cust_balance = 2 [json_name = "cust_balance"];
+    int64 cust_balance = 3 [json_name = "cust_balance"];
     /// Merchant balance
-    int64 merch_balance = 3 [json_name = "merch_balance"];
+    int64 merch_balance = 4 [json_name = "merch_balance"];
 }
 
 message OpenZkChannelResponse {
