@@ -3202,6 +3202,11 @@ var openZkChannelCommand = cli.Command{
 			Usage: "the identity public key of the target node/peer " +
 				"serialized in compressed format",
 		},
+		cli.StringFlag{
+			Name: "merch_pubkey",
+			Usage: "the merchant's public key for the escrow tx" +
+				"serialized in compressed format",
+		},
 		cli.IntFlag{
 			Name:  "cust_balance",
 			Usage: "the number of satoshis the wallet should commit to the customer's balance (local side)",
@@ -3233,24 +3238,33 @@ func openZkChannel(ctx *cli.Context) error {
 		return fmt.Errorf("must specify target public key")
 	}
 
-	var cust_balance int64
+	var merchPubKey string
+	switch {
+	case ctx.IsSet("merch_pubkey"):
+		merchPubKey = ctx.String("merch_pubkey")
+	default:
+		return fmt.Errorf("must specify the merchant's bitcoin public key")
+	}
+
+	var custBalance int64
 	if !ctx.IsSet("cust_balance") {
 		return fmt.Errorf("must specify amount of satoshis for customer balance")
 	} else {
-		cust_balance = ctx.Int64("cust_balance")
+		custBalance = ctx.Int64("cust_balance")
 	}
 
-	var merch_balance int64
+	var merchBalance int64
 	if !ctx.IsSet("merch_balance") {
 		return fmt.Errorf("must specify amount of satoshis to send to the merchant")
 	} else {
-		merch_balance = ctx.Int64("merch_balance")
+		merchBalance = ctx.Int64("merch_balance")
 	}
 
 	req := &lnrpc.OpenZkChannelRequest{
 		PubKey:       pubKey,
-		CustBalance:  cust_balance,
-		MerchBalance: merch_balance,
+		MerchPubKey:  merchPubKey,
+		CustBalance:  custBalance,
+		MerchBalance: merchBalance,
 	}
 
 	lnid, err := client.OpenZkChannel(ctxb, req)
