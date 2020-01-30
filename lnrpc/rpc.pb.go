@@ -10396,7 +10396,7 @@ type OpenZkChannelRequest struct {
 	/// The pubkey of the node to pay
 	PubKey string `protobuf:"bytes,1,opt,name=pub_key,proto3" json:"pub_key,omitempty"`
 	/// The merchant's bitcoin pubkey
-	MerchPubKey string `protobuf:"bytes,2,opt,name=merch_pub_key,json=merch_pubkey,proto3" json:"merch_pub_key,omitempty"`
+	MerchPubKey []byte `protobuf:"bytes,2,opt,name=merch_pub_key,json=merch_pubkey,proto3" json:"merch_pub_key,omitempty"`
 	/// Customer balance
 	CustBalance int64 `protobuf:"varint,3,opt,name=cust_balance,proto3" json:"cust_balance,omitempty"`
 	/// Merchant balance
@@ -10438,11 +10438,11 @@ func (m *OpenZkChannelRequest) GetPubKey() string {
 	return ""
 }
 
-func (m *OpenZkChannelRequest) GetMerchPubKey() string {
+func (m *OpenZkChannelRequest) GetMerchPubKey() []byte {
 	if m != nil {
 		return m.MerchPubKey
 	}
-	return ""
+	return nil
 }
 
 func (m *OpenZkChannelRequest) GetCustBalance() int64 {
