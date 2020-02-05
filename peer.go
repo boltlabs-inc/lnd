@@ -1208,6 +1208,8 @@ out:
 			p.queueMsg(lnwire.NewPong(pongBytes), nil)
 
 		// ########### zkChannels ###########
+		case *lnwire.ZkEstablishOpen:
+			p.server.zkchannelMgr.processZkEstablishOpen(msg, p)
 		case *lnwire.ZkPayProof:
 			p.server.zkchannelMgr.processZkPayProof(msg, p)
 		case *lnwire.ZkPayClose:
