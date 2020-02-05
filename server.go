@@ -5,10 +5,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"image/color"
-	"log"
 	"math/big"
 	prand "math/rand"
 	"net"
@@ -19,7 +17,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/connmgr"
@@ -44,7 +41,6 @@ import (
 	"github.com/lightningnetwork/lnd/htlcswitch/hop"
 	"github.com/lightningnetwork/lnd/input"
 	"github.com/lightningnetwork/lnd/invoices"
-	"github.com/lightningnetwork/lnd/libzkchannels"
 	"github.com/lightningnetwork/lnd/lncfg"
 	"github.com/lightningnetwork/lnd/lnpeer"
 	"github.com/lightningnetwork/lnd/lnrpc"
@@ -67,7 +63,6 @@ import (
 	"github.com/lightningnetwork/lnd/watchtower/wtclient"
 	"github.com/lightningnetwork/lnd/watchtower/wtdb"
 	"github.com/lightningnetwork/lnd/watchtower/wtpolicy"
-	"github.com/lightningnetwork/lnd/zkchanneldb"
 )
 
 const (
@@ -3474,74 +3469,74 @@ func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, merchPubKey []byte, cust
 		return fmt.Errorf("peer %x is not connected", pubBytes)
 	}
 
-	_ = peer
+	peer.server.zkchannelMgr.initZkEstablish(merchPubKey, custBalance, merchBalance, peer)
 
-	// open the zkchanneldb to load custState
-	zkCustDB, err := zkchanneldb.SetupZkCustDB()
+	// // open the zkchanneldb to load custState
+	// zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
-	// read custState from ZkCustDB
-	var custStateBytes []byte
-	err = zkCustDB.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-		_, v := c.Seek([]byte("custStateKey"))
-		custStateBytes = v
-		return nil
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
+	// // read custState from ZkCustDB
+	// var custStateBytes []byte
+	// err = zkCustDB.View(func(tx *bolt.Tx) error {
+	// 	c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+	// 	_, v := c.Seek([]byte("custStateKey"))
+	// 	custStateBytes = v
+	// 	return nil
+	// })
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	zkCustDB.Close()
+	// zkCustDB.Close()
 
-	// // Below is if merchPubKey is to be loaded from json
-	// // Right now it's passed in as a command line argument for openzkchannel
-	// // Load channel token provided by Merchant
-	// merchPubKeyFile, err := ioutil.ReadFile("../merchPubKey.json")
-	// fmt.Println("\n\nread merchPubKey.json file as string =", string(merchPubKeyFile))
-	// var merchPubKey []byte
-	// err = json.Unmarshal(merchPubKeyFile, &merchPubKey)
+	// // // Below is if merchPubKey is to be loaded from json
+	// // // Right now it's passed in as a command line argument for openzkchannel
+	// // // Load channel token provided by Merchant
+	// // merchPubKeyFile, err := ioutil.ReadFile("../merchPubKey.json")
+	// // fmt.Println("\n\nread merchPubKey.json file as string =", string(merchPubKeyFile))
+	// // var merchPubKey []byte
+	// // err = json.Unmarshal(merchPubKeyFile, &merchPubKey)
 
-	// NOTE: tx will be replaced with update of libzkchannels
-	tx := "{\"init_cust_bal\":100,\"init_merch_bal\":100,\"escrow_index\":0,\"merch_index\":0,\"escrow_txid\":\"f6f77d4ff12bbcefd3213aaf2aa61d29b8267f89c57792875dead8f9ba2f303d\",\"escrow_prevout\":\"1a4946d25e4699c69d38899858f1173c5b7ab4e89440cf925205f4f244ce0725\",\"merch_txid\":\"42840a4d79fe3259007d8667b5c377db0d6446c20a8b490cfe9973582e937c3d\",\"merch_prevout\":\"e9af3d3478ee5bab17f97cb9da3e5c60104dec7f777f8a529a0d7ae960866449\"}"
+	// // NOTE: tx will be replaced with update of libzkchannels
+	// tx := "{\"init_cust_bal\":100,\"init_merch_bal\":100,\"escrow_index\":0,\"merch_index\":0,\"escrow_txid\":\"f6f77d4ff12bbcefd3213aaf2aa61d29b8267f89c57792875dead8f9ba2f303d\",\"escrow_prevout\":\"1a4946d25e4699c69d38899858f1173c5b7ab4e89440cf925205f4f244ce0725\",\"merch_txid\":\"42840a4d79fe3259007d8667b5c377db0d6446c20a8b490cfe9973582e937c3d\",\"merch_prevout\":\"e9af3d3478ee5bab17f97cb9da3e5c60104dec7f777f8a529a0d7ae960866449\"}"
 
-	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), tx, "cust")
-	// channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), 100, 100, "cust")
+	// channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), tx, "cust")
+	// // channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), 100, 100, "cust")
 
-	_, _ = channelToken, custState
-	zkchLog.Infof("Generated channelToken and custState")
+	// _, _ = channelToken, custState
+	// zkchLog.Infof("Generated channelToken and custState")
 
-	// zkDB add custState, channelToken, and channelState
-	zkCustDB, err = zkchanneldb.SetupZkCustDB()
+	// // zkDB add custState, channelToken, and channelState
+	// zkCustDB, err = zkchanneldb.SetupZkCustDB()
 
-	custStateBytes, _ = json.Marshal(custState)
-	zkchanneldb.AddCustState(zkCustDB, custStateBytes)
+	// custStateBytes, _ = json.Marshal(custState)
+	// zkchanneldb.AddCustState(zkCustDB, custStateBytes)
 
-	channelTokenBytes, _ := json.Marshal(channelToken)
-	zkchanneldb.AddCustChannelToken(zkCustDB, channelTokenBytes)
+	// channelTokenBytes, _ := json.Marshal(channelToken)
+	// zkchanneldb.AddCustChannelToken(zkCustDB, channelTokenBytes)
 
-	// channelStateBytes, _ := json.Marshal(channelState)
-	// zkchanneldb.AddCustChannelState(zkCustDB, channelStateBytes)
+	// // channelStateBytes, _ := json.Marshal(channelState)
+	// // zkchanneldb.AddCustChannelState(zkCustDB, channelStateBytes)
 
-	zkCustDB.Close()
+	// zkCustDB.Close()
 
-	zkchLog.Infof("Saved custState and channelToken")
+	// zkchLog.Infof("Saved custState and channelToken")
 
-	// paymentBytes, err := json.Marshal(payment)
-	// zkchLog.Info("\nlength of 'payment': ", len(payment))
+	// // paymentBytes, err := json.Marshal(payment)
+	// // zkchLog.Info("\nlength of 'payment': ", len(payment))
 
-	// zkpayproof := lnwire.ZkPayProof{
+	// // zkpayproof := lnwire.ZkPayProof{
+	// // 	Payment: paymentBytes,
+	// // }
+
+	// // TEMPORARY dummy message
+	// paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+
+	// zkEstablishOpen := lnwire.ZkEstablishOpen{
 	// 	Payment: paymentBytes,
 	// }
 
-	// TEMPORARY dummy message
-	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
-
-	zkEstablishOpen := lnwire.ZkEstablishOpen{
-		Payment: paymentBytes,
-	}
-
-	peer.SendMessage(false, &zkEstablishOpen)
-	// peer.SendMessage(false, &openZkChan)
+	// peer.SendMessage(false, &zkEstablishOpen)
+	// // peer.SendMessage(false, &openZkChan)
 
 	return nil
 }
