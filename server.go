@@ -3490,15 +3490,24 @@ func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, merchPubKey []byte, cust
 		log.Fatal(err)
 	}
 
+	// // Below is if merchPubKey is to be loaded from json
+	// // Right now it's passed in as a command line argument for openzkchannel
+	// // Load channel token provided by Merchant
+	// merchPubKeyFile, err := ioutil.ReadFile("../merchPubKey.json")
+	// fmt.Println("\n\nread merchPubKey.json file as string =", string(merchPubKeyFile))
+	// var merchPubKey []byte
+	// err = json.Unmarshal(merchPubKeyFile, &merchPubKey)
+
 	// NOTE: tx will be replaced with update of libzkchannels
 	tx := "{\"init_cust_bal\":100,\"init_merch_bal\":100,\"escrow_index\":0,\"merch_index\":0,\"escrow_txid\":\"f6f77d4ff12bbcefd3213aaf2aa61d29b8267f89c57792875dead8f9ba2f303d\",\"escrow_prevout\":\"1a4946d25e4699c69d38899858f1173c5b7ab4e89440cf925205f4f244ce0725\",\"merch_txid\":\"42840a4d79fe3259007d8667b5c377db0d6446c20a8b490cfe9973582e937c3d\",\"merch_prevout\":\"e9af3d3478ee5bab17f97cb9da3e5c60104dec7f777f8a529a0d7ae960866449\"}"
 
-	merchStatePkM = 
-
 	_ = custStateBytes
-	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", *merchState.PkM), 100, 100, "cust")
+	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), tx, "cust")
+	// channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), 100, 100, "cust")
 
 	_, _ = channelToken, custState
+	zkchLog.Infof("Generated channelToken and custState")
+
 	// var custState libbolt.CustState
 	// err = json.Unmarshal(custStateBytes, &custState)
 
