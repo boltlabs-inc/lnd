@@ -26,42 +26,46 @@ type MessageType uint16
 // The currently defined message types within this current version of the
 // Lightning protocol.
 const (
-	MsgInit                    MessageType = 16
-	MsgError                               = 17
-	MsgPing                                = 18
-	MsgPong                                = 19
-	MsgOpenChannel                         = 32
-	MsgAcceptChannel                       = 33
-	MsgFundingCreated                      = 34
-	MsgFundingSigned                       = 35
-	MsgFundingLocked                       = 36
-	MsgShutdown                            = 38
-	MsgClosingSigned                       = 39
-	MsgUpdateAddHTLC                       = 128
-	MsgUpdateFulfillHTLC                   = 130
-	MsgUpdateFailHTLC                      = 131
-	MsgCommitSig                           = 132
-	MsgRevokeAndAck                        = 133
-	MsgUpdateFee                           = 134
-	MsgUpdateFailMalformedHTLC             = 135
-	MsgChannelReestablish                  = 136
-	MsgChannelAnnouncement                 = 256
-	MsgNodeAnnouncement                    = 257
-	MsgChannelUpdate                       = 258
-	MsgAnnounceSignatures                  = 259
-	MsgQueryShortChanIDs                   = 261
-	MsgReplyShortChanIDsEnd                = 262
-	MsgQueryChannelRange                   = 263
-	MsgReplyChannelRange                   = 264
-	MsgGossipTimestampRange                = 265
-	ZkMsgEstablishOpen                     = 801
-	ZkMsgEstablishAccept                   = 802
-	// ZkMsgEstablishCustActivated            = 803
-	// ZkMsgEstablishPayToken                 = 804
-	ZkMsgPayProof  = 918
-	ZkMsgPayClose  = 919
-	ZkMsgPayRevoke = 920
-	ZkMsgPayToken  = 921
+	MsgInit                        MessageType = 16
+	MsgError                                   = 17
+	MsgPing                                    = 18
+	MsgPong                                    = 19
+	MsgOpenChannel                             = 32
+	MsgAcceptChannel                           = 33
+	MsgFundingCreated                          = 34
+	MsgFundingSigned                           = 35
+	MsgFundingLocked                           = 36
+	MsgShutdown                                = 38
+	MsgClosingSigned                           = 39
+	MsgUpdateAddHTLC                           = 128
+	MsgUpdateFulfillHTLC                       = 130
+	MsgUpdateFailHTLC                          = 131
+	MsgCommitSig                               = 132
+	MsgRevokeAndAck                            = 133
+	MsgUpdateFee                               = 134
+	MsgUpdateFailMalformedHTLC                 = 135
+	MsgChannelReestablish                      = 136
+	MsgChannelAnnouncement                     = 256
+	MsgNodeAnnouncement                        = 257
+	MsgChannelUpdate                           = 258
+	MsgAnnounceSignatures                      = 259
+	MsgQueryShortChanIDs                       = 261
+	MsgReplyShortChanIDsEnd                    = 262
+	MsgQueryChannelRange                       = 263
+	MsgReplyChannelRange                       = 264
+	MsgGossipTimestampRange                    = 265
+	ZkMsgEstablishOpen                         = 801
+	ZkMsgEstablishAccept                       = 802
+	ZkMsgEstablishMCloseSigned                 = 803
+	ZkMsgEstablishCCloseSigned                 = 804
+	ZkMsgEstablishFundingLocked                = 805
+	ZkMsgEstablishFundingConfirmed             = 806
+	ZkMsgEstablishCustActivated                = 807
+	ZkMsgEstablishPayToken                     = 808
+	ZkMsgPayProof                              = 918
+	ZkMsgPayClose                              = 919
+	ZkMsgPayRevoke                             = 920
+	ZkMsgPayToken                              = 921
 )
 
 // String return the string representation of message type.
@@ -127,6 +131,18 @@ func (t MessageType) String() string {
 		return "ZkEstablishOpen"
 	case ZkMsgEstablishAccept:
 		return "ZkEstablishAccept"
+	case ZkMsgEstablishMCloseSigned:
+		return "ZkEstablishMCloseSigned"
+	case ZkMsgEstablishCCloseSigned:
+		return "ZkEstablishCCloseSigned"
+	case ZkMsgEstablishFundingLocked:
+		return "ZkEstablishFundingLocked"
+	case ZkMsgEstablishFundingConfirmed:
+		return "ZkEstablishFundingConfirmed"
+	case ZkMsgEstablishCustActivated:
+		return "ZkEstablishCustActivated"
+	case ZkMsgEstablishPayToken:
+		return "ZkEstablishPayToken"
 	case ZkMsgPayProof:
 		return "ZkPayProof"
 	case ZkMsgPayClose:
@@ -240,6 +256,18 @@ func makeEmptyMessage(msgType MessageType) (Message, error) {
 		msg = &ZkEstablishOpen{}
 	case ZkMsgEstablishAccept:
 		msg = &ZkEstablishAccept{}
+	case ZkMsgEstablishMCloseSigned:
+		msg = &ZkEstablishMCloseSigned{}
+	case ZkMsgEstablishCCloseSigned:
+		msg = &ZkEstablishCCloseSigned{}
+	case ZkMsgEstablishFundingLocked:
+		msg = &ZkEstablishFundingLocked{}
+	case ZkMsgEstablishFundingConfirmed:
+		msg = &ZkEstablishFundingConfirmed{}
+	case ZkMsgEstablishCustActivated:
+		msg = &ZkEstablishCustActivated{}
+	case ZkMsgEstablishPayToken:
+		msg = &ZkEstablishPayToken{}
 	case ZkMsgPayProof:
 		msg = &ZkPayProof{}
 	case ZkMsgPayClose:
