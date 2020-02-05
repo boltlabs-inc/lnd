@@ -135,6 +135,122 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 	// // }
 	// // p.SendMessage(false, &zkEstablishCustSig)
 
+	// TEMPORARY DUMMY MESSAGE
+	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+
+	zkEstablishMCloseSigned := lnwire.ZkEstablishMCloseSigned{
+		Payment: paymentBytes,
+	}
+	p.SendMessage(false, &zkEstablishMCloseSigned)
+
+}
+
+func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablishMCloseSigned, p lnpeer.Peer) {
+
+	zkchLog.Info("Just received MCloseSigned with length: ", len(msg.Payment))
+
+	// // To load from rpc message
+	var payment string
+	err := json.Unmarshal(msg.Payment, &payment)
+	_ = err
+
+	// TEMPORARY DUMMY MESSAGE
+	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	zkEstablishCCloseSigned := lnwire.ZkEstablishCCloseSigned{
+		Payment: paymentBytes,
+	}
+	p.SendMessage(false, &zkEstablishCCloseSigned)
+
+}
+
+func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablishCCloseSigned, p lnpeer.Peer) {
+
+	zkchLog.Info("Just received CCloseSigned with length: ", len(msg.Payment))
+
+	// // To load from rpc message
+	var payment string
+	err := json.Unmarshal(msg.Payment, &payment)
+	_ = err
+
+	// TEMPORARY DUMMY MESSAGE
+	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	zkEstablishFundingLocked := lnwire.ZkEstablishFundingLocked{
+		Payment: paymentBytes,
+	}
+	p.SendMessage(false, &zkEstablishFundingLocked)
+
+}
+
+func (z *zkChannelManager) processZkEstablishFundingLocked(msg *lnwire.ZkEstablishFundingLocked, p lnpeer.Peer) {
+
+	zkchLog.Info("Just received FundingLocked with length: ", len(msg.Payment))
+
+	// // To load from rpc message
+	var payment string
+	err := json.Unmarshal(msg.Payment, &payment)
+	_ = err
+
+	// TEMPORARY DUMMY MESSAGE
+	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	zkEstablishFundingConfirmed := lnwire.ZkEstablishFundingConfirmed{
+		Payment: paymentBytes,
+	}
+	p.SendMessage(false, &zkEstablishFundingConfirmed)
+
+}
+
+func (z *zkChannelManager) processZkEstablishFundingConfirmed(msg *lnwire.ZkEstablishFundingConfirmed, p lnpeer.Peer) {
+
+	zkchLog.Info("Just received FundingConfirmed with length: ", len(msg.Payment))
+
+	// // To load from rpc message
+	var payment string
+	err := json.Unmarshal(msg.Payment, &payment)
+	_ = err
+
+	// TEMPORARY DUMMY MESSAGE
+	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	zkEstablishCustActivated := lnwire.ZkEstablishCustActivated{
+		Payment: paymentBytes,
+	}
+	p.SendMessage(false, &zkEstablishCustActivated)
+
+}
+
+func (z *zkChannelManager) processZkEstablishCustActivated(msg *lnwire.ZkEstablishCustActivated, p lnpeer.Peer) {
+
+	zkchLog.Info("Just received CustActivated with length: ", len(msg.Payment))
+
+	// // To load from rpc message
+	var payment string
+	err := json.Unmarshal(msg.Payment, &payment)
+	_ = err
+
+	// TEMPORARY DUMMY MESSAGE
+	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	zkEstablishPayToken := lnwire.ZkEstablishPayToken{
+		Payment: paymentBytes,
+	}
+	p.SendMessage(false, &zkEstablishPayToken)
+
+}
+
+func (z *zkChannelManager) processZkEstablishPayToken(msg *lnwire.ZkEstablishPayToken, p lnpeer.Peer) {
+
+	zkchLog.Info("Just received PayToken with length: ", len(msg.Payment))
+
+	// // To load from rpc message
+	var payment string
+	err := json.Unmarshal(msg.Payment, &payment)
+	_ = err
+
+	// // TEMPORARY DUMMY MESSAGE
+	// paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	// zkEstablish := lnwire.ZkEstablish{
+	// 	Payment: paymentBytes,
+	// }
+	// p.SendMessage(false, &zkEstablish)
+
 }
 
 func (z *zkChannelManager) processZkPayProof(msg *lnwire.ZkPayProof, p lnpeer.Peer) {
