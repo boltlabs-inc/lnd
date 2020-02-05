@@ -54,10 +54,14 @@ const (
 	MsgQueryChannelRange                   = 263
 	MsgReplyChannelRange                   = 264
 	MsgGossipTimestampRange                = 265
-	ZkMsgPayProof                          = 918
-	ZkMsgPayClose                          = 919
-	ZkMsgPayRevoke                         = 920
-	ZkMsgPayToken                          = 921
+	ZkMsgEstablishOpen                     = 801
+	// ZkMsgEstablishAccept                   = 802
+	// ZkMsgEstablishCustActivated            = 803
+	// ZkMsgEstablishPayToken                 = 804
+	ZkMsgPayProof  = 918
+	ZkMsgPayClose  = 919
+	ZkMsgPayRevoke = 920
+	ZkMsgPayToken  = 921
 )
 
 // String return the string representation of message type.
@@ -119,6 +123,8 @@ func (t MessageType) String() string {
 		return "ReplyChannelRange"
 	case MsgGossipTimestampRange:
 		return "GossipTimestampRange"
+	case ZkMsgEstablishOpen:
+		return "ZkEstablishOpen"
 	case ZkMsgPayProof:
 		return "ZkPayProof"
 	case ZkMsgPayClose:
@@ -228,6 +234,8 @@ func makeEmptyMessage(msgType MessageType) (Message, error) {
 		msg = &ReplyChannelRange{}
 	case MsgGossipTimestampRange:
 		msg = &GossipTimestampRange{}
+	case ZkMsgEstablishOpen:
+		msg = &ZkEstablishOpen{}
 	case ZkMsgPayProof:
 		msg = &ZkPayProof{}
 	case ZkMsgPayClose:

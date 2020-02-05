@@ -10,6 +10,25 @@ import (
 type zkChannelManager struct {
 }
 
+func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p lnpeer.Peer) {
+
+	zkchLog.Info("Just received ZkEstablishOpen with length: ", len(msg.Payment))
+
+	// // To load from rpc message
+	var payment string
+	err := json.Unmarshal(msg.Payment, &payment)
+	_ = err
+
+	// TEMPORARY DUMMY MESSAGE
+	closeTokenBytes := []byte{'d', 'u', 'm', 'm', 'y', 'y', 'y', 'y'}
+	_ = closeTokenBytes
+	// zkPayClose := lnwire.ZkPayClose{
+	// 	CloseToken: closeTokenBytes,
+	// }
+	// p.SendMessage(false, &zkEstablishAccept)
+
+}
+
 func (z *zkChannelManager) processZkPayProof(msg *lnwire.ZkPayProof, p lnpeer.Peer) {
 
 	zkchLog.Info("Just received ZkPayProof with length: ", len(msg.Payment))

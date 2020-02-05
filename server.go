@@ -3526,46 +3526,6 @@ func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, merchPubKey []byte, cust
 
 	zkchLog.Infof("Saved custState and channelToken")
 
-	// var custState libbolt.CustState
-	// err = json.Unmarshal(custStateBytes, &custState)
-
-	// // read channelState from ZkCustDB
-	// var channelStateBytes []byte
-	// err = zkCustDB.View(func(tx *bolt.Tx) error {
-	// 	c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-	// 	_, v := c.Seek([]byte("channelStateKey"))
-	// 	channelStateBytes = v
-
-	// 	return nil
-	// })
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// var channelState libbolt.ChannelState
-	// err = json.Unmarshal(channelStateBytes, &channelState)
-
-	// zkCustDB.Close()
-
-	// zkchLog.Infof("Generating payment proof")
-
-	// // zkChannel specific code
-	// // generate payment proof
-	// paymentAmount := int(Amount) // convert from int64 to int
-	// payment, newCustState, err := libbolt.BidirectionalPayGeneratePaymentProof(channelState, custState, paymentAmount)
-
-	// // save updated newCustState in zkCustDB
-	// newCustStateBytes, _ := json.Marshal(newCustState)
-
-	// // zkDB add newCustState
-	// zkCustDB, err = zkchanneldb.SetupZkCustDB()
-	// zkchanneldb.AddNewCustState(zkCustDB, newCustStateBytes)
-	// zkCustDB.Close()
-
-	// zkchLog.Info("\n\nlength of 'newCustStateBytes': ", len(newCustStateBytes), "\n")
-
-	// zkchLog.Infof("Sending Ping msg to %v", peer)
-
 	// paymentBytes, err := json.Marshal(payment)
 	// zkchLog.Info("\nlength of 'payment': ", len(payment))
 
@@ -3573,7 +3533,15 @@ func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, merchPubKey []byte, cust
 	// 	Payment: paymentBytes,
 	// }
 
-	// peer.SendMessage(false, &zkpayproof)
+	// TEMPORARY dummy message
+	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+
+	zkEstablishOpen := lnwire.ZkEstablishOpen{
+		Payment: paymentBytes,
+	}
+
+	peer.SendMessage(false, &zkEstablishOpen)
+	// peer.SendMessage(false, &openZkChan)
 
 	return nil
 }
