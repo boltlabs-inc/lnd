@@ -1089,6 +1089,8 @@ out:
 		// ########### zkChannels ###########
 		case *lnwire.ZkEstablishOpen:
 			p.server.zkchannelMgr.processZkEstablishOpen(msg, p)
+		case *lnwire.ZkEstablishAccept:
+			p.server.zkchannelMgr.processZkEstablishAccept(msg, p)
 		case *lnwire.ZkPayProof:
 			p.server.zkchannelMgr.processZkPayProof(msg, p)
 		case *lnwire.ZkPayClose:
