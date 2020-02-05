@@ -20,12 +20,31 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 	_ = err
 
 	// TEMPORARY DUMMY MESSAGE
-	closeTokenBytes := []byte{'d', 'u', 'm', 'm', 'y', 'y', 'y', 'y'}
-	_ = closeTokenBytes
-	// zkPayClose := lnwire.ZkPayClose{
-	// 	CloseToken: closeTokenBytes,
-	// }
-	// p.SendMessage(false, &zkEstablishAccept)
+	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+
+	zkEstablishAccept := lnwire.ZkEstablishAccept{
+		Payment: paymentBytes,
+	}
+	p.SendMessage(false, &zkEstablishAccept)
+
+}
+
+func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccept, p lnpeer.Peer) {
+
+	zkchLog.Info("Just received ZkEstablishAccept with length: ", len(msg.Payment))
+
+	// // To load from rpc message
+	var payment string
+	err := json.Unmarshal(msg.Payment, &payment)
+	_ = err
+
+	// // TEMPORARY DUMMY MESSAGE
+	// closeTokenBytes := []byte{'d', 'u', 'm', 'm', 'y', 'y', 'y', 'y'}
+	// _ = closeTokenBytes
+	// // zkPayClose := lnwire.ZkPayClose{
+	// // 	CloseToken: closeTokenBytes,
+	// // }
+	// // p.SendMessage(false, &zkEstablishAccept)
 
 }
 
