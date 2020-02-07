@@ -823,8 +823,8 @@ service Lightning {
     */
     rpc OpenZkChannel (OpenZkChannelRequest) returns (OpenZkChannelResponse) {
         /// darius TODO: Figure out what this does. Copied from rpc disconnect
-        // option (google.api.http) = {
-        //     delete: "/v1/peers/{pub_key}"
+        option (google.api.http) = {
+            delete: "/v1/peers/{pub_key}"
         };
     }
 
@@ -834,8 +834,8 @@ service Lightning {
     */
     rpc ZkPay (ZkPayRequest) returns (ZkPayResponse) {
     /// darius TODO: figure out what this function does. Copied from rpc disconnect 
-        // option (google.api.http) = {
-        //     delete: "/v1/peers/{pub_key}"
+        option (google.api.http) = {
+            delete: "/v1/peers/{pub_key}"
         };
     }
     // ########### ln-mpc end ###########
@@ -3106,7 +3106,7 @@ message OpenZkChannelRequest {
     /// The pubkey of the node to pay
     string pub_key = 1 [json_name = "pub_key"];
     /// The merchant's bitcoin pubkey
-    bytes merch_pub_key = 2 [json_name = "merch_pubkey"];
+    string merch_pub_key = 2 [json_name = "merch_pubkey"];
     /// Customer balance
     int64 cust_balance = 3 [json_name = "cust_balance"];
     /// Merchant balance
