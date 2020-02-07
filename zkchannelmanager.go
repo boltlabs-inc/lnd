@@ -15,7 +15,7 @@ import (
 type zkChannelManager struct {
 }
 
-func (z *zkChannelManager) initZkEstablish(merchPubKey []byte, custBalance int64, merchBalance int64, p lnpeer.Peer) {
+func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBalance int64, merchBalance int64, p lnpeer.Peer) {
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.SetupZkCustDB()
@@ -42,11 +42,40 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey []byte, custBalance int64
 	// var merchPubKey []byte
 	// err = json.Unmarshal(merchPubKeyFile, &merchPubKey)
 
-	// NOTE: tx will be replaced with update of libzkchannels
-	tx := "{\"init_cust_bal\":100,\"init_merch_bal\":100,\"escrow_index\":0,\"merch_index\":0,\"escrow_txid\":\"f6f77d4ff12bbcefd3213aaf2aa61d29b8267f89c57792875dead8f9ba2f303d\",\"escrow_prevout\":\"1a4946d25e4699c69d38899858f1173c5b7ab4e89440cf925205f4f244ce0725\",\"merch_txid\":\"42840a4d79fe3259007d8667b5c377db0d6446c20a8b490cfe9973582e937c3d\",\"merch_prevout\":\"e9af3d3478ee5bab17f97cb9da3e5c60104dec7f777f8a529a0d7ae960866449\"}"
+	inputSats := int64(10000)
+	custBal := int64(9000)
+	merchBal := int64(100)
 
-	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), tx, "cust")
-	// channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), 100, 100, "cust")
+	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
+	// assert.Nil(t, err)
+
+	cust_utxo_txid := "f4df16149735c2963832ccaa9627f4008a06291e8b932c2fc76b3a5d62d462e1"
+
+	custSk := fmt.Sprintf("%v", custState.SkC)
+	custPk := fmt.Sprintf("%v", custState.PkC)
+
+	// merchSk := fmt.Sprintf("%v", *merchState.SkM)
+	// merchPk := fmt.Sprintf("%v", *merchState.PkM)
+	merchPk := fmt.Sprintf("%v", merchPubKey)
+	// changeSk := "4157697b6428532758a9d0f9a73ce58befe3fd665797427d1c5bb3d33f6a132e"
+	changePk := "037bed6ab680a171ef2ab564af25eff15c0659313df0bbfb96414da7c7d1e65882"
+
+	// merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
+	// toSelfDelay := "cf05"
+	zkchLog.Info("custSk :=> ", custSk)
+	fmt.Println("custPk :=> ", custPk)
+	// fmt.Println("merchSk :=> ", merchSk)
+	fmt.Println("merchPk :=> ", merchPk)
+	// fmt.Println("merchClosePk :=> ", merchClosePk)
+
+	signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(cust_utxo_txid, 0, inputSats, custBal, custSk, custPk, merchPk, changePk)
+	// assert.Nil(t, err)
+
+	_ = escrowTxid
+	_ = escrowPrevout
+	fmt.Println("escrow txid => ", escrowTxid)
+	fmt.Println("escrow prevout => ", escrowPrevout)
+	fmt.Println("signedEscrowTx => ", signedEscrowTx)
 
 	_, _ = channelToken, custState
 	zkchLog.Infof("Generated channelToken and custState")

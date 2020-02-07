@@ -11229,7 +11229,7 @@ func (m *Failure) GetChannelUpdate() *ChannelUpdate {
 	if m != nil {
 		return m.ChannelUpdate
 	}
-	return nil
+	return ""
 }
 
 func (m *Failure) GetHtlcMsat() uint64 {
