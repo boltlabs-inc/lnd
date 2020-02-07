@@ -8,7 +8,7 @@ import "io"
 // the end of the ping message (which is padding).
 type ZkPayProof struct {
 	// Payment contains the payment from generatePaymentProof
-	Payment ZkPayProofPaymentType
+	Payment ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.

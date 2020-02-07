@@ -5,7 +5,7 @@ import "io"
 // ZkEstablishMCloseSigned is the first msg sent by the customer to open a zkchannel
 type ZkEstablishMCloseSigned struct {
 	// Payment contains the payment from generatePaymentProof
-	Payment ZkPayProofPaymentType
+	Payment ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
