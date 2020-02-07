@@ -34,14 +34,6 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBalance int64
 
 	zkCustDB.Close()
 
-	// // Below is if merchPubKey is to be loaded from json
-	// // Right now it's passed in as a command line argument for openzkchannel
-	// // Load channel token provided by Merchant
-	// merchPubKeyFile, err := ioutil.ReadFile("../merchPubKey.json")
-	// fmt.Println("\n\nread merchPubKey.json file as string =", string(merchPubKeyFile))
-	// var merchPubKey []byte
-	// err = json.Unmarshal(merchPubKeyFile, &merchPubKey)
-
 	inputSats := int64(10000)
 	custBal := int64(9000)
 	merchBal := int64(100)
@@ -89,29 +81,18 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBalance int64
 	channelTokenBytes, _ := json.Marshal(channelToken)
 	zkchanneldb.AddCustChannelToken(zkCustDB, channelTokenBytes)
 
-	// channelStateBytes, _ := json.Marshal(channelState)
-	// zkchanneldb.AddCustChannelState(zkCustDB, channelStateBytes)
-
 	zkCustDB.Close()
 
 	zkchLog.Infof("Saved custState and channelToken")
 
-	// paymentBytes, err := json.Marshal(payment)
-	// zkchLog.Info("\nlength of 'payment': ", len(payment))
-
-	// zkpayproof := lnwire.ZkPayProof{
-	// 	Payment: paymentBytes,
-	// }
-
-	// TEMPORARY dummy message
-	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	// Send ZkEstablishOpen message to merchant
+	escrowTxidBytes := []byte(escrowTxid)
 
 	zkEstablishOpen := lnwire.ZkEstablishOpen{
-		Payment: paymentBytes,
+		Payment: escrowTxidBytes,
 	}
 
 	p.SendMessage(false, &zkEstablishOpen)
-	// peer.SendMessage(false, &openZkChan)
 
 }
 
