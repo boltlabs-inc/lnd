@@ -38,8 +38,8 @@ type ZkChannelParamsType []byte
 // CloseToken, CustPkC
 type ZkChannelSigType []byte
 
-// ZkPayProofPaymentType is the type for 'payment' on zkChannels.
-type ZkPayProofPaymentType []byte
+// ZkMsgType is the type for 'payment' on zkChannels.
+type ZkMsgType []byte
 
 const (
 	// noAddr denotes a blank address. An address of this type indicates
@@ -451,12 +451,12 @@ func WriteElement(w io.Writer, element interface{}) error {
 			return err
 		}
 
-	case ZkPayProofPaymentType:
+	case ZkMsgType:
 		// zkpayment has length 34464 bytes (21sh Dec 2019)
 		// darius TODO: put in the actual length of CloseToken and CustPkC
 		Length := len(e)
 		if Length > 44464 {
-			return fmt.Errorf("'ZkPayProofPaymentType' too long")
+			return fmt.Errorf("'ZkMsgType' too long")
 		}
 		if err := wire.WriteVarBytes(w, 0, e); err != nil {
 			return err
@@ -887,7 +887,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 		}
 		*e = zkChannelSig
 
-	case *ZkPayProofPaymentType:
+	case *ZkMsgType:
 		// zkpayment has length 34464 bytes (21sh Dec 2019)
 		// darius: not sure what the field name at the end is for
 		zkPayment, err := wire.ReadVarBytes(r, 0, 44464, "zkpayment")

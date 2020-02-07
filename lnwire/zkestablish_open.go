@@ -5,7 +5,10 @@ import "io"
 // ZkEstablishOpen is the first msg sent by the customer to open a zkchannel
 type ZkEstablishOpen struct {
 	// Payment contains the payment from generatePaymentProof
-	Payment ZkPayProofPaymentType
+	Payment ZkMsgType
+	// CustPk ZkMsgType
+	// CustBal ZkMsgType
+	// MerchBal ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
