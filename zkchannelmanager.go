@@ -64,10 +64,10 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBalance int64
 	zkchanneldb.AddCustState(zkCustDB, custStateBytes)
 
 	channelTokenBytes, _ := json.Marshal(channelToken)
-	zkchanneldb.AddCustChannelToken(zkCustDB, channelTokenBytes)
+	zkchanneldb.AddCustField(zkCustDB, channelTokenBytes, "channelTokenKey")
 
 	custSkBytes, _ := json.Marshal(custSk)
-	zkchanneldb.AddField(zkCustDB, custSkBytes, "custSkKey")
+	zkchanneldb.AddCustField(zkCustDB, custSkBytes, "custSkKey")
 
 	zkCustDB.Close()
 
