@@ -245,7 +245,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 
 			// // save channelStateBytes in zkMerchDB
 			channelStateBytes, _ := json.Marshal(channelState)
-			zkchanneldb.AddMerchChannelState(zkMerchDB, channelStateBytes)
+			zkchanneldb.AddMerchField(zkMerchDB, channelStateBytes, "channelStateKey")
 
 			zkMerchDB.Close()
 
