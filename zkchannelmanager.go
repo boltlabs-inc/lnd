@@ -1,6 +1,7 @@
 package lnd
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -85,11 +86,21 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBalance int64
 
 	zkchLog.Infof("Saved custState and channelToken")
 
-	// Send ZkEstablishOpen message to merchant
+	// Convert fields into bytes
 	escrowTxidBytes := []byte(escrowTxid)
+	custPkBytes := []byte(custPk)
+
+	custBalBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(custBalBytes, uint64(custBal))
+
+	merchBalBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(merchBalBytes, uint64(merchBal))
 
 	zkEstablishOpen := lnwire.ZkEstablishOpen{
-		Payment: escrowTxidBytes,
+		EscrowTxid: escrowTxidBytes,
+		CustPk:     custPkBytes,
+		CustBal:    custBalBytes,
+		MerchBal:   merchBalBytes,
 	}
 
 	p.SendMessage(false, &zkEstablishOpen)
@@ -98,12 +109,11 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBalance int64
 
 func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p lnpeer.Peer) {
 
-	zkchLog.Info("Just received ZkEstablishOpen with length: ", len(msg.Payment))
+	zkchLog.Info("Just received ZkEstablishOpen with length: ", len(msg.EscrowTxid))
 
-	// // To load from rpc message
-	var payment string
-	err := json.Unmarshal(msg.Payment, &payment)
-	_ = err
+	escrowTxid := string(msg.EscrowTxid)
+
+	fmt.Println("received escrow txid => ", escrowTxid)
 
 	// TEMPORARY DUMMY MESSAGE
 	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
