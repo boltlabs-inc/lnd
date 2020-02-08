@@ -118,17 +118,12 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 		log.Fatal(err)
 	}
 
-	zkMerchDB.Close()
-
-	zkchLog.Info("zkMerchDB closed")
-
 	var merchState libzkchannels.MerchState
 	zkchLog.Info("libzkchannels.MerchState")
 	err = json.Unmarshal(merchStateBytes, &merchState)
 
-	if err != nil {
-		log.Fatal(err)
-	}
+	zkMerchDB.Close()
+	zkchLog.Info("zkMerchDB closed")
 
 	zkchLog.Info("Unmarshal done")
 
