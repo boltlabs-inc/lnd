@@ -66,6 +66,9 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBalance int64
 	channelTokenBytes, _ := json.Marshal(channelToken)
 	zkchanneldb.AddCustChannelToken(zkCustDB, channelTokenBytes)
 
+	custSkBytes, _ := json.Marshal(custSk)
+	zkchanneldb.AddField(zkCustDB, custSkBytes, "custSkKey")
+
 	zkCustDB.Close()
 
 	zkchLog.Infof("Saved custState and channelToken")
@@ -106,7 +109,7 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 	// open the zkchanneldb to load merchState
 	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
 
-	// // read custState from ZkCustDB
+	// read custState from ZkCustDB
 	var merchStateBytes []byte
 	err = zkMerchDB.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
@@ -123,10 +126,8 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 	err = json.Unmarshal(merchStateBytes, &merchState)
 
 	zkMerchDB.Close()
-	zkchLog.Info("zkMerchDB closed")
 
-	zkchLog.Info("Unmarshal done")
-
+	// NOTE: For now, hardcoded
 	merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
 	toSelfDelay := "cf05"
 
@@ -145,12 +146,35 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 
 func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccept, p lnpeer.Peer) {
 
-	zkchLog.Info("Just received ZkEstablishAccept with length: ", len(msg.ToSelfDelay))
+	zkchLog.Info("Just received ZkEstablishAccept.ToSelfDelay with length: ", len(msg.ToSelfDelay))
 
-	// // To load from rpc message
-	var toSelfDelay string
-	err := json.Unmarshal(msg.ToSelfDelay, &toSelfDelay)
-	_ = err
+	// open the zkchanneldb to load merchState
+	zkCustDB, err := zkchanneldb.SetupZkCustDB()
+
+	// read custSkBytes from ZkCustDB
+	var custSkBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("custSkKey"))
+		custSkBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var custSk string
+	zkchLog.Info("libzkchannels.MerchState")
+	err = json.Unmarshal(custSkBytes, &custSk)
+
+	zkCustDB.Close()
+
+	zkchLog.Info("custSk :=> ", custSk)
+
+	// toSelfDelay := string(msg.ToSelfDelay)
+	// merchPayoutPk := string(msg.MerchPayoutPk)
+
+	// merchTxPreimage, err := libzkchannels.FormMerchCloseTx(escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay)
 
 	// ******** TODO ********
 	// FormEscrowTx()
