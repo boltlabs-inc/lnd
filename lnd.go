@@ -199,6 +199,12 @@ func Main(lisCfg ListenerCfg) error {
 			}
 			_ = ioutil.WriteFile("../merchPubKey.json", file, 0644)
 
+			fileb, err := json.MarshalIndent(merchState, "", " ")
+			if err != nil {
+				return err
+			}
+			_ = ioutil.WriteFile("../merchAll.json", fileb, 0644)
+
 			// zkDB add merchState & channelState
 			zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
 			if err != nil {

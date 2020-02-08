@@ -120,13 +120,29 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 
 	zkMerchDB.Close()
 
-	// merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
-	// toSelfDelay := "cf05"
+	zkchLog.Info("zkMerchDB closed")
 
-	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	var merchState libzkchannels.MerchState
+	zkchLog.Info("libzkchannels.MerchState")
+	err = json.Unmarshal(merchStateBytes, &merchState)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	zkchLog.Info("Unmarshal done")
+
+	merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
+	toSelfDelay := "cf05"
+
+	// Convert fields into bytes
+	merchClosePkBytes := []byte(merchClosePk)
+	toSelfDelayBytes := []byte(toSelfDelay)
+	zkchLog.Info("converting done")
 
 	zkEstablishAccept := lnwire.ZkEstablishAccept{
-		Delay: paymentBytes,
+		ToSelfDelay:   toSelfDelayBytes,
+		MerchPayoutPk: merchClosePkBytes,
 	}
 	p.SendMessage(false, &zkEstablishAccept)
 
@@ -134,11 +150,11 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 
 func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccept, p lnpeer.Peer) {
 
-	zkchLog.Info("Just received ZkEstablishAccept with length: ", len(msg.Delay))
+	zkchLog.Info("Just received ZkEstablishAccept with length: ", len(msg.ToSelfDelay))
 
 	// // To load from rpc message
-	var payment string
-	err := json.Unmarshal(msg.Delay, &payment)
+	var toSelfDelay string
+	err := json.Unmarshal(msg.ToSelfDelay, &toSelfDelay)
 	_ = err
 
 	// ******** TODO ********
