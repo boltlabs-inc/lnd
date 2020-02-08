@@ -113,6 +113,21 @@ func AddCustChannelToken(db *bolt.DB, channelTokenBytes []byte) error {
 	return err
 }
 
+// AddField adds arbitrary field to the zkCustDB
+func AddField(db *bolt.DB, fieldBytes []byte, fieldName string) error {
+
+	err := db.Update(func(tx *bolt.Tx) error {
+		err := tx.Bucket(CustBucket).Put([]byte(fieldName), fieldBytes)
+		if err != nil {
+			return fmt.Errorf("could not insert entry: %v", err)
+		}
+
+		return nil
+	})
+	fmt.Println("Added cust Entry:", fieldName)
+	return err
+}
+
 // AddMerchChannelToken adds merchState to the zkMerchDB
 func AddMerchChannelToken(db *bolt.DB, channelTokenBytes []byte) error {
 
