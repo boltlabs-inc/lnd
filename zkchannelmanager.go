@@ -18,28 +18,12 @@ type zkChannelManager struct {
 
 func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBalance int64, merchBalance int64, p lnpeer.Peer) {
 
-	// open the zkchanneldb to load custState
-	zkCustDB, err := zkchanneldb.SetupZkCustDB()
-
-	// read custState from ZkCustDB
-	var custStateBytes []byte
-	err = zkCustDB.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-		_, v := c.Seek([]byte("custStateKey"))
-		custStateBytes = v
-		return nil
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	zkCustDB.Close()
-
 	inputSats := int64(10000)
 	custBal := int64(9000)
 	merchBal := int64(100)
 
 	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
+	_ = err
 	// assert.Nil(t, err)
 
 	cust_utxo_txid := "f4df16149735c2963832ccaa9627f4008a06291e8b932c2fc76b3a5d62d462e1"
@@ -74,9 +58,9 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBalance int64
 	zkchLog.Infof("Generated channelToken and custState")
 
 	// zkDB add custState, channelToken, and channelState
-	zkCustDB, err = zkchanneldb.SetupZkCustDB()
+	zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
-	custStateBytes, _ = json.Marshal(custState)
+	custStateBytes, _ := json.Marshal(custState)
 	zkchanneldb.AddCustState(zkCustDB, custStateBytes)
 
 	channelTokenBytes, _ := json.Marshal(channelToken)
@@ -111,15 +95,38 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 
 	zkchLog.Info("Just received ZkEstablishOpen with length: ", len(msg.EscrowTxid))
 
-	escrowTxid := string(msg.EscrowTxid)
+	// // Variables to save
+	// escrowTxid := string(msg.EscrowTxid)
+	// custPk := string(msg.CustPk)
+	// custBal := int64(msg.CustBal)
+	// merchBal := int64(msg.MerchBal)
 
-	fmt.Println("received escrow txid => ", escrowTxid)
+	// fmt.Println("received escrow txid => ", escrowTxid)
 
-	// TEMPORARY DUMMY MESSAGE
+	// open the zkchanneldb to load merchState
+	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
+	// // read custState from ZkCustDB
+	var merchStateBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		_, v := c.Seek([]byte("merchStateKey"))
+		merchStateBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	zkMerchDB.Close()
+
+	// merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
+	// toSelfDelay := "cf05"
+
 	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
 
 	zkEstablishAccept := lnwire.ZkEstablishAccept{
-		Payment: paymentBytes,
+		Delay: paymentBytes,
 	}
 	p.SendMessage(false, &zkEstablishAccept)
 
@@ -127,11 +134,11 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 
 func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccept, p lnpeer.Peer) {
 
-	zkchLog.Info("Just received ZkEstablishAccept with length: ", len(msg.Payment))
+	zkchLog.Info("Just received ZkEstablishAccept with length: ", len(msg.Delay))
 
 	// // To load from rpc message
 	var payment string
-	err := json.Unmarshal(msg.Payment, &payment)
+	err := json.Unmarshal(msg.Delay, &payment)
 	_ = err
 
 	// ******** TODO ********
