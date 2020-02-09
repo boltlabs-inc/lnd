@@ -57,7 +57,7 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBalance int64
 	_, _ = channelToken, custState
 	zkchLog.Infof("Generated channelToken and custState")
 
-	// zkDB add custState, channelToken, and channelState
+	// Add variables to zkchannelsdb
 	zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
 	custStateBytes, _ := json.Marshal(custState)
@@ -69,18 +69,30 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBalance int64
 	custSkBytes, _ := json.Marshal(custSk)
 	zkchanneldb.AddCustField(zkCustDB, custSkBytes, "custSkKey")
 
+	merchPkBytes, _ := json.Marshal(merchPk)
+	zkchanneldb.AddCustField(zkCustDB, merchPkBytes, "merchPkKey")
+
+	custBalBytes, _ := json.Marshal(custBal)
+	zkchanneldb.AddCustField(zkCustDB, custBalBytes, "custBalKey")
+
+	merchBalBytes, _ := json.Marshal(merchBal)
+	zkchanneldb.AddCustField(zkCustDB, merchBalBytes, "merchBalKey")
+
+	escrowTxidBytes, _ := json.Marshal(escrowTxid)
+	zkchanneldb.AddCustField(zkCustDB, escrowTxidBytes, "escrowTxidKey")
+
 	zkCustDB.Close()
 
 	zkchLog.Infof("Saved custState and channelToken")
 
 	// Convert fields into bytes
-	escrowTxidBytes := []byte(escrowTxid)
+	escrowTxidBytes = []byte(escrowTxid)
 	custPkBytes := []byte(custPk)
 
-	custBalBytes := make([]byte, 8)
+	custBalBytes = make([]byte, 8)
 	binary.LittleEndian.PutUint64(custBalBytes, uint64(custBal))
 
-	merchBalBytes := make([]byte, 8)
+	merchBalBytes = make([]byte, 8)
 	binary.LittleEndian.PutUint64(merchBalBytes, uint64(merchBal))
 
 	zkEstablishOpen := lnwire.ZkEstablishOpen{
@@ -151,55 +163,99 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 	// open the zkchanneldb to load merchState
 	zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
-	// read custSkBytes from ZkCustDB
-	var custSkBytes []byte
+	// read custState from ZkCustDB
+	var custStateBytes []byte
 	err = zkCustDB.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-		_, v := c.Seek([]byte("custSkKey"))
-		custSkBytes = v
+		_, v := c.Seek([]byte("custStateKey"))
+		custStateBytes = v
 		return nil
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var custSk string
-	zkchLog.Info("libzkchannels.MerchState")
-	err = json.Unmarshal(custSkBytes, &custSk)
+	var custState libzkchannels.CustState
+	err = json.Unmarshal(custStateBytes, &custState)
+
+	// read merchPkBytes from ZkCustDB
+	var merchPkBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("merchPkKey"))
+		merchPkBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var merchPk string
+	err = json.Unmarshal(merchPkBytes, &merchPk)
+
+	// read escrowTxidBytes from ZkCustDB
+	var escrowTxidBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("escrowTxidKey"))
+		escrowTxidBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var escrowTxid string
+	err = json.Unmarshal(escrowTxidBytes, &escrowTxid)
+
+	// read merchBalBytes from ZkCustDB
+	var merchBalBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("merchBalKey"))
+		merchBalBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var merchBal int64
+	err = json.Unmarshal(merchBalBytes, &merchBal)
+
+	// read custBalBytes from ZkCustDB
+	var custBalBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("custBalKey"))
+		custBalBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var custBal int64
+	err = json.Unmarshal(custBalBytes, &custBal)
 
 	zkCustDB.Close()
 
-	zkchLog.Info("custSk :=> ", custSk)
+	custSk := fmt.Sprintf("%v", custState.SkC)
+	custPk := fmt.Sprintf("%v", custState.PkC)
 
-	// toSelfDelay := string(msg.ToSelfDelay)
-	// merchPayoutPk := string(msg.MerchPayoutPk)
+	toSelfDelay := string(msg.ToSelfDelay)
+	merchClosePk := string(msg.MerchPayoutPk)
 
-	// merchTxPreimage, err := libzkchannels.FormMerchCloseTx(escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay)
+	merchTxPreimage, err := libzkchannels.FormMerchCloseTx(escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay)
 
-	// ******** TODO ********
-	// FormEscrowTx()
+	zkchLog.Info("merch TxPreimage => ", merchTxPreimage)
 
-	// HandleCustTransactions(...)
-	// // requires that the <escrow-tx> and <merch-close-tx> are already formed (but not signed)
-	// (A) Customer calls FormCustCloseTxs(...) - form the <cust-close-from-escrow-tx> and <cust-close-from-merch-close-tx>
-	// (B) Customer calls SignCustCloseTxs(txInfo, channelToken, channelState, custState)
-	// 	channelToken, custState
-	// (C) Customer calls SignMerchCloseTx(...) - sign the <merch-close-tx>
+	custSig, err := libzkchannels.CustomerSignMerchCloseTx(custSk, merchTxPreimage)
 
-	// ******** TODO ********
-	// Customer sends 1 signature on <merch-close-tx>
-
-	// // TEMPORARY DUMMY MESSAGE
-	// signatureBytes := []byte{'d', 'u', 'm', 'm', 'y', 'y', 'y', 'y'}
-	// _ = signatureBytes
-	// // zkEstablishCustSig := lnwire.ZkEstablishCustSig{
-	// // 	Signature: signatureBytes,
-	// // }
-	// // p.SendMessage(false, &zkEstablishCustSig)
+	zkchLog.Info("custSig on merchCloseTx=> ", custSig)
 
 	// TEMPORARY DUMMY MESSAGE
 	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
-
 	zkEstablishMCloseSigned := lnwire.ZkEstablishMCloseSigned{
 		Payment: paymentBytes,
 	}
