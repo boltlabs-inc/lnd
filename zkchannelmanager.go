@@ -254,10 +254,13 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 
 	zkchLog.Info("custSig on merchCloseTx=> ", custSig)
 
-	// TEMPORARY DUMMY MESSAGE
-	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	// Convert variables to bytes before sending
+	merchTxPreimageBytes := []byte(merchTxPreimage)
+	custSigBytes := []byte(custSig)
+
 	zkEstablishMCloseSigned := lnwire.ZkEstablishMCloseSigned{
-		Payment: paymentBytes,
+		MerchTxPreimage: merchTxPreimageBytes,
+		CustSig:         custSigBytes,
 	}
 	p.SendMessage(false, &zkEstablishMCloseSigned)
 
@@ -265,12 +268,7 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 
 func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablishMCloseSigned, p lnpeer.Peer) {
 
-	zkchLog.Info("Just received MCloseSigned with length: ", len(msg.Payment))
-
-	// // To load from rpc message
-	var payment string
-	err := json.Unmarshal(msg.Payment, &payment)
-	_ = err
+	zkchLog.Info("Just received MCloseSigned.MerchTxPreimage with length: ", len(msg.MerchTxPreimage))
 
 	// TEMPORARY DUMMY MESSAGE
 	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
