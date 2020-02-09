@@ -5,10 +5,12 @@ import "io"
 // ZkEstablishOpen is the first msg sent by the customer to open a zkchannel
 type ZkEstablishOpen struct {
 	// Payment contains the payment from generatePaymentProof
-	EscrowTxid ZkMsgType
-	CustPk     ZkMsgType
-	CustBal    ZkMsgType
-	MerchBal   ZkMsgType
+	EscrowTxid    ZkMsgType
+	CustPk        ZkMsgType
+	EscrowPrevout ZkMsgType
+	RevLock       ZkMsgType
+	CustBal       ZkMsgType
+	MerchBal      ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -22,6 +24,8 @@ func (p *ZkEstablishOpen) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
 		&p.EscrowTxid,
 		&p.CustPk,
+		&p.EscrowPrevout,
+		&p.RevLock,
 		&p.CustBal,
 		&p.MerchBal)
 }
@@ -34,6 +38,8 @@ func (p *ZkEstablishOpen) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
 		p.EscrowTxid,
 		p.CustPk,
+		p.EscrowPrevout,
+		p.RevLock,
 		p.CustBal,
 		p.MerchBal)
 }
