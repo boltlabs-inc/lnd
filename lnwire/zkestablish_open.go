@@ -21,7 +21,9 @@ var _ Message = (*ZkEstablishOpen)(nil)
 func (p *ZkEstablishOpen) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
 		&p.EscrowTxid,
-		&p.CustPk)
+		&p.CustPk,
+		&p.CustBal,
+		&p.MerchBal)
 }
 
 // Encode serializes the target Ping into the passed io.Writer observing the
@@ -31,7 +33,9 @@ func (p *ZkEstablishOpen) Decode(r io.Reader, pver uint32) error {
 func (p *ZkEstablishOpen) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
 		p.EscrowTxid,
-		p.CustPk)
+		p.CustPk,
+		p.CustBal,
+		p.MerchBal)
 }
 
 // MsgType returns the integer uniquely identifying this message type on the
