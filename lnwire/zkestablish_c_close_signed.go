@@ -5,7 +5,10 @@ import "io"
 // ZkEstablishCCloseSigned is the first msg sent by the customer to open a zkchannel
 type ZkEstablishCCloseSigned struct {
 	// Payment contains the payment from generatePaymentProof
-	Payment ZkMsgType
+	EscrowSig    ZkMsgType
+	MerchSig     ZkMsgType
+	MerchTxid    ZkMsgType
+	MerchPrevout ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -17,7 +20,10 @@ var _ Message = (*ZkEstablishCCloseSigned)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishCCloseSigned) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
-		&p.Payment)
+		&p.EscrowSig,
+		&p.MerchSig,
+		&p.MerchTxid,
+		&p.MerchPrevout)
 }
 
 // Encode serializes the target Ping into the passed io.Writer observing the
@@ -26,7 +32,10 @@ func (p *ZkEstablishCCloseSigned) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishCCloseSigned) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
-		p.Payment)
+		p.EscrowSig,
+		p.MerchSig,
+		p.MerchTxid,
+		p.MerchPrevout)
 }
 
 // MsgType returns the integer uniquely identifying this message type on the

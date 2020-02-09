@@ -7,6 +7,7 @@ type ZkEstablishAccept struct {
 	// Payment contains the payment from generatePaymentProof
 	ToSelfDelay   ZkMsgType
 	MerchPayoutPk ZkMsgType
+	ChannelState  ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -19,7 +20,8 @@ var _ Message = (*ZkEstablishAccept)(nil)
 func (p *ZkEstablishAccept) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
 		&p.ToSelfDelay,
-		&p.MerchPayoutPk)
+		&p.MerchPayoutPk,
+		&p.ChannelState)
 }
 
 // Encode serializes the target Ping into the passed io.Writer observing the
@@ -29,7 +31,8 @@ func (p *ZkEstablishAccept) Decode(r io.Reader, pver uint32) error {
 func (p *ZkEstablishAccept) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
 		p.ToSelfDelay,
-		p.MerchPayoutPk)
+		p.MerchPayoutPk,
+		p.ChannelState)
 }
 
 // MsgType returns the integer uniquely identifying this message type on the
