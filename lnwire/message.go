@@ -64,7 +64,7 @@ const (
 	ZkMsgEstablishPayToken                     = 808
 	ZkMsgPayNonce                              = 918
 	ZkMsgMaskCom                               = 919
-	ZkMsgPayRevoke                             = 920
+	ZkMsgPayMPC                                = 920
 	ZkMsgPayToken                              = 921
 )
 
@@ -147,8 +147,8 @@ func (t MessageType) String() string {
 		return "ZkPayNonce"
 	case ZkMsgMaskCom:
 		return "ZkMaskCom"
-	case ZkMsgPayRevoke:
-		return "ZkPayRevoke"
+	case ZkMsgPayMPC:
+		return "ZkPayMPC"
 	case ZkMsgPayToken:
 		return "ZkPayToken"
 	default:
@@ -272,8 +272,8 @@ func makeEmptyMessage(msgType MessageType) (Message, error) {
 		msg = &ZkPayNonce{}
 	case ZkMsgMaskCom:
 		msg = &ZkMaskCom{}
-	case ZkMsgPayRevoke:
-		msg = &ZkPayRevoke{}
+	case ZkMsgPayMPC:
+		msg = &ZkPayMPC{}
 	case ZkMsgPayToken:
 		msg = &ZkPayToken{}
 	default:

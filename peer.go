@@ -1108,8 +1108,8 @@ out:
 			p.server.zkchannelMgr.processZkPayNonce(msg, p)
 		case *lnwire.ZkMaskCom:
 			p.server.zkchannelMgr.processZkMaskCom(msg, p)
-		case *lnwire.ZkPayRevoke:
-			p.server.zkchannelMgr.processZkPayRevoke(msg, p)
+		case *lnwire.ZkPayMPC:
+			p.server.zkchannelMgr.processZkPayMPC(msg, p)
 		case *lnwire.ZkPayToken:
 			p.server.zkchannelMgr.processZkPayToken(msg, p)
 
