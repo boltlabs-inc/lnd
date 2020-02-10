@@ -2,7 +2,7 @@ package lnwire
 
 import "io"
 
-// ZkPayClose contains the close token the merchant sends to the customer,
+// ZkMaskCom contains the close token the merchant sends to the customer,
 // after having verified the customer's payment proof.
 // The close token is given to the Customer by the Merchant, to allow the
 // Customer to close the channel unilaterally, paying out to each party
