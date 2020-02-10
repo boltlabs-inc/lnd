@@ -823,6 +823,20 @@ func (z *zkChannelManager) processZkEstablishCustActivated(msg *lnwire.ZkEstabli
 
 	payToken0, merchState, err := libzkchannels.ActivateMerchant(channelToken, state, merchState)
 
+	// Darius: Do we save 'state' here?
+
+	// Add variables to zkchannelsdb
+	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
+
+	merchStateBytes, _ = json.Marshal(merchState)
+	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+
+	// // Darius: Should state be saved? If so it'll need to be stored separately for each channel?
+	// stateBytes, _ := json.Marshal(state)
+	// zkchanneldb.AddMerchField(zkMerchDB, stateBytes, "stateKey")
+
+	zkMerchDB.Close()
+
 	// TEMPORARY DUMMY MESSAGE
 	payToken0Bytes := []byte(payToken0)
 	zkEstablishPayToken := lnwire.ZkEstablishPayToken{
@@ -845,14 +859,119 @@ func (z *zkChannelManager) processZkEstablishPayToken(msg *lnwire.ZkEstablishPay
 
 }
 
-func (z *zkChannelManager) processZkPayProof(msg *lnwire.ZkPayProof, p lnpeer.Peer) {
+func (z *zkChannelManager) InitZkPay(Amount int64, p lnpeer.Peer) {
 
-	zkchLog.Info("Just received ZkPayProof with length: ", len(msg.Payment))
+	// open the zkchanneldb to load custState
+	zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
-	// // To load from rpc message
-	var payment string
-	err := json.Unmarshal(msg.Payment, &payment)
-	_ = err
+	// read custState from ZkCustDB
+	var custStateBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("custStateKey"))
+		custStateBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var custState libzkchannels.CustState
+	err = json.Unmarshal(custStateBytes, &custState)
+
+	// read channelState from ZkCustDB
+	var channelStateBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("channelStateKey"))
+		channelStateBytes = v
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var channelState libzkchannels.ChannelState
+	err = json.Unmarshal(channelStateBytes, &channelState)
+
+	// read state from ZkCustDB
+	var stateBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("stateKey"))
+		stateBytes = v
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var state libzkchannels.State
+	err = json.Unmarshal(stateBytes, &state)
+
+	zkCustDB.Close()
+
+	revState, newState, channelState, custState, err := libzkchannels.PreparePaymentCustomer(channelState, Amount, custState)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Add variables to zkchannelsdb
+	zkCustDB, err = zkchanneldb.SetupZkCustDB()
+
+	custStateBytes, _ = json.Marshal(custState)
+	zkchanneldb.AddCustState(zkCustDB, custStateBytes)
+
+	channelStateBytes, _ = json.Marshal(channelState)
+	zkchanneldb.AddCustField(zkCustDB, channelStateBytes, "channelStateKey")
+
+	revStateBytes, _ := json.Marshal(revState)
+	zkchanneldb.AddCustField(zkCustDB, revStateBytes, "revStateKey")
+
+	newStateBytes, _ := json.Marshal(newState)
+	zkchanneldb.AddCustField(zkCustDB, newStateBytes, "newStateKey")
+
+	zkCustDB.Close()
+
+	stateNonce := state.Nonce
+	stateNonceBytes := []byte(stateNonce)
+
+	zkpaynonce := lnwire.ZkPayNonce{
+		StateNonce: stateNonceBytes,
+	}
+
+	p.SendMessage(false, &zkpaynonce)
+
+}
+
+func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Peer) {
+
+	stateNonce := string(msg.StateNonce)
+	zkchLog.Info("Just received ZkPayNonce with stateNonce: ", stateNonce)
+
+	// open the zkchanneldb to load merchState
+	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
+	// read merchState from ZkMerchDB
+	var merchStateBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		_, v := c.Seek([]byte("merchStateKey"))
+		merchStateBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var merchState libzkchannels.MerchState
+	err = json.Unmarshal(merchStateBytes, &merchState)
+
+	zkMerchDB.Close()
+
+	payTokenMaskCom, merchState, err := libzkchannels.PreparePaymentMerchant(stateNonce, merchState)
 
 	// TEMPORARY DUMMY MESSAGE
 	closeTokenBytes := []byte{'d', 'u', 'm', 'm', 'y', 'y', 'y', 'y'}
