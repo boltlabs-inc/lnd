@@ -65,7 +65,7 @@ const (
 	ZkMsgPayNonce                              = 918
 	ZkMsgMaskCom                               = 919
 	ZkMsgPayMPC                                = 920
-	ZkMsgPayToken                              = 921
+	ZkMsgPayMaskedTxInputs                     = 921
 )
 
 // String return the string representation of message type.
@@ -146,11 +146,11 @@ func (t MessageType) String() string {
 	case ZkMsgPayNonce:
 		return "ZkPayNonce"
 	case ZkMsgMaskCom:
-		return "ZkMaskCom"
+		return "ZkPayMaskCom"
 	case ZkMsgPayMPC:
 		return "ZkPayMPC"
-	case ZkMsgPayToken:
-		return "ZkPayToken"
+	case ZkMsgPayMaskedTxInputs:
+		return "ZkPayMaskedTxInputs"
 	default:
 		return "<unknown>"
 	}
@@ -271,11 +271,11 @@ func makeEmptyMessage(msgType MessageType) (Message, error) {
 	case ZkMsgPayNonce:
 		msg = &ZkPayNonce{}
 	case ZkMsgMaskCom:
-		msg = &ZkMaskCom{}
+		msg = &ZkPayMaskCom{}
 	case ZkMsgPayMPC:
 		msg = &ZkPayMPC{}
-	case ZkMsgPayToken:
-		msg = &ZkPayToken{}
+	case ZkMsgPayMaskedTxInputs:
+		msg = &ZkPayMaskedTxInputs{}
 	default:
 		return nil, &UnknownMessage{msgType}
 	}

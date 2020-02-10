@@ -986,8 +986,13 @@ func (z *zkChannelManager) InitZkPay(Amount int64, p lnpeer.Peer) {
 	stateNonce := state.Nonce
 	stateNonceBytes := []byte(stateNonce)
 
+	amountBytes = make([]byte, 8)
+	binary.LittleEndian.PutUint64(amountBytes, uint64(Amount))
+
+	// TODO: Add amount
 	zkpaynonce := lnwire.ZkPayNonce{
 		StateNonce: stateNonceBytes,
+		Amount:     amountBytes,
 	}
 
 	p.SendMessage(false, &zkpaynonce)
@@ -997,6 +1002,7 @@ func (z *zkChannelManager) InitZkPay(Amount int64, p lnpeer.Peer) {
 func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Peer) {
 
 	stateNonce := string(msg.StateNonce)
+	amount := int64(binary.LittleEndian.Uint64(msg.Amount))
 	zkchLog.Info("Just received ZkPayNonce with stateNonce: ", stateNonce)
 
 	// open the zkchanneldb to load merchState
@@ -1030,22 +1036,28 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 	merchStateBytes, _ = json.Marshal(merchState)
 	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
 
+	stateNonceBytes, _ := json.Marshal(stateNonce)
+	zkchanneldb.AddMerchField(zkMerchDB, stateNonceBytes, "stateNonceKey")
+
+	amountBytes, _ := json.Marshal(amount)
+	zkchanneldb.AddMerchField(zkMerchDB, amountBytes, "amountKey")
+
 	zkMerchDB.Close()
 
 	payTokenMaskComBytes := []byte(payTokenMaskCom)
 
-	zkMaskCom := lnwire.ZkMaskCom{
+	zkPayMaskCom := lnwire.ZkPayMaskCom{
 		PayTokenMaskCom: payTokenMaskComBytes,
 	}
-	p.SendMessage(false, &zkMaskCom)
+	p.SendMessage(false, &zkPayMaskCom)
 
 }
 
-func (z *zkChannelManager) processZkMaskCom(msg *lnwire.ZkMaskCom, p lnpeer.Peer) {
+func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpeer.Peer) {
 
 	payTokenMaskCom := string(msg.PayTokenMaskCom)
 
-	zkchLog.Info("Just received ZkMaskCom with PayTokenMaskCom: ", payTokenMaskCom)
+	zkchLog.Info("Just received ZkPayMaskCom with PayTokenMaskCom: ", payTokenMaskCom)
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.SetupZkCustDB()
@@ -1191,19 +1203,111 @@ func (z *zkChannelManager) processZkMaskCom(msg *lnwire.ZkMaskCom, p lnpeer.Peer
 }
 
 func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) {
-	zkchLog.Info("Just received ZkPayMPC payTokenMaskCom: ", string(msg.PayTokenMaskCom))
 
-	// maskedTxInputs, merchState, err := PayMerchant(channelState, state.Nonce, payTokenMaskCom, revState.RevLockCom, 10, merchState)
+	payTokenMaskCom := string(msg.PayTokenMaskCom)
 
-	// // TEMPORARY dummy message
-	// payTokenBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	zkchLog.Info("Just received ZkPayMPC payTokenMaskCom: ", payTokenMaskCom)
 
-	// zkPayToken := lnwire.ZkPayToken{
-	// 	PayToken: payTokenBytes,
-	// }
-	// p.SendMessage(false, &zkPayToken)
+	// open the zkchanneldb to load merchState
+	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
+	// read merchState from ZkMerchDB
+	var merchStateBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		_, v := c.Seek([]byte("merchStateKey"))
+		merchStateBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var merchState libzkchannels.MerchState
+	err = json.Unmarshal(merchStateBytes, &merchState)
+
+	// read merchState from ZkMerchDB
+	var channelStateBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		_, v := c.Seek([]byte("channelStateKey"))
+		channelStateBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var channelState libzkchannels.ChannelState
+	err = json.Unmarshal(channelStateBytes, &channelState)
+
+	// read stateNonce from ZkMerchDB
+	var stateNonceBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		_, v := c.Seek([]byte("stateNonceKey"))
+		stateNonceBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var stateNonce string
+	err = json.Unmarshal(stateNonceBytes, &stateNonce)
+
+	// read amount from ZkMerchDB
+	var amountBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		_, v := c.Seek([]byte("amountKey"))
+		amountBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var amount int64
+	err = json.Unmarshal(amountBytes, &amount)
+
+	// read revLockBytes from ZkMerchDB
+	var revLockBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		_, v := c.Seek([]byte("revLockKey"))
+		revLockBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var revLock string
+	err = json.Unmarshal(revLockBytes, &revLock)
+
+	zkchLog.Info("processEstablishMCloseSigned, loaded revLock =>:", revLock)
+
+	zkMerchDB.Close()
+
+	maskedTxInputs, merchState, err := libzkchannels.PayMerchant(channelState, stateNonce, payTokenMaskCom, revLock, amount, merchState)
+
+	// Add variables to zkchannelsdb
+	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
+
+	merchStateBytes, _ = json.Marshal(merchState)
+	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+
+	zkMerchDB.Close()
+
+	maskedTxInputsBytes, _ := json.Marshal(maskedTxInputs)
+
+	zkPayMaskedTxInputs := lnwire.ZkPayMaskedTxInputs{
+		MaskedTxInputs: maskedTxInputsBytes,
+	}
+	p.SendMessage(false, &zkPayMaskedTxInputs)
 }
 
-func (z *zkChannelManager) processZkPayToken(msg *lnwire.ZkPayToken, p lnpeer.Peer) {
-	zkchLog.Info("Just received ZkPayToken with length: ", len(msg.PayToken))
+func (z *zkChannelManager) processZkPayMaskedTxInputs(msg *lnwire.ZkPayMaskedTxInputs, p lnpeer.Peer) {
+	zkchLog.Info("Just received ZkPayMaskedTxInputs with length: ", len(msg.MaskedTxInputs))
 }
