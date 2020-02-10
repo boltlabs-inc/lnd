@@ -21,12 +21,16 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, me
 	inputSats := int64(10000)
 
 	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
-	_ = err
-	// assert.Nil(t, err)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("channelToken => ", channelToken)
+	fmt.Println("custState => ", custState)
 
 	cust_utxo_txid := "f4df16149735c2963832ccaa9627f4008a06291e8b932c2fc76b3a5d62d462e1"
 
-	custSk := fmt.Sprintf("%v", custState.SkC)
+	custSk := fmt.Sprintf("\"%v\"", custState.SkC)
 	custPk := fmt.Sprintf("%v", custState.PkC)
 	revLock := fmt.Sprintf("%v", custState.RevLock)
 
@@ -34,12 +38,22 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, me
 	// changeSk := "4157697b6428532758a9d0f9a73ce58befe3fd665797427d1c5bb3d33f6a132e"
 	changePk := "037bed6ab680a171ef2ab564af25eff15c0659313df0bbfb96414da7c7d1e65882"
 
-	zkchLog.Info("custSk :=> ", custSk)
+	fmt.Println("cust_utxo_txid :=> ", cust_utxo_txid)
+	fmt.Println("inputSats :=> ", inputSats)
+	fmt.Println("custBal :=> ", custBal)
+	fmt.Println("custSk :=> ", custSk)
 	fmt.Println("custPk :=> ", custPk)
 	fmt.Println("merchPk :=> ", merchPk)
+	fmt.Println("changePk :=> ", changePk)
 
-	signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(cust_utxo_txid, 0, inputSats, custBal, custSk, custPk, merchPk, changePk)
-	// assert.Nil(t, err)
+	fmt.Println("Variables going into FormEscrowTx :=> ", cust_utxo_txid, 0, inputSats, custBal, custSk, custPk, merchPk, changePk)
+
+	signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(cust_utxo_txid, uint32(0), inputSats, custBal, custSk, custPk, merchPk, changePk)
+	// signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(cust_utxo_txid, 0, inputSats, custBal, custSk, custPk, fmt.Sprintf("\"%v\"", merchPubKey), changePk)
+	// signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(cust_utxo_txid, 0, inputSats, custBal, custSk, custPk, merchPubKey, changePk)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	fmt.Println("escrow txid => ", escrowTxid)
 	fmt.Println("escrow prevout => ", escrowPrevout)
@@ -133,6 +147,9 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 
 	// Add variables to zkchannelsdb
 	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	toSelfDelayBytes, _ := json.Marshal(toSelfDelay)
 	zkchanneldb.AddMerchField(zkMerchDB, toSelfDelayBytes, "toSelfDelayKey")
@@ -315,7 +332,7 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 
 	zkCustDB.Close()
 
-	custSk := fmt.Sprintf("%v", custState.SkC)
+	custSk := fmt.Sprintf("\"%v\"", custState.SkC)
 	custPk := fmt.Sprintf("%v", custState.PkC)
 	custClosePk := fmt.Sprintf("%v", custState.PayoutPk)
 
@@ -324,6 +341,9 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 	zkchLog.Info("merch TxPreimage => ", merchTxPreimage)
 
 	custSig, err := libzkchannels.CustomerSignMerchCloseTx(custSk, merchTxPreimage)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	zkchLog.Info("custSig on merchCloseTx=> ", custSig)
 
@@ -483,7 +503,8 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	zkMerchDB.Close()
 
 	merchPk := fmt.Sprintf("%v", *merchState.PkM)
-	merchSk := fmt.Sprintf("%v", *merchState.SkM)
+	merchSk := fmt.Sprintf("\"%v\"", *merchState.SkM)
+
 	merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
 
 	fmt.Println("Variables going into MerchantSignMerchClose:", escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay, custSig, merchSk)
@@ -913,7 +934,7 @@ func (z *zkChannelManager) InitZkPay(Amount int64, p lnpeer.Peer) {
 
 	zkCustDB.Close()
 
-	revState, newState, channelState, custState, err := libzkchannels.PreparePaymentCustomer(channelState, Amount, custState)
+	revState, newState, custState, err := libzkchannels.PreparePaymentCustomer(channelState, Amount, custState)
 	if err != nil {
 		log.Fatal(err)
 	}
