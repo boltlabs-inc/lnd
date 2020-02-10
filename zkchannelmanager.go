@@ -533,7 +533,7 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 
 func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablishCCloseSigned, p lnpeer.Peer) {
 
-	zkchLog.Info("Just received CCloseSigned with length: ", len(msg.EscrowSig))
+	zkchLog.Info("Just received CCloseSigned with escrowSig length: ", len(msg.EscrowSig))
 
 	// Convert variables received
 	escrowSig := string(msg.EscrowSig)
@@ -689,13 +689,24 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 	}
 	zkchLog.Info("Are merch sigs okay? => ", isOk)
 
+	// Add variables to zkchannelsdb
+	zkCustDB, err = zkchanneldb.SetupZkCustDB()
+
+	custStateBytes, _ = json.Marshal(custState)
+	zkchanneldb.AddCustState(zkCustDB, custStateBytes)
+
+	channelTokenBytes, _ = json.Marshal(channelToken)
+	zkchanneldb.AddCustField(zkCustDB, channelTokenBytes, "channelTokenKey")
+
+	zkCustDB.Close()
+
 	// If merchSigs are okay, broadcast escrowTx
 	// When escrowTx is broadcast on chain, then send "Funding Locked" msg
 
 	// TEMPORARY DUMMY MESSAGE
-	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	fundingLockedBytes := []byte("Funding Locked")
 	zkEstablishFundingLocked := lnwire.ZkEstablishFundingLocked{
-		Payment: paymentBytes,
+		FundingLocked: fundingLockedBytes,
 	}
 	p.SendMessage(false, &zkEstablishFundingLocked)
 
@@ -703,17 +714,12 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 
 func (z *zkChannelManager) processZkEstablishFundingLocked(msg *lnwire.ZkEstablishFundingLocked, p lnpeer.Peer) {
 
-	zkchLog.Info("Just received FundingLocked with length: ", len(msg.Payment))
-
-	// // To load from rpc message
-	var payment string
-	err := json.Unmarshal(msg.Payment, &payment)
-	_ = err
+	zkchLog.Info("Just received FundingLocked: ", msg.FundingLocked)
 
 	// TEMPORARY DUMMY MESSAGE
-	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	fundingConfirmedBytes := []byte("Funding Confirmed")
 	zkEstablishFundingConfirmed := lnwire.ZkEstablishFundingConfirmed{
-		Payment: paymentBytes,
+		FundingConfirmed: fundingConfirmedBytes,
 	}
 	p.SendMessage(false, &zkEstablishFundingConfirmed)
 
@@ -721,17 +727,63 @@ func (z *zkChannelManager) processZkEstablishFundingLocked(msg *lnwire.ZkEstabli
 
 func (z *zkChannelManager) processZkEstablishFundingConfirmed(msg *lnwire.ZkEstablishFundingConfirmed, p lnpeer.Peer) {
 
-	zkchLog.Info("Just received FundingConfirmed with length: ", len(msg.Payment))
+	zkchLog.Info("Just received FundingConfirmed: ", string(msg.FundingConfirmed))
 
-	// // To load from rpc message
-	var payment string
-	err := json.Unmarshal(msg.Payment, &payment)
-	_ = err
+	// open the zkchanneldb to load custState
+	zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
-	// TEMPORARY DUMMY MESSAGE
-	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	// read custState from ZkCustDB
+	var custStateBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("custStateKey"))
+		custStateBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var custState libzkchannels.CustState
+	err = json.Unmarshal(custStateBytes, &custState)
+
+	// read channelToken from ZkCustDB
+	var channelTokenBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("channelTokenKey"))
+		channelTokenBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var channelToken libzkchannels.ChannelToken
+	err = json.Unmarshal(channelTokenBytes, &channelToken)
+	zkchLog.Info("ActivateCustomer, channelToken =>:", channelToken)
+
+	zkCustDB.Close()
+
+	state, custState, err := libzkchannels.ActivateCustomer(custState)
+	zkchLog.Info("ActivateCustomer, state =>:", state)
+
+	// Add variables to zkchannelsdb
+	zkCustDB, err = zkchanneldb.SetupZkCustDB()
+
+	custStateBytes, _ = json.Marshal(custState)
+	zkchanneldb.AddCustState(zkCustDB, custStateBytes)
+
+	stateBytes, _ := json.Marshal(state)
+	zkchanneldb.AddCustField(zkCustDB, stateBytes, "stateKey")
+
+	zkCustDB.Close()
+
+	channelTokenBytes, _ = json.Marshal(channelToken)
+
 	zkEstablishCustActivated := lnwire.ZkEstablishCustActivated{
-		Payment: paymentBytes,
+		State:        stateBytes,
+		ChannelToken: channelTokenBytes,
 	}
 	p.SendMessage(false, &zkEstablishCustActivated)
 
@@ -739,17 +791,42 @@ func (z *zkChannelManager) processZkEstablishFundingConfirmed(msg *lnwire.ZkEsta
 
 func (z *zkChannelManager) processZkEstablishCustActivated(msg *lnwire.ZkEstablishCustActivated, p lnpeer.Peer) {
 
-	zkchLog.Info("Just received CustActivated with length: ", len(msg.Payment))
-
-	// // To load from rpc message
-	var payment string
-	err := json.Unmarshal(msg.Payment, &payment)
+	// To load from rpc message
+	var state libzkchannels.State
+	err := json.Unmarshal(msg.State, &state)
 	_ = err
+	zkchLog.Info("Just received ActivateCustomer, state =>:", state)
+
+	var channelToken libzkchannels.ChannelToken
+	err = json.Unmarshal(msg.ChannelToken, &channelToken)
+	zkchLog.Info("Just received ActivateCustomer, channelToken =>:", channelToken)
+
+	// open the zkchanneldb to load merchState
+	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
+	// read merchState from ZkMerchDB
+	var merchStateBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		_, v := c.Seek([]byte("merchStateKey"))
+		merchStateBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var merchState libzkchannels.MerchState
+	err = json.Unmarshal(merchStateBytes, &merchState)
+
+	zkMerchDB.Close()
+
+	payToken0, merchState, err := libzkchannels.ActivateMerchant(channelToken, state, merchState)
 
 	// TEMPORARY DUMMY MESSAGE
-	paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	payToken0Bytes := []byte(payToken0)
 	zkEstablishPayToken := lnwire.ZkEstablishPayToken{
-		Payment: paymentBytes,
+		PayToken0: payToken0Bytes,
 	}
 	p.SendMessage(false, &zkEstablishPayToken)
 
@@ -757,12 +834,7 @@ func (z *zkChannelManager) processZkEstablishCustActivated(msg *lnwire.ZkEstabli
 
 func (z *zkChannelManager) processZkEstablishPayToken(msg *lnwire.ZkEstablishPayToken, p lnpeer.Peer) {
 
-	zkchLog.Info("Just received PayToken with length: ", len(msg.Payment))
-
-	// // To load from rpc message
-	var payment string
-	err := json.Unmarshal(msg.Payment, &payment)
-	_ = err
+	zkchLog.Info("Just received PayToken0: ", string(msg.PayToken0))
 
 	// // TEMPORARY DUMMY MESSAGE
 	// paymentBytes := []byte{'d', 'u', 'm', 'm', 'y'}

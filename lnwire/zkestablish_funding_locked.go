@@ -5,7 +5,7 @@ import "io"
 // ZkEstablishFundingLocked is the first msg sent by the customer to open a zkchannel
 type ZkEstablishFundingLocked struct {
 	// Payment contains the payment from generatePaymentProof
-	Payment ZkMsgType
+	FundingLocked ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -17,7 +17,7 @@ var _ Message = (*ZkEstablishFundingLocked)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishFundingLocked) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
-		&p.Payment)
+		&p.FundingLocked)
 }
 
 // Encode serializes the target Ping into the passed io.Writer observing the
@@ -26,7 +26,7 @@ func (p *ZkEstablishFundingLocked) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishFundingLocked) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
-		p.Payment)
+		p.FundingLocked)
 }
 
 // MsgType returns the integer uniquely identifying this message type on the

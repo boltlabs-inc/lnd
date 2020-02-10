@@ -4,8 +4,8 @@ import "io"
 
 // ZkEstablishFundingConfirmed is the first msg sent by the customer to open a zkchannel
 type ZkEstablishFundingConfirmed struct {
-	// Payment contains the payment from generatePaymentProof
-	Payment ZkMsgType
+	// FundingConfirmed contains the payment from generatePaymentProof
+	FundingConfirmed ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -17,7 +17,7 @@ var _ Message = (*ZkEstablishFundingConfirmed)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishFundingConfirmed) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
-		&p.Payment)
+		&p.FundingConfirmed)
 }
 
 // Encode serializes the target Ping into the passed io.Writer observing the
@@ -26,7 +26,7 @@ func (p *ZkEstablishFundingConfirmed) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishFundingConfirmed) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
-		p.Payment)
+		p.FundingConfirmed)
 }
 
 // MsgType returns the integer uniquely identifying this message type on the
