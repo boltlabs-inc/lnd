@@ -933,6 +933,9 @@ func (z *zkChannelManager) InitZkPay(Amount int64, p lnpeer.Peer) {
 	newStateBytes, _ := json.Marshal(newState)
 	zkchanneldb.AddCustField(zkCustDB, newStateBytes, "newStateKey")
 
+	amountBytes, _ := json.Marshal(Amount)
+	zkchanneldb.AddCustField(zkCustDB, amountBytes, "amountKey")
+
 	zkCustDB.Close()
 
 	stateNonce := state.Nonce
@@ -973,27 +976,176 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 
 	payTokenMaskCom, merchState, err := libzkchannels.PreparePaymentMerchant(stateNonce, merchState)
 
-	// TEMPORARY DUMMY MESSAGE
-	closeTokenBytes := []byte{'d', 'u', 'm', 'm', 'y', 'y', 'y', 'y'}
+	// Add variables to zkchannelsdb
+	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
 
-	zkPayClose := lnwire.ZkPayClose{
-		CloseToken: closeTokenBytes,
+	merchStateBytes, _ = json.Marshal(merchState)
+	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+
+	zkMerchDB.Close()
+
+	payTokenMaskComBytes := []byte(payTokenMaskCom)
+
+	zkMaskCom := lnwire.ZkMaskCom{
+		PayTokenMaskCom: payTokenMaskComBytes,
 	}
-	p.SendMessage(false, &zkPayClose)
+	p.SendMessage(false, &zkMaskCom)
 
 }
 
-func (z *zkChannelManager) processZkPayClose(msg *lnwire.ZkPayClose, p lnpeer.Peer) {
+func (z *zkChannelManager) processZkMaskCom(msg *lnwire.ZkMaskCom, p lnpeer.Peer) {
 
-	zkchLog.Info("Just received ZkPayClose with length: ", len(msg.CloseToken))
+	zkchLog.Info("Just received ZkMaskCom with PayTokenMaskCom: ", string(msg.PayTokenMaskCom))
 
-	// TEMPORARY dummy message
-	revokeTokenBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+	// open the zkchanneldb to load custState
+	zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
-	zkPayRevoke := lnwire.ZkPayRevoke{
-		RevokeToken: revokeTokenBytes,
+	// read custState from ZkCustDB
+	var custStateBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("custStateKey"))
+		custStateBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
-	p.SendMessage(false, &zkPayRevoke)
+
+	var custState libzkchannels.CustState
+	err = json.Unmarshal(custStateBytes, &custState)
+
+	// read channelState from ZkCustDB
+	var channelStateBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("channelStateKey"))
+		channelStateBytes = v
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var channelState libzkchannels.ChannelState
+	err = json.Unmarshal(channelStateBytes, &channelState)
+
+	// read state from ZkCustDB
+	var stateBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("stateKey"))
+		stateBytes = v
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var state libzkchannels.State
+	err = json.Unmarshal(stateBytes, &state)
+
+	// read state from ZkCustDB
+	var newStateBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("newStateKey"))
+		newStateBytes = v
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var newState libzkchannels.State
+	err = json.Unmarshal(newStateBytes, &newState)
+
+	// read channelToken from ZkCustDB
+	var channelTokenBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("channelTokenKey"))
+		channelTokenBytes = v
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var channelToken libzkchannels.ChannelToken
+	err = json.Unmarshal(channelTokenBytes, &channelToken)
+
+	// read state from ZkCustDB
+	var revStateBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("revStateKey"))
+		revStateBytes = v
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var revState libzkchannels.RevokedState
+	err = json.Unmarshal(revStateBytes, &revState)
+
+	// read payTokenMaskCom from ZkCustDB
+	var payTokenMaskComBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("payTokenMaskComKey"))
+		payTokenMaskComBytes = v
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var payTokenMaskCom string
+	err = json.Unmarshal(payTokenMaskComBytes, &payTokenMaskCom)
+
+	// read amountBytes from ZkCustDB
+	var amountBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("amountKey"))
+		amountBytes = v
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var amount int64
+	err = json.Unmarshal(amountBytes, &amount)
+
+	zkCustDB.Close()
+	revLockCom := revState.RevLockCom
+
+	fmt.Println("Variables going into PayCustomer:", channelState, channelToken, state, newState, payTokenMaskCom, revLockCom, amount, custState)
+
+	isOk, custState, err := libzkchannels.PayCustomer(channelState, channelToken, state, newState, payTokenMaskCom, revLockCom, amount, custState)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	zkchLog.Info("Just finished PayCustomer. IsOk?: ", isOk)
+
+	// // TEMPORARY dummy message
+	// revokeTokenBytes := []byte{'d', 'u', 'm', 'm', 'y'}
+
+	// zkPayRevoke := lnwire.ZkPayRevoke{
+	// 	RevokeToken: revokeTokenBytes,
+	// }
+	// p.SendMessage(false, &zkPayRevoke)
 
 }
 
