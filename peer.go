@@ -1106,12 +1106,12 @@ out:
 
 		case *lnwire.ZkPayNonce:
 			p.server.zkchannelMgr.processZkPayNonce(msg, p)
-		case *lnwire.ZkMaskCom:
-			p.server.zkchannelMgr.processZkMaskCom(msg, p)
+		case *lnwire.ZkPayMaskCom:
+			p.server.zkchannelMgr.processZkPayMaskCom(msg, p)
 		case *lnwire.ZkPayMPC:
 			p.server.zkchannelMgr.processZkPayMPC(msg, p)
-		case *lnwire.ZkPayToken:
-			p.server.zkchannelMgr.processZkPayToken(msg, p)
+		case *lnwire.ZkPayMaskedTxInputs:
+			p.server.zkchannelMgr.processZkPayMaskedTxInputs(msg, p)
 
 		case *lnwire.OpenChannel:
 			p.server.fundingMgr.processFundingOpen(msg, p)
