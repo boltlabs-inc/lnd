@@ -3243,7 +3243,10 @@ func openZkChannel(ctx *cli.Context) error {
 	if !ctx.IsSet("merch_pubkey") {
 		return fmt.Errorf("(Temporary solution). Must specify json containing merchant's pubkey")
 	} else {
-		merchPubKeyFile, _ := ioutil.ReadFile("../" + ctx.String("merch_pubkey"))
+		merchPubKeyFile, err := ioutil.ReadFile("../" + ctx.String("merch_pubkey"))
+		if err != nil {
+			return err
+		}
 		_ = json.Unmarshal(merchPubKeyFile, &merchPubKey)
 	}
 

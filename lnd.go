@@ -227,11 +227,17 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 			}
 			_ = ioutil.WriteFile("../merchPubKey.json", file, 0644)
 
-			fileb, err := json.MarshalIndent(merchState, "", " ")
+			debugMerchStateFile, err := json.MarshalIndent(merchState, "", " ")
 			if err != nil {
 				return err
 			}
-			_ = ioutil.WriteFile("../merchAll.json", fileb, 0644)
+			_ = ioutil.WriteFile("../merchAll.json", debugMerchStateFile, 0644)
+
+			debugChannelStateFile, err := json.MarshalIndent(channelState, "", " ")
+			if err != nil {
+				return err
+			}
+			_ = ioutil.WriteFile("../channelState.json", debugChannelStateFile, 0644)
 
 			// zkDB add merchState & channelState
 			zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
