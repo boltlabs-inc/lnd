@@ -7,7 +7,7 @@ require (
 	github.com/Yawning/aez v0.0.0-20180114000226-4dad034d9db2
 	github.com/boltdb/bolt v1.3.1
 	github.com/boltlabs-inc/libbolt-go v0.0.0-20191123131922-7e764bc1c794
-	github.com/boltlabs-inc/libzkchannels v0.0.0-20200210171842-a1389a81b04a
+	github.com/boltlabs-inc/libzkchannels v0.0.0-20200211022543-e09f9fd2779e
 	github.com/btcsuite/btcd v0.20.1-beta.0.20200513120220-b470eee47728
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
 	github.com/btcsuite/btcutil v1.0.2
@@ -41,7 +41,7 @@ require (
 	github.com/jackpal/go-nat-pmp v0.0.0-20170405195558-28a68d0c24ad
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jessevdk/go-flags v1.4.0
-	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a // indirect
+	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/jrick/logrotate v1.0.0
 	github.com/json-iterator/go v1.1.9 // indirect
