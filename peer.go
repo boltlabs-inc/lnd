@@ -1112,6 +1112,10 @@ out:
 			p.server.zkchannelMgr.processZkPayMPC(msg, p)
 		case *lnwire.ZkPayMaskedTxInputs:
 			p.server.zkchannelMgr.processZkPayMaskedTxInputs(msg, p)
+		case *lnwire.ZkPayRevoke:
+			p.server.zkchannelMgr.processZkPayRevoke(msg, p)
+		case *lnwire.ZkPayTokenMask:
+			p.server.zkchannelMgr.processZkPayTokenMask(msg, p)
 
 		case *lnwire.OpenChannel:
 			p.server.fundingMgr.processFundingOpen(msg, p)
