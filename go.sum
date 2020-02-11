@@ -30,6 +30,8 @@ github.com/boltlabs-inc/libzkchannels v0.0.0-20200207154435-a277a05b42e8 h1:NkEA
 github.com/boltlabs-inc/libzkchannels v0.0.0-20200207154435-a277a05b42e8/go.mod h1:snbVlMdYXR27iNdTBYJQSyNM+ifBSSCWg3UszAr891M=
 github.com/boltlabs-inc/libzkchannels v0.0.0-20200210171842-a1389a81b04a h1:XsKE0x5Dwp6Zz4k6VBui/cEllIoq8zqaAjprzRcO/FE=
 github.com/boltlabs-inc/libzkchannels v0.0.0-20200210171842-a1389a81b04a/go.mod h1:snbVlMdYXR27iNdTBYJQSyNM+ifBSSCWg3UszAr891M=
+github.com/boltlabs-inc/libzkchannels v0.0.0-20200211022543-e09f9fd2779e h1:GY3DVTyuaaF6jqEuElr44xkIEAfmiNB1Js0wIKnzh9w=
+github.com/boltlabs-inc/libzkchannels v0.0.0-20200211022543-e09f9fd2779e/go.mod h1:snbVlMdYXR27iNdTBYJQSyNM+ifBSSCWg3UszAr891M=
 github.com/btcsuite/btcd v0.0.0-20190629003639-c26ffa870fd8/go.mod h1:3J08xEfcugPacsc34/LKRU2yO7YmuT8yt28J8k2+rrI=
 github.com/btcsuite/btcd v0.0.0-20190824003749-130ea5bddde3/go.mod h1:3J08xEfcugPacsc34/LKRU2yO7YmuT8yt28J8k2+rrI=
 github.com/btcsuite/btcd v0.20.1-beta h1:Ik4hyJqN8Jfyv3S4AGBOmyouMsYE3EdYODkMbQjwPGw=
@@ -127,6 +129,8 @@ github.com/jackpal/go-nat-pmp v0.0.0-20170405195558-28a68d0c24ad/go.mod h1:QPH04
 github.com/jessevdk/go-flags v0.0.0-20141203071132-1679536dcc89/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/jessevdk/go-flags v1.4.0 h1:4IU2WS7AumrZ/40jfhf4QVDMsQwqA7VEHozFRrGARJA=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
+github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a h1:zPPuIq2jAWWPTrGt70eK/BSch+gFAGrNzecsoENgu2o=
+github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a/go.mod h1:yL958EeXv8Ylng6IfnvG4oflryUi3vgA3xPs9hmII1s=
 github.com/jrick/logrotate v1.0.0 h1:lQ1bL/n9mBNeIXoTUoYRlK4dHuNJVofX9oWqBtPnSzI=
 github.com/jrick/logrotate v1.0.0/go.mod h1:LNinyqDIJnpAur+b8yyulnQw/wDuN1+BYKlTRt3OuAQ=
 github.com/juju/clock v0.0.0-20190205081909-9c5c9712527c h1:3UvYABOQRhJAApj9MdCN+Ydv841ETSoy6xLzdmmr/9A=
