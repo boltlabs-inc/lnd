@@ -58,16 +58,18 @@ const (
 	ZkMsgEstablishAccept                       = 802
 	ZkMsgEstablishMCloseSigned                 = 803
 	ZkMsgEstablishCCloseSigned                 = 804
-	ZkMsgEstablishFundingLocked                = 805
-	ZkMsgEstablishFundingConfirmed             = 806
-	ZkMsgEstablishCustActivated                = 807
-	ZkMsgEstablishPayToken                     = 808
-	ZkMsgPayNonce                              = 918
-	ZkMsgMaskCom                               = 919
-	ZkMsgPayMPC                                = 920
-	ZkMsgPayMaskedTxInputs                     = 921
-	ZkMsgPayRevoke                             = 922
-	ZkMsgPayTokenMask                          = 923
+	ZkMsgEstablishInitialState                 = 805
+	ZkMsgEstablishStateValidated               = 806
+	ZkMsgEstablishFundingLocked                = 807
+	ZkMsgEstablishFundingConfirmed             = 808
+	ZkMsgEstablishCustActivated                = 809
+	ZkMsgEstablishPayToken                     = 810
+	ZkMsgPayNonce                              = 901
+	ZkMsgMaskCom                               = 902
+	ZkMsgPayMPC                                = 903
+	ZkMsgPayMaskedTxInputs                     = 904
+	ZkMsgPayRevoke                             = 905
+	ZkMsgPayTokenMask                          = 906
 )
 
 // String return the string representation of message type.
@@ -137,6 +139,10 @@ func (t MessageType) String() string {
 		return "ZkEstablishMCloseSigned"
 	case ZkMsgEstablishCCloseSigned:
 		return "ZkEstablishCCloseSigned"
+	case ZkMsgEstablishInitialState:
+		return "ZkEstablishInitialState"
+	case ZkMsgEstablishStateValidated:
+		return "ZkEstablishStateValidated"
 	case ZkMsgEstablishFundingLocked:
 		return "ZkEstablishFundingLocked"
 	case ZkMsgEstablishFundingConfirmed:
@@ -266,6 +272,10 @@ func makeEmptyMessage(msgType MessageType) (Message, error) {
 		msg = &ZkEstablishMCloseSigned{}
 	case ZkMsgEstablishCCloseSigned:
 		msg = &ZkEstablishCCloseSigned{}
+	case ZkMsgEstablishInitialState:
+		msg = &ZkEstablishInitialState{}
+	case ZkMsgEstablishStateValidated:
+		msg = &ZkEstablishStateValidated{}
 	case ZkMsgEstablishFundingLocked:
 		msg = &ZkEstablishFundingLocked{}
 	case ZkMsgEstablishFundingConfirmed:

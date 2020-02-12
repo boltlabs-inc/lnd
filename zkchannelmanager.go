@@ -727,8 +727,88 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 
 	zkCustDB.Close()
 
-	// If merchSigs are okay, broadcast escrowTx
-	// When escrowTx is broadcast on chain, then send "Funding Locked" msg
+	initCustState, initHash, err := libzkchannels.CustomerGetInitialState(custState)
+
+	initCustStateBytes, _ := json.Marshal(initCustState)
+	initHashBytes := []byte(initHash)
+
+	zkEstablishInitialState := lnwire.ZkEstablishInitialState{
+		ChannelToken:  channelTokenBytes,
+		InitCustState: initCustStateBytes,
+		InitHash:      initHashBytes,
+	}
+	p.SendMessage(false, &zkEstablishInitialState)
+}
+
+func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablishInitialState, p lnpeer.Peer) {
+
+	zkchLog.Info("Just received InitialState with length: ", len(msg.InitCustState))
+
+	var channelToken libzkchannels.ChannelToken
+	err := json.Unmarshal(msg.ChannelToken, &channelToken)
+	_ = err
+
+	var initCustState libzkchannels.InitCustState
+	err = json.Unmarshal(msg.InitCustState, &initCustState)
+
+	initHash := string(msg.InitHash)
+
+	// open the zkchanneldb to load merchState
+	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
+	// read merchState from ZkMerchDB
+	var merchStateBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		_, v := c.Seek([]byte("merchStateKey"))
+		merchStateBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var merchState libzkchannels.MerchState
+	err = json.Unmarshal(merchStateBytes, &merchState)
+
+	zkMerchDB.Close()
+
+	isOk, merchState, err := libzkchannels.MerchantValidateInitialState(channelToken, initCustState, initHash, merchState)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("merchant validates initial state: ", isOk)
+
+	// Update merchState in zkchannelsdb
+	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
+
+	merchStateBytes, _ = json.Marshal(merchState)
+	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+
+	zkMerchDB.Close()
+
+	var successMsg string
+	if isOk {
+		successMsg = "Initial State Validation Successful"
+	} else {
+		successMsg = "Initial State Validation Unsuccessful"
+	}
+	zkEstablishStateValidated := lnwire.ZkEstablishStateValidated{
+		SuccessMsg: []byte(successMsg),
+	}
+	p.SendMessage(false, &zkEstablishStateValidated)
+
+}
+
+func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstablishStateValidated, p lnpeer.Peer) {
+
+	zkchLog.Info("Just received ZkEstablishStateValidated: ", string(msg.SuccessMsg))
+
+	// TODO: For now, we assume isOk is true
+	// Add alternative path for when isOk is false
+
+	// TODO: Broadcast escrow tx on chain
 
 	// TEMPORARY DUMMY MESSAGE
 	fundingLockedBytes := []byte("Funding Locked")
@@ -857,10 +937,6 @@ func (z *zkChannelManager) processZkEstablishCustActivated(msg *lnwire.ZkEstabli
 
 	merchStateBytes, _ = json.Marshal(merchState)
 	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
-
-	// // Darius: Should state be saved? If so it'll need to be stored separately for each channel?
-	// stateBytes, _ := json.Marshal(state)
-	// zkchanneldb.AddMerchField(zkMerchDB, stateBytes, "stateKey")
 
 	zkMerchDB.Close()
 
