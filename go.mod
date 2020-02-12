@@ -7,7 +7,7 @@ require (
 	github.com/Yawning/aez v0.0.0-20180114000226-4dad034d9db2
 	github.com/boltdb/bolt v1.3.1
 	github.com/boltlabs-inc/libbolt-go v0.0.0-20191123131922-7e764bc1c794
-	github.com/boltlabs-inc/libzkchannels v0.0.0-20200211022543-e09f9fd2779e
+	github.com/boltlabs-inc/libzkchannels v0.0.0-20200212043046-d258fbfe5e89
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d

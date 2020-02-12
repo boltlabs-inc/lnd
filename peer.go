@@ -1095,6 +1095,10 @@ out:
 			p.server.zkchannelMgr.processZkEstablishMCloseSigned(msg, p)
 		case *lnwire.ZkEstablishCCloseSigned:
 			p.server.zkchannelMgr.processZkEstablishCCloseSigned(msg, p)
+		case *lnwire.ZkEstablishInitialState:
+			p.server.zkchannelMgr.processZkEstablishInitialState(msg, p)
+		case *lnwire.ZkEstablishStateValidated:
+			p.server.zkchannelMgr.processZkEstablishStateValidated(msg, p)
 		case *lnwire.ZkEstablishFundingLocked:
 			p.server.zkchannelMgr.processZkEstablishFundingLocked(msg, p)
 		case *lnwire.ZkEstablishFundingConfirmed:
