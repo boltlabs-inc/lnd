@@ -1,15 +1,19 @@
 package lnd
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/boltdb/bolt"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/jinzhu/copier"
 	"github.com/lightningnetwork/lnd/libzkchannels"
 	"github.com/lightningnetwork/lnd/lnpeer"
+	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/zkchanneldb"
 )
@@ -19,7 +23,9 @@ type zkChannelManager struct {
 
 func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, merchBal int64, p lnpeer.Peer) {
 
-	inputSats := int64(10000)
+	inputSats := int64(50 * 100000000)
+	cust_utxo_txid := "afdecf00445b9cbd40d78d21f67b5cbf499ddc77cc854ca9fd716492ef2ca792"
+	custSk := fmt.Sprintf("\"%v\"", "6111111111111111111111111111111100000000000000000000000000000000")
 
 	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
 	if err != nil {
@@ -29,9 +35,6 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, me
 	fmt.Println("channelToken => ", channelToken)
 	fmt.Println("custState => ", custState)
 
-	cust_utxo_txid := "f4df16149735c2963832ccaa9627f4008a06291e8b932c2fc76b3a5d62d462e1"
-
-	custSk := fmt.Sprintf("\"%v\"", custState.SkC)
 	custPk := fmt.Sprintf("%v", custState.PkC)
 	revLock := fmt.Sprintf("%v", custState.RevLock)
 
@@ -90,6 +93,9 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, me
 
 	escrowPrevoutBytes, _ := json.Marshal(escrowPrevout)
 	zkchanneldb.AddCustField(zkCustDB, escrowPrevoutBytes, "escrowPrevoutKey")
+
+	signedEscrowTxBytes, _ := json.Marshal(signedEscrowTx)
+	zkchanneldb.AddCustField(zkCustDB, signedEscrowTxBytes, "signedEscrowTxKey")
 
 	zkCustDB.Close()
 
@@ -801,14 +807,50 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 
 }
 
-func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstablishStateValidated, p lnpeer.Peer) {
+func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstablishStateValidated, p lnpeer.Peer, wallet *lnwallet.LightningWallet) {
 
 	zkchLog.Info("Just received ZkEstablishStateValidated: ", string(msg.SuccessMsg))
 
 	// TODO: For now, we assume isOk is true
 	// Add alternative path for when isOk is false
 
-	// TODO: Broadcast escrow tx on chain
+	// open the zkchanneldb to load custState
+	zkCustDB, err := zkchanneldb.SetupZkCustDB()
+
+	// read merchPkBytes from ZkCustDB
+	var signedEscrowTxBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("signedEscrowTxKey"))
+		signedEscrowTxBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var signedEscrowTx string
+	err = json.Unmarshal(signedEscrowTxBytes, &signedEscrowTx)
+	zkchLog.Info("processEstablish, loaded signedEscrowTx =>:", signedEscrowTx)
+
+	zkCustDB.Close()
+
+	// Broadcast escrow tx on chain
+	serializedTx, err := hex.DecodeString(signedEscrowTx)
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	var msgTx wire.MsgTx
+	err = msgTx.Deserialize(bytes.NewReader(serializedTx))
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	err = wallet.PublishTransaction(&msgTx)
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
 	// TEMPORARY DUMMY MESSAGE
 	fundingLockedBytes := []byte("Funding Locked")
