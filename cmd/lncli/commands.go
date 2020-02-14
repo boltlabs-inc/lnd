@@ -3195,7 +3195,7 @@ var openZkChannelCommand = cli.Command{
 	Usage:    "Open a zk-channel to a node or an existing peer.",
 	Description: `
 	Create a zk-channel with an ln-mpc node.`,
-	ArgsUsage: "node-key local-amt push-amt",
+	ArgsUsage: "node-key merch_pubkey cust_balance merch_balance",
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name: "node_key",

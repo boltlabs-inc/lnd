@@ -24,8 +24,8 @@ type zkChannelManager struct {
 func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, merchBal int64, p lnpeer.Peer) {
 
 	inputSats := int64(50 * 100000000)
-	cust_utxo_txid := "afdecf00445b9cbd40d78d21f67b5cbf499ddc77cc854ca9fd716492ef2ca792"
-	custSk := fmt.Sprintf("\"%v\"", "6111111111111111111111111111111100000000000000000000000000000000")
+	cust_utxo_txid := "cd2be8f9aadabc8da87c2673bc3f288a942bdcc72a6397af37da069f49665969"
+	custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
 
 	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
 	if err != nil {
@@ -45,16 +45,14 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, me
 	fmt.Println("cust_utxo_txid :=> ", cust_utxo_txid)
 	fmt.Println("inputSats :=> ", inputSats)
 	fmt.Println("custBal :=> ", custBal)
-	fmt.Println("custSk :=> ", custSk)
+	fmt.Println("custSk :=> ", custInputSk)
 	fmt.Println("custPk :=> ", custPk)
 	fmt.Println("merchPk :=> ", merchPk)
 	fmt.Println("changePk :=> ", changePk)
 
-	fmt.Println("Variables going into FormEscrowTx :=> ", cust_utxo_txid, 0, inputSats, custBal, custSk, custPk, merchPk, changePk)
+	fmt.Println("Variables going into FormEscrowTx :=> ", cust_utxo_txid, 0, inputSats, custBal, custInputSk, custPk, merchPk, changePk)
 
-	signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(cust_utxo_txid, uint32(0), inputSats, custBal, custSk, custPk, merchPk, changePk)
-	// signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(cust_utxo_txid, 0, inputSats, custBal, custSk, custPk, fmt.Sprintf("\"%v\"", merchPubKey), changePk)
-	// signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(cust_utxo_txid, 0, inputSats, custBal, custSk, custPk, merchPubKey, changePk)
+	signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(cust_utxo_txid, uint32(0), inputSats, custBal, custInputSk, custPk, merchPk, changePk)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,9 +73,6 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, me
 
 	channelTokenBytes, _ := json.Marshal(channelToken)
 	zkchanneldb.AddCustField(zkCustDB, channelTokenBytes, "channelTokenKey")
-
-	// custSkBytes, _ := json.Marshal(custSk)
-	// zkchanneldb.AddCustField(zkCustDB, custSkBytes, "custSkKey")
 
 	merchPkBytes, _ := json.Marshal(merchPk)
 	zkchanneldb.AddCustField(zkCustDB, merchPkBytes, "merchPkKey")
@@ -721,6 +716,9 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 		log.Fatal(err)
 	}
 	zkchLog.Info("Are merch sigs okay? => ", isOk)
+
+	fmt.Println("CloseEscrowTx: ", string(custState.CloseEscrowTx))
+	fmt.Println("CloseMerchTx: ", string(custState.CloseMerchTx))
 
 	// Add variables to zkchannelsdb
 	zkCustDB, err = zkchanneldb.SetupZkCustDB()
