@@ -313,6 +313,7 @@ func main() {
 		// ################## ln-zkmpc ##################
 		openZkChannelCommand,
 		zkPayCommand,
+		closeZkChannelCommand,
 	}
 
 	// Add any extra commands determined by build flags.

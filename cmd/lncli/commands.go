@@ -3344,4 +3344,83 @@ func zkPay(ctx *cli.Context) error {
 	return nil
 }
 
+var closeZkChannelCommand = cli.Command{
+	Name:     "closezkchannel",
+	Category: "ZkChannels",
+	Usage:    "Close an existing zkchannel.",
+	Description: `
+	*** For now, only capable of force close. (--force)
+	
+	Close an existing channel. The channel can be closed either cooperatively,
+	or unilaterally (--force).`,
+	ArgsUsage: "funding_txid",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "funding_txid",
+			Usage: "the txid of the channel's funding transaction",
+		},
+		cli.BoolFlag{
+			Name:  "force",
+			Usage: "attempt an uncooperative closure",
+		},
+	},
+	Action: actionDecorator(closeZkChannel),
+}
+
+func closeZkChannel(ctx *cli.Context) error {
+	// client, cleanUp := getClient(ctx)
+	// defer cleanUp()
+
+	// // Show command help if no arguments and flags were provided.
+	// if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
+	// 	cli.ShowCommandHelp(ctx, "closechannel")
+	// 	return nil
+	// }
+
+	// channelPoint, err := parseChannelPoint(ctx)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// // TODO(roasbeef): implement time deadline within server
+	// req := &lnrpc.CloseChannelRequest{
+	// 	ChannelPoint:    channelPoint,
+	// 	Force:           ctx.Bool("force"),
+	// 	TargetConf:      int32(ctx.Int64("conf_target")),
+	// 	SatPerByte:      ctx.Int64("sat_per_byte"),
+	// 	DeliveryAddress: ctx.String("delivery_addr"),
+	// }
+
+	// // After parsing the request, we'll spin up a goroutine that will
+	// // retrieve the closing transaction ID when attempting to close the
+	// // channel. We do this to because `executeChannelClose` can block, so we
+	// // would like to present the closing transaction ID to the user as soon
+	// // as it is broadcasted.
+	// var wg sync.WaitGroup
+	// txidChan := make(chan string, 1)
+
+	// wg.Add(1)
+	// go func() {
+	// 	defer wg.Done()
+
+	// 	printJSON(struct {
+	// 		ClosingTxid string `json:"closing_txid"`
+	// 	}{
+	// 		ClosingTxid: <-txidChan,
+	// 	})
+	// }()
+
+	// err = executeChannelClose(client, req, txidChan, ctx.Bool("block"))
+	// if err != nil {
+	// 	return err
+	// }
+
+	// // In the case that the user did not provide the `block` flag, then we
+	// // need to wait for the goroutine to be done to prevent it from being
+	// // destroyed when exiting before printing the closing transaction ID.
+	// wg.Wait()
+
+	return nil
+}
+
 // ########### ln-mpc end ###########
