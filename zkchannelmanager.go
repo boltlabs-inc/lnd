@@ -1662,3 +1662,51 @@ func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p l
 	zkCustDB.Close()
 
 }
+
+// BroadcastZkCloseTx broadcasts a close transaction
+func BroadcastZkCloseTx() {
+
+	// TODO: Set a flag here (in custDB?) to prevent any further
+	// payments being made.
+
+	// open the zkchanneldb to load custState
+	zkCustDB, err := zkchanneldb.SetupZkCustDB()
+
+	// read custState from ZkCustDB
+	var custStateBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("custStateKey"))
+		custStateBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var custState libzkchannels.CustState
+	err = json.Unmarshal(custStateBytes, &custState)
+
+	CloseEscrowTx := custState.CloseEscrowTx
+
+	fmt.Println("Loaded CloseEscrowTx =>:", CloseEscrowTx)
+	fmt.Println("Broadcasting close transaction")
+
+	// Broadcast escrow tx on chain
+	serializedTx, err := hex.DecodeString(CloseEscrowTx)
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	var msgTx wire.MsgTx
+	err = msgTx.Deserialize(bytes.NewReader(serializedTx))
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	err = wallet.PublishTransaction(&msgTx)
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+}

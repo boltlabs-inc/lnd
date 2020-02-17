@@ -25,6 +25,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/routing/route"
 	"github.com/lightningnetwork/lnd/walletunlocker"
+
 	"github.com/urfave/cli"
 	"golang.org/x/crypto/ssh/terminal"
 	"google.golang.org/grpc/codes"
@@ -3368,58 +3369,41 @@ var closeZkChannelCommand = cli.Command{
 }
 
 func closeZkChannel(ctx *cli.Context) error {
-	// client, cleanUp := getClient(ctx)
-	// defer cleanUp()
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
 
-	// // Show command help if no arguments and flags were provided.
-	// if ctx.NArg() == 0 && ctx.NumFlags() == 0 {
-	// 	cli.ShowCommandHelp(ctx, "closechannel")
-	// 	return nil
-	// }
+	var pubKey string
+	switch {
+	case ctx.IsSet("node_key"):
+		pubKey = ctx.String("node_key")
+	case ctx.Args().Present():
+		pubKey = ctx.Args().First()
+	default:
+		return fmt.Errorf("must specify target public key")
+	}
 
-	// channelPoint, err := parseChannelPoint(ctx)
-	// if err != nil {
-	// 	return err
-	// }
+	// TODO: set force bool flag
+	var force bool
+	if !ctx.IsSet("force") {
+		return fmt.Errorf("must specify amount of satoshis to send")
+	} else {
+		force = ctx.Bool("force")
+	}
 
-	// // TODO(roasbeef): implement time deadline within server
-	// req := &lnrpc.CloseChannelRequest{
-	// 	ChannelPoint:    channelPoint,
-	// 	Force:           ctx.Bool("force"),
-	// 	TargetConf:      int32(ctx.Int64("conf_target")),
-	// 	SatPerByte:      ctx.Int64("sat_per_byte"),
-	// 	DeliveryAddress: ctx.String("delivery_addr"),
-	// }
+	// TODO: Define CloseZkChannelRequest msg type
+	req := &lnrpc.CloseZkChannelRequest{
+		PubKey: pubKey,
+		Force:  force,
+	}
 
-	// // After parsing the request, we'll spin up a goroutine that will
-	// // retrieve the closing transaction ID when attempting to close the
-	// // channel. We do this to because `executeChannelClose` can block, so we
-	// // would like to present the closing transaction ID to the user as soon
-	// // as it is broadcasted.
-	// var wg sync.WaitGroup
-	// txidChan := make(chan string, 1)
+	// TODO: Define request in rpc.proto
+	lnid, err := client.CloseZkChannel(ctxb, req)
+	if err != nil {
+		return err
+	}
 
-	// wg.Add(1)
-	// go func() {
-	// 	defer wg.Done()
-
-	// 	printJSON(struct {
-	// 		ClosingTxid string `json:"closing_txid"`
-	// 	}{
-	// 		ClosingTxid: <-txidChan,
-	// 	})
-	// }()
-
-	// err = executeChannelClose(client, req, txidChan, ctx.Bool("block"))
-	// if err != nil {
-	// 	return err
-	// }
-
-	// // In the case that the user did not provide the `block` flag, then we
-	// // need to wait for the goroutine to be done to prevent it from being
-	// // destroyed when exiting before printing the closing transaction ID.
-	// wg.Wait()
-
+	printRespJSON(lnid)
 	return nil
 }
 
