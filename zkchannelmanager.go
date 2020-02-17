@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"unsafe"
 
 	"github.com/boltdb/bolt"
 	"github.com/btcsuite/btcd/wire"
@@ -24,8 +25,11 @@ type zkChannelManager struct {
 func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, merchBal int64, p lnpeer.Peer) {
 
 	inputSats := int64(50 * 100000000)
-	cust_utxo_txid := "afdecf00445b9cbd40d78d21f67b5cbf499ddc77cc854ca9fd716492ef2ca792"
-	custSk := fmt.Sprintf("\"%v\"", "6111111111111111111111111111111100000000000000000000000000000000")
+	cust_utxo_txid := "9fa25d0ac10a65a9012787bc63d9f49d36553f00bdea735cf98512ba411ecedf"
+	custSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
+
+	fmt.Println("Ptr: ", unsafe.Pointer(&p))
+	fmt.Println("Ptr: ", uintptr(unsafe.Pointer(&p)))
 
 	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
 	if err != nil {
@@ -749,6 +753,8 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablishInitialState, p lnpeer.Peer) {
 
 	zkchLog.Info("Just received InitialState with length: ", len(msg.InitCustState))
+	fmt.Println("Ptr: ", unsafe.Pointer(&p))
+	fmt.Println("Ptr: ", uintptr(unsafe.Pointer(&p)))
 
 	var channelToken libzkchannels.ChannelToken
 	err := json.Unmarshal(msg.ChannelToken, &channelToken)
@@ -1177,7 +1183,7 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 
 }
 
-func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpeer.Peer) {
+func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpeer.Peer, pPtr uintptr) {
 
 	payTokenMaskCom := string(msg.PayTokenMaskCom)
 
@@ -1329,7 +1335,9 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 	zkchLog.Info("Before PayCustomer (old), Nonce =>:", oldState.Nonce)
 	zkchLog.Info("Before PayCustomer (new), Nonce =>:", newState.Nonce)
 
-	isOk, custState, err := libzkchannels.PayCustomer(channelState, channelToken, oldState, newState, payTokenMaskCom, revLockCom, amount, custState)
+	fmt.Println("Ptr: ", uintptr(unsafe.Pointer(&p)))
+	//isOk, custState, err := libzkchannels.PayCustomer(0, channelState, channelToken, oldState, newState, payTokenMaskCom, revLockCom, amount, custState)
+	isOk, custState, err := libzkchannels.PayCustomer(pPtr, channelState, channelToken, oldState, newState, payTokenMaskCom, revLockCom, amount, custState)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -1353,7 +1361,7 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 
 }
 
-func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) {
+func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer, pPtr uintptr) {
 
 	payTokenMaskCom := string(msg.PayTokenMaskCom)
 	revLockCom := string(msg.RevLockCom)
@@ -1440,7 +1448,9 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 
 	fmt.Println("channelState MerchStatePkM => ", *merchState.PkM)
 
-	maskedTxInputs, merchState, err := libzkchannels.PayMerchant(channelState, stateNonce, payTokenMaskCom, revLockCom, amount, merchState)
+	fmt.Println("Ptr: ", uintptr(unsafe.Pointer(&p)))
+	//maskedTxInputs, merchState, err := libzkchannels.PayMerchant(0, channelState, stateNonce, payTokenMaskCom, revLockCom, amount, merchState)
+	maskedTxInputs, merchState, err := libzkchannels.PayMerchant(pPtr, channelState, stateNonce, payTokenMaskCom, revLockCom, amount, merchState)
 
 	// Update merchState in zkMerchDB
 	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()

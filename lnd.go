@@ -188,9 +188,15 @@ func Main(lisCfg ListenerCfg) error {
 			}
 
 			channelState, err := libzkchannels.ChannelSetup("channel", false)
+			if err != nil {
+				return err
+			}
 			zkchLog.Infof("libzkchannels.ChannelSetup done")
 
 			channelState, merchState, err := libzkchannels.InitMerchant(channelState, "merch")
+			if err != nil {
+				return err
+			}
 			zkchLog.Infof("InitMerchant done")
 
 			file, err := json.MarshalIndent(merchState.PkM, "", " ")
