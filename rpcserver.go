@@ -6471,4 +6471,37 @@ func (r *rpcServer) ZkPay(ctx context.Context,
 	return &lnrpc.ZkPayResponse{}, nil
 }
 
+// ZkPay attempts to pay a peer.
+func (r *rpcServer) CloseZkChannel(ctx context.Context,
+	in *lnrpc.CloseZkChannelRequest) (*lnrpc.CloseZkChannelResponse, error) {
+
+	zkchLog.Debugf("CloseZkChannel initiated with peer(%s)", in.PubKey)
+
+	if !r.server.Started() {
+		return nil, fmt.Errorf("chain backend is still syncing, server " +
+			"not active yet")
+	}
+
+	// First we'll validate the string passed in within the request to
+	// ensure that it's a valid hex-string, and also a valid compressed
+	// public key.
+	pubKeyBytes, err := hex.DecodeString(in.PubKey)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode pubkey bytes: %v", err)
+	}
+	peerPubKey, err := btcec.ParsePubKey(pubKeyBytes, btcec.S256())
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse pubkey: %v", err)
+	}
+
+	// With all initial validation complete, we'll now request that the
+	// server disconnects from the peer.
+	if err := r.server.CloseZkChannel(peerPubKey, in.Force); err != nil {
+		return nil, fmt.Errorf("Could not send payment "+
+			"to peer: %v", err)
+	}
+
+	return &lnrpc.CloseZkChannelResponse{}, nil
+}
+
 // ########### ln-mpc ###########

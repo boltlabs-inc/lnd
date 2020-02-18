@@ -11526,6 +11526,86 @@ func (m *ZkPayResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ZkPayResponse proto.InternalMessageInfo
 
+type CloseZkChannelRequest struct {
+	/// The pubkey of the node to pay
+	PubKey string `protobuf:"bytes,1,opt,name=pub_key,proto3" json:"pub_key,omitempty"`
+	/// The number of satoshis to send
+	Force                bool     `protobuf:"varint,2,opt,name=force,proto3" json:"force,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CloseZkChannelRequest) Reset()         { *m = CloseZkChannelRequest{} }
+func (m *CloseZkChannelRequest) String() string { return proto.CompactTextString(m) }
+func (*CloseZkChannelRequest) ProtoMessage()    {}
+func (*CloseZkChannelRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{150}
+}
+
+func (m *CloseZkChannelRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CloseZkChannelRequest.Unmarshal(m, b)
+}
+func (m *CloseZkChannelRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CloseZkChannelRequest.Marshal(b, m, deterministic)
+}
+func (m *CloseZkChannelRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CloseZkChannelRequest.Merge(m, src)
+}
+func (m *CloseZkChannelRequest) XXX_Size() int {
+	return xxx_messageInfo_CloseZkChannelRequest.Size(m)
+}
+func (m *CloseZkChannelRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_CloseZkChannelRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CloseZkChannelRequest proto.InternalMessageInfo
+
+func (m *CloseZkChannelRequest) GetPubKey() string {
+	if m != nil {
+		return m.PubKey
+	}
+	return ""
+}
+
+func (m *CloseZkChannelRequest) GetForce() bool {
+	if m != nil {
+		return m.Force
+	}
+	return false
+}
+
+type CloseZkChannelResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CloseZkChannelResponse) Reset()         { *m = CloseZkChannelResponse{} }
+func (m *CloseZkChannelResponse) String() string { return proto.CompactTextString(m) }
+func (*CloseZkChannelResponse) ProtoMessage()    {}
+func (*CloseZkChannelResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{151}
+}
+
+func (m *CloseZkChannelResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CloseZkChannelResponse.Unmarshal(m, b)
+}
+func (m *CloseZkChannelResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CloseZkChannelResponse.Marshal(b, m, deterministic)
+}
+func (m *CloseZkChannelResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CloseZkChannelResponse.Merge(m, src)
+}
+func (m *CloseZkChannelResponse) XXX_Size() int {
+	return xxx_messageInfo_CloseZkChannelResponse.Size(m)
+}
+func (m *CloseZkChannelResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_CloseZkChannelResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CloseZkChannelResponse proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterEnum("lnrpc.AddressType", AddressType_name, AddressType_value)
 	proto.RegisterEnum("lnrpc.CommitmentType", CommitmentType_name, CommitmentType_value)
@@ -12789,6 +12869,10 @@ type LightningClient interface {
 	//ZkPay attempts to make a zk payment to a peer with whom we have established a
 	//zkChannel.
 	ZkPay(ctx context.Context, in *ZkPayRequest, opts ...grpc.CallOption) (*ZkPayResponse, error)
+	//* lncli: `closezkchannel`
+	//ZkPay attempts to closezkchannel a zk payment to a peer with whom we have established a
+	//zkChannel.
+	CloseZkChannel(ctx context.Context, in *CloseZkChannelRequest, opts ...grpc.CallOption) (*CloseZkChannelResponse, error)
 }
 
 type lightningClient struct {
@@ -13564,6 +13648,15 @@ func (c *lightningClient) ZkPay(ctx context.Context, in *ZkPayRequest, opts ...g
 	return out, nil
 }
 
+func (c *lightningClient) CloseZkChannel(ctx context.Context, in *CloseZkChannelRequest, opts ...grpc.CallOption) (*CloseZkChannelResponse, error) {
+	out := new(CloseZkChannelResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/CloseZkChannel", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LightningServer is the server API for Lightning service.
 type LightningServer interface {
 	// lncli: `walletbalance`
@@ -13893,6 +13986,10 @@ type LightningServer interface {
 	//ZkPay attempts to make a zk payment to a peer with whom we have established a
 	//zkChannel.
 	ZkPay(context.Context, *ZkPayRequest) (*ZkPayResponse, error)
+	//* lncli: `closezkchannel`
+	//ZkPay attempts to closezkchannel a zk payment to a peer with whom we have established a
+	//zkChannel.
+	CloseZkChannel(context.Context, *CloseZkChannelRequest) (*CloseZkChannelResponse, error)
 }
 
 func RegisterLightningServer(s *grpc.Server, srv LightningServer) {
@@ -14973,6 +15070,24 @@ func _Lightning_ZkPay_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Lightning_CloseZkChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CloseZkChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).CloseZkChannel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/CloseZkChannel",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).CloseZkChannel(ctx, req.(*CloseZkChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Lightning_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "lnrpc.Lightning",
 	HandlerType: (*LightningServer)(nil),
@@ -15160,6 +15275,10 @@ var _Lightning_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ZkPay",
 			Handler:    _Lightning_ZkPay_Handler,
+		},
+		{
+			MethodName: "CloseZkChannel",
+			Handler:    _Lightning_CloseZkChannel_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

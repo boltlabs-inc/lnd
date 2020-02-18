@@ -24,7 +24,7 @@ type zkChannelManager struct {
 func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, merchBal int64, p lnpeer.Peer) {
 
 	inputSats := int64(50 * 100000000)
-	cust_utxo_txid := "cd2be8f9aadabc8da87c2673bc3f288a942bdcc72a6397af37da069f49665969"
+	cust_utxo_txid := "faa4011a50c1d5c25adfbd8de208671495b18187d6859182069a28929b88f8ca"
 	custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
 
 	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
@@ -1663,50 +1663,50 @@ func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p l
 
 }
 
-// BroadcastZkCloseTx broadcasts a close transaction
-func BroadcastZkCloseTx() {
+// // CloseZkChannel broadcasts a close transaction
+// func (z *zkChannelManager) CloseZkChannel() {
 
-	// TODO: Set a flag here (in custDB?) to prevent any further
-	// payments being made.
+// 	// TODO: Set a flag here (in custDB?) to prevent any further
+// 	// payments being made.
 
-	// open the zkchanneldb to load custState
-	zkCustDB, err := zkchanneldb.SetupZkCustDB()
+// 	// open the zkchanneldb to load custState
+// 	zkCustDB, err := zkchanneldb.SetupZkCustDB()
 
-	// read custState from ZkCustDB
-	var custStateBytes []byte
-	err = zkCustDB.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-		_, v := c.Seek([]byte("custStateKey"))
-		custStateBytes = v
-		return nil
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
+// 	// read custState from ZkCustDB
+// 	var custStateBytes []byte
+// 	err = zkCustDB.View(func(tx *bolt.Tx) error {
+// 		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+// 		_, v := c.Seek([]byte("custStateKey"))
+// 		custStateBytes = v
+// 		return nil
+// 	})
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	var custState libzkchannels.CustState
-	err = json.Unmarshal(custStateBytes, &custState)
+// 	var custState libzkchannels.CustState
+// 	err = json.Unmarshal(custStateBytes, &custState)
 
-	CloseEscrowTx := custState.CloseEscrowTx
+// 	CloseEscrowTx := custState.CloseEscrowTx
 
-	fmt.Println("Loaded CloseEscrowTx =>:", CloseEscrowTx)
-	fmt.Println("Broadcasting close transaction")
+// 	fmt.Println("Loaded CloseEscrowTx =>:", CloseEscrowTx)
+// 	fmt.Println("Broadcasting close transaction")
 
-	// Broadcast escrow tx on chain
-	serializedTx, err := hex.DecodeString(CloseEscrowTx)
-	if err != nil {
-		zkchLog.Error(err)
-	}
+// 	// Broadcast escrow tx on chain
+// 	serializedTx, err := hex.DecodeString(CloseEscrowTx)
+// 	if err != nil {
+// 		zkchLog.Error(err)
+// 	}
 
-	var msgTx wire.MsgTx
-	err = msgTx.Deserialize(bytes.NewReader(serializedTx))
-	if err != nil {
-		zkchLog.Error(err)
-	}
+// 	var msgTx wire.MsgTx
+// 	err = msgTx.Deserialize(bytes.NewReader(serializedTx))
+// 	if err != nil {
+// 		zkchLog.Error(err)
+// 	}
 
-	err = wallet.PublishTransaction(&msgTx)
-	if err != nil {
-		zkchLog.Error(err)
-	}
+// 	err = peer.server.cc.wallet.PublishTransaction(&msgTx)
+// 	if err != nil {
+// 		zkchLog.Error(err)
+// 	}
 
-}
+// }

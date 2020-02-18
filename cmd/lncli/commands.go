@@ -3354,10 +3354,10 @@ var closeZkChannelCommand = cli.Command{
 	
 	Close an existing channel. The channel can be closed either cooperatively,
 	or unilaterally (--force).`,
-	ArgsUsage: "funding_txid",
+	ArgsUsage: "node_key",
 	Flags: []cli.Flag{
 		cli.StringFlag{
-			Name:  "funding_txid",
+			Name:  "node_key",
 			Usage: "the txid of the channel's funding transaction",
 		},
 		cli.BoolFlag{
@@ -3391,7 +3391,6 @@ func closeZkChannel(ctx *cli.Context) error {
 		force = ctx.Bool("force")
 	}
 
-	// TODO: Define CloseZkChannelRequest msg type
 	req := &lnrpc.CloseZkChannelRequest{
 		PubKey: pubKey,
 		Force:  force,

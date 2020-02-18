@@ -682,6 +682,16 @@ service Lightning {
         //     delete: "/v1/peers/{pub_key}"
         };
     }
+
+    /** lncli: `closezkchannel`
+    ZkPay attempts to closezkchannel a zk payment to a peer with whom we have established a
+    zkChannel.
+    */
+    rpc CloseZkChannel (CloseZkChannelRequest) returns (CloseZkChannelResponse) {
+        option (google.api.http) = {
+            delete: "/v1/peers/{pub_key}"
+        };
+    }
     // ########### ln-mpc end ###########
 }
 
@@ -3573,5 +3583,14 @@ message ZkPayRequest {
     int64 amount = 2 [json_name = "amount"];
 }
 message ZkPayResponse {
+}
+
+message CloseZkChannelRequest {
+    /// The pubkey of the node to pay
+    string pub_key = 1 [json_name = "pub_key"];
+    /// The number of satoshis to send
+    bool force = 2 [json_name = "force"];
+}
+message CloseZkChannelResponse {
 }
 // ########### ln-mpc end ###########

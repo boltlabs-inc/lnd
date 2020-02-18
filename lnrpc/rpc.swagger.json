@@ -1199,7 +1199,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/lnrpcZkPayResponse"
+              "$ref": "#/definitions/lnrpcCloseZkChannelResponse"
             }
           }
         },
@@ -2382,6 +2382,9 @@
           "$ref": "#/definitions/lnrpcChannelCloseUpdate"
         }
       }
+    },
+    "lnrpcCloseZkChannelResponse": {
+      "type": "object"
     },
     "lnrpcClosedChannelUpdate": {
       "type": "object",
