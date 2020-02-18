@@ -5,10 +5,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"image/color"
-	"log"
 	"math/big"
 	prand "math/rand"
 	"net"
@@ -19,7 +17,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/connmgr"
@@ -45,7 +42,6 @@ import (
 	"github.com/lightningnetwork/lnd/input"
 	"github.com/lightningnetwork/lnd/invoices"
 	"github.com/lightningnetwork/lnd/keychain"
-	"github.com/lightningnetwork/lnd/libzkchannels"
 	"github.com/lightningnetwork/lnd/lncfg"
 	"github.com/lightningnetwork/lnd/lnpeer"
 	"github.com/lightningnetwork/lnd/lnrpc"
@@ -69,7 +65,6 @@ import (
 	"github.com/lightningnetwork/lnd/watchtower/wtclient"
 	"github.com/lightningnetwork/lnd/watchtower/wtdb"
 	"github.com/lightningnetwork/lnd/watchtower/wtpolicy"
-	"github.com/lightningnetwork/lnd/zkchanneldb"
 )
 
 const (
@@ -3591,44 +3586,7 @@ func (s *server) CloseZkChannel(pubKey *btcec.PublicKey, Force bool) error {
 		return fmt.Errorf("peer %x is not connected", pubBytes)
 	}
 
-	// open the zkchanneldb to load custState
-	zkCustDB, err := zkchanneldb.SetupZkCustDB()
-
-	// read custState from ZkCustDB
-	var custStateBytes []byte
-	err = zkCustDB.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-		_, v := c.Seek([]byte("custStateKey"))
-		custStateBytes = v
-		return nil
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var custState libzkchannels.CustState
-	err = json.Unmarshal(custStateBytes, &custState)
-
-	CloseEscrowTx := custState.CloseEscrowTx
-
-	fmt.Println("Loaded CloseEscrowTx =>:", CloseEscrowTx)
-
-	// Broadcast escrow tx on chain
-	serializedTx, err := hex.DecodeString(CloseEscrowTx)
-	if err != nil {
-		zkchLog.Error(err)
-	}
-
-	var msgTx wire.MsgTx
-	err = msgTx.Deserialize(bytes.NewReader(serializedTx))
-	if err != nil {
-		zkchLog.Error(err)
-	}
-
-	fmt.Println("Broadcasting close transaction")
-	peer.server.cc.wallet.PublishTransaction(&msgTx)
-
-	// peer.server.zkchannelMgr.CloseZkChannel(Amount, peer)
+	peer.server.zkchannelMgr.CloseZkChannel(peer.server.cc.wallet)
 
 	return nil
 }

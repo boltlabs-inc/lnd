@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"math"
 	"os"
 	"strconv"
@@ -17,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/boltdb/bolt"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/lightninglabs/protobuf-hex-display/json"
@@ -25,6 +27,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/routing/route"
 	"github.com/lightningnetwork/lnd/walletunlocker"
+	"github.com/lightningnetwork/lnd/zkchanneldb"
 
 	"github.com/urfave/cli"
 	"golang.org/x/crypto/ssh/terminal"
@@ -3369,6 +3372,30 @@ var closeZkChannelCommand = cli.Command{
 }
 
 func closeZkChannel(ctx *cli.Context) error {
+
+	// open the zkchanneldb to load custState
+	zkCustDB, err := zkchanneldb.SetupZkCustDB()
+
+	// read custState from ZkCustDB
+	var closeInitiatedBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("closeInitiatedKey"))
+		closeInitiatedBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var closeInitiated bool
+	err = json.Unmarshal(closeInitiatedBytes, &closeInitiated)
+	zkCustDB.Close()
+
+	if closeInitiated {
+		return fmt.Errorf("Cannot make a payment, closeZkChannel has been initiated on this channel")
+	}
+
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
