@@ -10,8 +10,15 @@ var (
 	// MerchBucket contains all zkChannel information stored on the merchant's node
 	MerchBucket = []byte("merchant-bucket")
 
+	// MerchStateBucket contains the merch-state information
+	MerchStateBucket = []byte("merch-state-bucket")
+
 	// CustBucket contains all zkChannel information stored on the customer's node
 	CustBucket = []byte("customer-bucket")
+
+	// CustStateBucket contains the cust-state information. There is one
+	// cust-state per zkChannel.
+	CustStateBucket = []byte("cust-state-bucket")
 )
 
 // SetupZkMerchDB creates the zkchanneldb for the merchant

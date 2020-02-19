@@ -25,7 +25,7 @@ type zkChannelManager struct {
 func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, merchBal int64, p lnpeer.Peer) {
 
 	inputSats := int64(50 * 100000000)
-	cust_utxo_txid := "0fcfe57479a387d2c7ce2d9fb2767b5648f976620fed21c60e49cb7c2c7a3532"
+	cust_utxo_txid := "12546189f0bd8224990088e7c88ec62aace6d40a57475a4fc71c464a48c6f44d"
 	custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
 
 	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
