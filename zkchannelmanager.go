@@ -33,8 +33,9 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, me
 		log.Fatal(err)
 	}
 
-	fmt.Println("channelToken => ", channelToken)
-	fmt.Println("custState => ", custState)
+	zkchLog.Infof("Generated channelToken and custState")
+	zkchLog.Debug("channelToken => ", channelToken)
+	zkchLog.Debug("custState => ", custState)
 
 	custPk := fmt.Sprintf("%v", custState.PkC)
 	revLock := fmt.Sprintf("%v", custState.RevLock)
@@ -43,26 +44,24 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, me
 	// changeSk := "4157697b6428532758a9d0f9a73ce58befe3fd665797427d1c5bb3d33f6a132e"
 	changePk := "037bed6ab680a171ef2ab564af25eff15c0659313df0bbfb96414da7c7d1e65882"
 
-	fmt.Println("cust_utxo_txid :=> ", cust_utxo_txid)
-	fmt.Println("inputSats :=> ", inputSats)
-	fmt.Println("custBal :=> ", custBal)
-	fmt.Println("custSk :=> ", custInputSk)
-	fmt.Println("custPk :=> ", custPk)
-	fmt.Println("merchPk :=> ", merchPk)
-	fmt.Println("changePk :=> ", changePk)
+	zkchLog.Debug("cust_utxo_txid :=> ", cust_utxo_txid)
+	zkchLog.Debug("inputSats :=> ", inputSats)
+	zkchLog.Debug("custBal :=> ", custBal)
+	zkchLog.Debug("custSk :=> ", custInputSk)
+	zkchLog.Debug("custPk :=> ", custPk)
+	zkchLog.Debug("merchPk :=> ", merchPk)
+	zkchLog.Debug("changePk :=> ", changePk)
 
-	fmt.Println("Variables going into FormEscrowTx :=> ", cust_utxo_txid, 0, inputSats, custBal, custInputSk, custPk, merchPk, changePk)
+	zkchLog.Debug("Variables going into FormEscrowTx :=> ", cust_utxo_txid, 0, inputSats, custBal, custInputSk, custPk, merchPk, changePk)
 
 	signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(cust_utxo_txid, uint32(0), inputSats, custBal, custInputSk, custPk, merchPk, changePk)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("escrow txid => ", escrowTxid)
-	fmt.Println("escrow prevout => ", escrowPrevout)
-	fmt.Println("signedEscrowTx => ", signedEscrowTx)
-
-	zkchLog.Infof("Generated channelToken and custState")
+	zkchLog.Info("escrow txid => ", escrowTxid)
+	zkchLog.Debug("escrow prevout => ", escrowPrevout)
+	zkchLog.Info("signedEscrowTx => ", signedEscrowTx)
 
 	// TODO: Write a function to handle the storing of variables in zkchanneldb
 	// Add variables to zkchannelsdb
@@ -143,7 +142,7 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 	zkchLog.Info("custBal =>:", custBal)
 	zkchLog.Info("merchBal =>:", merchBal)
 
-	fmt.Println("received escrow txid => ", escrowTxid)
+	zkchLog.Debug("received escrow txid => ", escrowTxid)
 
 	// TODO: If the variables are not checked, they can be saved directly, skipping the step above/
 
@@ -512,7 +511,7 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 
 	merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
 
-	fmt.Println("Variables going into MerchantSignMerchClose:", escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay, custSig, merchSk)
+	zkchLog.Debug("Variables going into MerchantSignMerchClose:", escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay, custSig, merchSk)
 	signedMerchCloseTx, merchTxid, merchPrevout, err := libzkchannels.MerchantSignMerchCloseTx(escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay, custSig, merchSk)
 	if err != nil {
 		log.Fatal(err)

@@ -3238,7 +3238,7 @@ func openZkChannel(ctx *cli.Context) error {
 		log.Fatal(err)
 	}
 	if !isCustomer {
-		return fmt.Errorf("You are a merchant, only customers can make payments")
+		return fmt.Errorf("You are a operating as a merchant, only customers can make payments")
 	}
 
 	var pubKey string
@@ -3331,7 +3331,7 @@ func zkPay(ctx *cli.Context) error {
 		log.Fatal(err)
 	}
 	if !isCustomer {
-		return fmt.Errorf("You are a merchant, only customers can make payments")
+		return fmt.Errorf("You are a operating as a merchant, only customers can make payments")
 	}
 
 	var pubKey string
