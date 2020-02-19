@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/boltdb/bolt"
 	"github.com/btcsuite/btcd/wire"
@@ -520,6 +521,14 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	fmt.Println("Merchant has signed merch close tx => ", signedMerchCloseTx)
 	fmt.Println("merch txid = ", merchTxid)
 	fmt.Println("merch prevout = ", merchPrevout)
+
+	// Update merchState in zkchannelsdb
+	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
+
+	signedMerchCloseTxBytes, _ := json.Marshal(signedMerchCloseTx)
+	zkchanneldb.AddMerchField(zkMerchDB, signedMerchCloseTxBytes, "signedMerchCloseTxKey")
+
+	zkMerchDB.Close()
 
 	// MERCH SIGN CUST CLOSE
 
@@ -1674,40 +1683,81 @@ func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p l
 // CloseZkChannel broadcasts a close transaction
 func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet) {
 
-	// TODO: Determine if it is the customer or merchant making the payment?
+	isCustomer, err := DetermineIfCustomer()
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	zkchLog.Info("Is this user a customer? : ", isCustomer)
+	// TODO: MerchClose if merch, CustClose if customer
 
 	// TODO: If --force is not set, initiate a mutual close
 
+	// Set closeInitiated flag to prevent further zkpayments
 	closeInitiated := true
 
-	// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
-	// This is used to prevent another payment being made
-	zkCustDB, err := zkchanneldb.SetupZkCustDB()
-	closeInitiatedBytes, _ := json.Marshal(closeInitiated)
-	zkchanneldb.AddCustField(zkCustDB, closeInitiatedBytes, "closeInitiatedKey")
-	zkCustDB.Close()
+	var CloseEscrowTx string
+	if isCustomer {
+		// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
+		// This is used to prevent another payment being made
+		zkCustDB, err := zkchanneldb.SetupZkCustDB()
+		closeInitiatedBytes, _ := json.Marshal(closeInitiated)
+		zkchanneldb.AddCustField(zkCustDB, closeInitiatedBytes, "closeInitiatedKey")
+		zkCustDB.Close()
 
-	// open the zkchanneldb to load custState
-	zkCustDB, err = zkchanneldb.SetupZkCustDB()
+		// open the zkchanneldb to load custState
+		zkCustDB, err = zkchanneldb.SetupZkCustDB()
 
-	// read custState from ZkCustDB
-	var custStateBytes []byte
-	err = zkCustDB.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-		_, v := c.Seek([]byte("custStateKey"))
-		custStateBytes = v
-		return nil
-	})
-	if err != nil {
-		log.Fatal(err)
+		// read custState from ZkCustDB
+		var custStateBytes []byte
+		err = zkCustDB.View(func(tx *bolt.Tx) error {
+			c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+			_, v := c.Seek([]byte("custStateKey"))
+			custStateBytes = v
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var custState libzkchannels.CustState
+		err = json.Unmarshal(custStateBytes, &custState)
+
+		zkCustDB.Close()
+
+		CloseEscrowTx = custState.CloseEscrowTx
+
+	} else if !isCustomer {
+
+		// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
+		// This is used to prevent another payment being made
+		zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+		closeInitiatedBytes, _ := json.Marshal(closeInitiated)
+		zkchanneldb.AddMerchField(zkMerchDB, closeInitiatedBytes, "closeInitiatedKey")
+		zkMerchDB.Close()
+
+		// open the zkchanneldb to load signedMerchCloseTx
+		zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
+
+		// read merchState from ZkMerchDB
+		var signedMerchCloseTxBytes []byte
+		err = zkMerchDB.View(func(tx *bolt.Tx) error {
+			c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+			_, v := c.Seek([]byte("signedMerchCloseTxKey"))
+			signedMerchCloseTxBytes = v
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var signedMerchCloseTx string
+		err = json.Unmarshal(signedMerchCloseTxBytes, &signedMerchCloseTx)
+
+		zkMerchDB.Close()
+
+		CloseEscrowTx = signedMerchCloseTx
 	}
-
-	var custState libzkchannels.CustState
-	err = json.Unmarshal(custStateBytes, &custState)
-
-	zkCustDB.Close()
-
-	CloseEscrowTx := custState.CloseEscrowTx
 
 	fmt.Println("Loaded CloseEscrowTx =>:", CloseEscrowTx)
 
@@ -1726,4 +1776,28 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet) {
 	fmt.Println("Broadcasting close transaction")
 	wallet.PublishTransaction(&msgTx)
 
+}
+
+// DetermineIfCustomer is used to make sure that only the Customer is able
+// to execute certain commands. e.g. openZkChannel, closeZkChannel, zkPay
+func DetermineIfCustomer() (bool, error) {
+
+	var custdbExists, merchdbExists bool
+	if _, err := os.Stat("zkcust.db"); err == nil {
+		custdbExists = true
+	}
+	if _, err := os.Stat("zkmerch.db"); err == nil {
+		merchdbExists = true
+	}
+
+	if custdbExists && merchdbExists {
+		return false, fmt.Errorf("Cannot run both a Customer and Merchant node. " +
+			"Both zkcust.cb and zkmerch.db exist")
+	} else if custdbExists {
+		return true, nil
+	} else if merchdbExists {
+		return false, nil
+	}
+
+	return false, fmt.Errorf("neither zkcust.db or zkmerch.db found")
 }

@@ -24,6 +24,7 @@ import (
 	"github.com/lightninglabs/protobuf-hex-display/json"
 	"github.com/lightninglabs/protobuf-hex-display/jsonpb"
 	"github.com/lightninglabs/protobuf-hex-display/proto"
+	"github.com/lightningnetwork/lnd"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/routing/route"
 	"github.com/lightningnetwork/lnd/walletunlocker"
@@ -3232,6 +3233,14 @@ func openZkChannel(ctx *cli.Context) error {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
+	isCustomer, err := lnd.DetermineIfCustomer()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !isCustomer {
+		return fmt.Errorf("You are a merchant, only customers can make payments")
+	}
+
 	var pubKey string
 	switch {
 	case ctx.IsSet("node_key"):
@@ -3317,6 +3326,14 @@ func zkPay(ctx *cli.Context) error {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
+	isCustomer, err := lnd.DetermineIfCustomer()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !isCustomer {
+		return fmt.Errorf("You are a merchant, only customers can make payments")
+	}
+
 	var pubKey string
 	switch {
 	case ctx.IsSet("node_key"):
@@ -3372,28 +3389,37 @@ var closeZkChannelCommand = cli.Command{
 }
 
 func closeZkChannel(ctx *cli.Context) error {
-
-	// open the zkchanneldb to load custState
-	zkCustDB, err := zkchanneldb.SetupZkCustDB()
-
-	// read custState from ZkCustDB
-	var closeInitiatedBytes []byte
-	err = zkCustDB.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-		_, v := c.Seek([]byte("closeInitiatedKey"))
-		closeInitiatedBytes = v
-		return nil
-	})
+	isCustomer, err := lnd.DetermineIfCustomer()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var closeInitiated bool
-	err = json.Unmarshal(closeInitiatedBytes, &closeInitiated)
-	zkCustDB.Close()
+	// If the customer is initiating closeZkChannel, they must be absolutely sure not to make
+	// any further payments on the channel, so as to not revoke the state they are broadcasting on.
+	if isCustomer {
 
-	if closeInitiated {
-		return fmt.Errorf("Cannot make a payment, closeZkChannel has been initiated on this channel")
+		// open the zkchanneldb to check closeInitiated flag
+		zkCustDB, err := zkchanneldb.SetupZkCustDB()
+
+		// read custState from ZkCustDB
+		var closeInitiatedBytes []byte
+		err = zkCustDB.View(func(tx *bolt.Tx) error {
+			c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+			_, v := c.Seek([]byte("closeInitiatedKey"))
+			closeInitiatedBytes = v
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var closeInitiated bool
+		err = json.Unmarshal(closeInitiatedBytes, &closeInitiated)
+		zkCustDB.Close()
+
+		if closeInitiated {
+			return fmt.Errorf("Cannot make a payment, closeZkChannel has been initiated on this channel")
+		}
 	}
 
 	ctxb := context.Background()
