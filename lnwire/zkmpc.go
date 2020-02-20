@@ -1,10 +1,12 @@
 package lnwire
 
-import "io"
+import (
+	"io"
+)
 
 // ZkMPC defines a message which is sent by peers while doing MPC
 type ZkMPC struct {
-	Data []byte
+	Data ZkMsgMPCType
 }
 
 // A compile time check to ensure ZkMPC implements the lnwire.Message interface.

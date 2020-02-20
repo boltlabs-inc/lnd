@@ -6,13 +6,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/lightningnetwork/lnd/libzkchannels"
 	"log"
 	"unsafe"
 
 	"github.com/boltdb/bolt"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/jinzhu/copier"
-	"github.com/lightningnetwork/lnd/libzkchannels"
 	"github.com/lightningnetwork/lnd/lnpeer"
 	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/lnwire"
@@ -1183,7 +1183,7 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 
 }
 
-func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpeer.Peer, pPtr uintptr) {
+func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpeer.Peer, pPtr unsafe.Pointer) {
 
 	payTokenMaskCom := string(msg.PayTokenMaskCom)
 
@@ -1335,6 +1335,7 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 	zkchLog.Info("Before PayCustomer (old), Nonce =>:", oldState.Nonce)
 	zkchLog.Info("Before PayCustomer (new), Nonce =>:", newState.Nonce)
 
+	//go Receive(pPtr)
 	fmt.Println("Ptr: ", uintptr(unsafe.Pointer(&p)))
 	//isOk, custState, err := libzkchannels.PayCustomer(0, channelState, channelToken, oldState, newState, payTokenMaskCom, revLockCom, amount, custState)
 	isOk, custState, err := libzkchannels.PayCustomer(pPtr, channelState, channelToken, oldState, newState, payTokenMaskCom, revLockCom, amount, custState)
@@ -1361,7 +1362,7 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 
 }
 
-func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer, pPtr uintptr) {
+func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer, pPtr unsafe.Pointer) {
 
 	payTokenMaskCom := string(msg.PayTokenMaskCom)
 	revLockCom := string(msg.RevLockCom)
@@ -1448,6 +1449,8 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer, 
 
 	fmt.Println("channelState MerchStatePkM => ", *merchState.PkM)
 
+	//err = Send([]byte("test"), pPtr)
+	//fmt.Println(err)
 	fmt.Println("Ptr: ", uintptr(unsafe.Pointer(&p)))
 	//maskedTxInputs, merchState, err := libzkchannels.PayMerchant(0, channelState, stateNonce, payTokenMaskCom, revLockCom, amount, merchState)
 	maskedTxInputs, merchState, err := libzkchannels.PayMerchant(pPtr, channelState, stateNonce, payTokenMaskCom, revLockCom, amount, merchState)

@@ -5,6 +5,7 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"github.com/lightningnetwork/lnd/pointer"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -187,7 +188,7 @@ type peer struct {
 
 	// chanMpcMsgs is a channel where messages intended for MPC
 	// communication are queued
-	chanMpcMsgs chan *mpcMsg
+	chanMpcMsgs chan *lnwire.ZkMPC
 
 	// chanCloseMsgs is a channel that any message related to channel
 	// closures are sent over. This includes lnwire.Shutdown message as
@@ -286,7 +287,7 @@ func newPeer(conn net.Conn, connReq *connmgr.ConnReq, server *server,
 		chanCloseMsgs:      make(chan *closeMsg),
 		failedChannels:     make(map[lnwire.ChannelID]struct{}),
 
-		chanMpcMsgs:        make(chan *mpcMsg),
+		chanMpcMsgs:        make(chan *lnwire.ZkMPC),
 
 		chanActiveTimeout: chanActiveTimeout,
 
@@ -1124,9 +1125,11 @@ out:
 		case *lnwire.ZkPayNonce:
 			p.server.zkchannelMgr.processZkPayNonce(msg, p)
 		case *lnwire.ZkPayMaskCom:
-			p.server.zkchannelMgr.processZkPayMaskCom(msg, p, uintptr(unsafe.Pointer(&p)))
+			pPtr := pointer.Save(p)
+			p.server.zkchannelMgr.processZkPayMaskCom(msg, p, pPtr)
 		case *lnwire.ZkPayMPC:
-			p.server.zkchannelMgr.processZkPayMPC(msg, p, uintptr(unsafe.Pointer(&p)))
+			pPtr := pointer.Save(p)
+			p.server.zkchannelMgr.processZkPayMPC(msg, p, pPtr)
 		case *lnwire.ZkPayMaskedTxInputs:
 			p.server.zkchannelMgr.processZkPayMaskedTxInputs(msg, p)
 		case *lnwire.ZkPayRevoke:
@@ -1135,7 +1138,11 @@ out:
 			p.server.zkchannelMgr.processZkPayTokenMask(msg, p)
 
 		case *lnwire.ZkMPC:
-			p.chanMpcMsgs <- &mpcMsg{ *msg }
+			select {
+			case p.chanMpcMsgs <- msg:
+			case <-p.quit:
+				break out
+			}
 
 		case *lnwire.OpenChannel:
 			p.server.fundingMgr.processFundingOpen(msg, p)

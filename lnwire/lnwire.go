@@ -40,6 +40,7 @@ type ZkChannelSigType []byte
 
 // ZkMsgType is the type for 'payment' on zkChannels.
 type ZkMsgType []byte
+type ZkMsgMPCType []byte
 
 const (
 	// noAddr denotes a blank address. An address of this type indicates
@@ -457,6 +458,14 @@ func WriteElement(w io.Writer, element interface{}) error {
 		Length := len(e)
 		if Length > 44464 {
 			return fmt.Errorf("'ZkMsgType' too long")
+		}
+		if err := wire.WriteVarBytes(w, 0, e); err != nil {
+			return err
+		}
+	case ZkMsgMPCType:
+		Length := len(e)
+		if Length > 65532 {
+			return fmt.Errorf("'ZkMsgMPCType' too long")
 		}
 		if err := wire.WriteVarBytes(w, 0, e); err != nil {
 			return err
@@ -891,6 +900,12 @@ func ReadElement(r io.Reader, element interface{}) error {
 		// zkpayment has length 34464 bytes (21sh Dec 2019)
 		// darius: not sure what the field name at the end is for
 		zkPayment, err := wire.ReadVarBytes(r, 0, 44464, "zkpayment")
+		if err != nil {
+			return err
+		}
+		*e = zkPayment
+	case *ZkMsgMPCType:
+		zkPayment, err := wire.ReadVarBytes(r, 0, 65532, "data")
 		if err != nil {
 			return err
 		}
