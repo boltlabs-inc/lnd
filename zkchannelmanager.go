@@ -1425,20 +1425,20 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	var amount int64
 	err = json.Unmarshal(amountBytes, &amount)
 
-	// read totalAmount from ZkMerchDB
-	var totalAmountBytes []byte
+	// read totalReceived from ZkMerchDB
+	var totalReceivedBytes []byte
 	err = zkMerchDB.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
-		_, v := c.Seek([]byte("totalAmountKey"))
-		totalAmountBytes = v
+		_, v := c.Seek([]byte("totalReceivedKey"))
+		totalReceivedBytes = v
 		return nil
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var totalAmount int64
-	err = json.Unmarshal(totalAmountBytes, &totalAmount)
+	var totalReceived int64
+	err = json.Unmarshal(totalReceivedBytes, &totalReceived)
 
 	zkMerchDB.Close()
 
@@ -1457,7 +1457,7 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 
 	maskedTxInputs, merchState, err := libzkchannels.PayMerchant(channelState, stateNonce, payTokenMaskCom, revLockCom, amount, merchState)
 
-	totalAmount += amount
+	totalReceived += amount
 
 	// Update merchState in zkMerchDB
 	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
@@ -1465,8 +1465,8 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	merchStateBytes, _ = json.Marshal(merchState)
 	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
 
-	totalAmountBytes, _ = json.Marshal(totalAmount)
-	zkchanneldb.AddMerchField(zkMerchDB, totalAmountBytes, "totalAmountKey")
+	totalReceivedBytes, _ = json.Marshal(totalReceived)
+	zkchanneldb.AddMerchField(zkMerchDB, totalReceivedBytes, "totalReceivedKey")
 
 	zkMerchDB.Close()
 
@@ -1794,69 +1794,62 @@ func ZkChannelBalance() (int64, error) {
 
 	var zkbalance int64
 
-	user, err := CustOrMerch()
+	// open the zkchanneldb to load custState
+	zkCustDB, err := zkchanneldb.SetupZkCustDB()
+
+	// TODO: Add error message for the case where custState does not exist,
+	// it's because the user hasn't opened a zkchannel.
+
+	// read custState from ZkCustDB
+	var custStateBytes []byte
+	err = zkCustDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+		_, v := c.Seek([]byte("custStateKey"))
+		custStateBytes = v
+		return nil
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	switch user {
-	case "cust":
-		// open the zkchanneldb to load custState
-		zkCustDB, err := zkchanneldb.SetupZkCustDB()
-
-		// TODO: Add error message for the case where custState does not exist,
-		// it's because the user hasn't opened a zkchannel.
-
-		// read custState from ZkCustDB
-		var custStateBytes []byte
-		err = zkCustDB.View(func(tx *bolt.Tx) error {
-			c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-			_, v := c.Seek([]byte("custStateKey"))
-			custStateBytes = v
-			return nil
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		var custState libzkchannels.CustState
-		err = json.Unmarshal(custStateBytes, &custState)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		zkchLog.Info("Cust balance: %v", custState.CustBalance)
-
-		zkCustDB.Close()
-
-		zkbalance = custState.CustBalance
-
-	case "merch":
-
-		zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
-
-		// read totalAmount from ZkMerchDB
-		var totalAmountBytes []byte
-		err = zkMerchDB.View(func(tx *bolt.Tx) error {
-			c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
-			_, v := c.Seek([]byte("totalAmountKey"))
-			totalAmountBytes = v
-			return nil
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		var totalAmount int64
-		err = json.Unmarshal(totalAmountBytes, &totalAmount)
-
-		zkMerchDB.Close()
-
-		zkbalance = totalAmount
-
+	var custState libzkchannels.CustState
+	err = json.Unmarshal(custStateBytes, &custState)
+	if err != nil {
+		log.Fatal(err)
 	}
 
+	zkchLog.Info("Cust balance:", custState.CustBalance)
+
+	zkCustDB.Close()
+
+	zkbalance = custState.CustBalance
+
 	return zkbalance, nil
+}
+
+// TotalReceived returns the balance on the customer's zkchannel
+func TotalReceived() (int64, error) {
+
+	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
+	// read totalReceived from ZkMerchDB
+	var totalReceivedBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		_, v := c.Seek([]byte("totalReceivedKey"))
+		totalReceivedBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var totalReceived int64
+	err = json.Unmarshal(totalReceivedBytes, &totalReceived)
+
+	zkMerchDB.Close()
+
+	return totalReceived, nil
 }
 
 // DetermineIfCust is used to check the user is a customer

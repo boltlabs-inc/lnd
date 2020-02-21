@@ -3320,15 +3320,16 @@ var zkPayCommand = cli.Command{
 }
 
 func zkPay(ctx *cli.Context) error {
-	ctxb := context.Background()
-	client, cleanUp := getClient(ctx)
-	defer cleanUp()
 
 	isCustomer := lnd.DetermineIfCust()
 
 	if !isCustomer {
 		return fmt.Errorf("You are a operating as a merchant, only customers can make payments")
 	}
+
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
 
 	var pubKey string
 	switch {
@@ -3455,18 +3456,56 @@ func closeZkChannel(ctx *cli.Context) error {
 var zkChannelBalanceCommand = cli.Command{
 	Name:     "zkchannelbalance",
 	Category: "zkChannels",
-	Usage: "Returns the sum of the total available channel balance across " +
+	Usage: "Returns the total available channel balance" +
 		"all open zkchannels.",
 	Action: actionDecorator(zkChannelBalance),
 }
 
 func zkChannelBalance(ctx *cli.Context) error {
+
+	isCustomer := lnd.DetermineIfCust()
+
+	if !isCustomer {
+		return fmt.Errorf("You are a operating as a merchant, " +
+			"use totalreceived to view how many payments you have received")
+	}
+
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
 	req := &lnrpc.ZkChannelBalanceRequest{}
 	resp, err := client.ZkChannelBalance(ctxb, req)
+	if err != nil {
+		return err
+	}
+
+	printRespJSON(resp)
+	return nil
+}
+
+var totalReceivedCommand = cli.Command{
+	Name:     "totalreceived",
+	Category: "zkChannels",
+	Usage:    "Returns the sum of the total payments received across all zkchannels.",
+	Action:   actionDecorator(totalReceived),
+}
+
+func totalReceived(ctx *cli.Context) error {
+
+	isMerchant := lnd.DetermineIfMerch()
+
+	if !isMerchant {
+		return fmt.Errorf("You are a operating as a customer and are not receiving payments," +
+			"use 'zkchannelbalance' to view your balance instead.")
+	}
+
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	req := &lnrpc.TotalReceivedRequest{}
+	resp, err := client.TotalReceived(ctxb, req)
 	if err != nil {
 		return err
 	}

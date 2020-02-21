@@ -11639,7 +11639,7 @@ var xxx_messageInfo_ZkChannelBalanceRequest proto.InternalMessageInfo
 
 type ZkChannelBalanceResponse struct {
 	/// Sum of channels zkbalances denominated in satoshis
-	ZkBalance            int64    `protobuf:"varint,1,opt,name=zk_balance,proto3" json:"zk_balance,omitempty"`
+	ZkBalance            int64    `protobuf:"varint,1,opt,name=zk_balance,json=zkbalance,proto3" json:"zk_balance,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -11673,6 +11673,77 @@ var xxx_messageInfo_ZkChannelBalanceResponse proto.InternalMessageInfo
 func (m *ZkChannelBalanceResponse) GetZkBalance() int64 {
 	if m != nil {
 		return m.ZkBalance
+	}
+	return 0
+}
+
+type TotalReceivedRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *TotalReceivedRequest) Reset()         { *m = TotalReceivedRequest{} }
+func (m *TotalReceivedRequest) String() string { return proto.CompactTextString(m) }
+func (*TotalReceivedRequest) ProtoMessage()    {}
+func (*TotalReceivedRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{154}
+}
+
+func (m *TotalReceivedRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TotalReceivedRequest.Unmarshal(m, b)
+}
+func (m *TotalReceivedRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TotalReceivedRequest.Marshal(b, m, deterministic)
+}
+func (m *TotalReceivedRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TotalReceivedRequest.Merge(m, src)
+}
+func (m *TotalReceivedRequest) XXX_Size() int {
+	return xxx_messageInfo_TotalReceivedRequest.Size(m)
+}
+func (m *TotalReceivedRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_TotalReceivedRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TotalReceivedRequest proto.InternalMessageInfo
+
+type TotalReceivedResponse struct {
+	/// Sum of channels zkbalances denominated in satoshis
+	TotalReceived        int64    `protobuf:"varint,1,opt,name=total_received,proto3" json:"total_received,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *TotalReceivedResponse) Reset()         { *m = TotalReceivedResponse{} }
+func (m *TotalReceivedResponse) String() string { return proto.CompactTextString(m) }
+func (*TotalReceivedResponse) ProtoMessage()    {}
+func (*TotalReceivedResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{155}
+}
+
+func (m *TotalReceivedResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TotalReceivedResponse.Unmarshal(m, b)
+}
+func (m *TotalReceivedResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TotalReceivedResponse.Marshal(b, m, deterministic)
+}
+func (m *TotalReceivedResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TotalReceivedResponse.Merge(m, src)
+}
+func (m *TotalReceivedResponse) XXX_Size() int {
+	return xxx_messageInfo_TotalReceivedResponse.Size(m)
+}
+func (m *TotalReceivedResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_TotalReceivedResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TotalReceivedResponse proto.InternalMessageInfo
+
+func (m *TotalReceivedResponse) GetTotalReceived() int64 {
+	if m != nil {
+		return m.TotalReceived
 	}
 	return 0
 }
@@ -12948,6 +13019,10 @@ type LightningClient interface {
 	//ChannelBalance returns the total funds available across all open channels
 	//in satoshis.
 	ZkChannelBalance(ctx context.Context, in *ZkChannelBalanceRequest, opts ...grpc.CallOption) (*ZkChannelBalanceResponse, error)
+	//* lncli: `totalreceived`
+	//TotalReceived returns the total funds available across all open channels
+	//in satoshis.
+	TotalReceived(ctx context.Context, in *TotalReceivedRequest, opts ...grpc.CallOption) (*TotalReceivedResponse, error)
 }
 
 type lightningClient struct {
@@ -13741,6 +13816,15 @@ func (c *lightningClient) ZkChannelBalance(ctx context.Context, in *ZkChannelBal
 	return out, nil
 }
 
+func (c *lightningClient) TotalReceived(ctx context.Context, in *TotalReceivedRequest, opts ...grpc.CallOption) (*TotalReceivedResponse, error) {
+	out := new(TotalReceivedResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/TotalReceived", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LightningServer is the server API for Lightning service.
 type LightningServer interface {
 	// lncli: `walletbalance`
@@ -14078,6 +14162,10 @@ type LightningServer interface {
 	//ChannelBalance returns the total funds available across all open channels
 	//in satoshis.
 	ZkChannelBalance(context.Context, *ZkChannelBalanceRequest) (*ZkChannelBalanceResponse, error)
+	//* lncli: `totalreceived`
+	//TotalReceived returns the total funds available across all open channels
+	//in satoshis.
+	TotalReceived(context.Context, *TotalReceivedRequest) (*TotalReceivedResponse, error)
 }
 
 func RegisterLightningServer(s *grpc.Server, srv LightningServer) {
@@ -15194,6 +15282,24 @@ func _Lightning_ZkChannelBalance_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Lightning_TotalReceived_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TotalReceivedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).TotalReceived(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/TotalReceived",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).TotalReceived(ctx, req.(*TotalReceivedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Lightning_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "lnrpc.Lightning",
 	HandlerType: (*LightningServer)(nil),
@@ -15389,6 +15495,10 @@ var _Lightning_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ZkChannelBalance",
 			Handler:    _Lightning_ZkChannelBalance_Handler,
+		},
+		{
+			MethodName: "TotalReceived",
+			Handler:    _Lightning_TotalReceived_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

@@ -74,7 +74,6 @@ func AddMerchState(db *bolt.DB, merchStateBytes []byte) error {
 
 		return nil
 	})
-	fmt.Println("Added merchState Entry")
 	return err
 }
 
@@ -89,7 +88,6 @@ func AddCustState(db *bolt.DB, custStateBytes []byte) error {
 
 		return nil
 	})
-	fmt.Println("Added custState Entry")
 	return err
 }
 
@@ -104,7 +102,6 @@ func AddMerchField(db *bolt.DB, fieldBytes []byte, fieldName string) error {
 
 		return nil
 	})
-	fmt.Println("Added merch Entry:", fieldName)
 	return err
 }
 
@@ -119,6 +116,5 @@ func AddCustField(db *bolt.DB, fieldBytes []byte, fieldName string) error {
 
 		return nil
 	})
-	fmt.Println("Added cust Entry:", fieldName)
 	return err
 }

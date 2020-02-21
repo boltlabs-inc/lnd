@@ -3598,4 +3598,11 @@ func (s *server) ZkChannelBalance() int64 {
 	return zkbalance
 }
 
+// TotalReceived sends the request to server to close the connection with peer
+// identified by public key.
+func (s *server) TotalReceived() int64 {
+	total, _ := TotalReceived()
+	return total
+}
+
 // ########### ln-mpc end ###########

@@ -703,6 +703,17 @@ service Lightning {
         };
     }
     // ########### ln-mpc end ###########
+
+    /** lncli: `totalreceived`
+    TotalReceived returns the total funds available across all open channels
+    in satoshis.
+    */
+    rpc TotalReceived (TotalReceivedRequest) returns (TotalReceivedResponse) {
+        option (google.api.http) = {
+            get: "/v1/balance/totalreceived"
+        };
+    }
+    // ########### ln-mpc end ###########
 }
 
 message Utxo {
@@ -3609,7 +3620,14 @@ message ZkChannelBalanceRequest {
 }
 message ZkChannelBalanceResponse {
     /// Sum of channels zkbalances denominated in satoshis
-    int64 zk_balance = 1 [json_name = "zk_balance"];
+    int64 zk_balance = 1 [json_name = "zkbalance"];
+}
+
+message TotalReceivedRequest {
+}
+message TotalReceivedResponse {
+    /// Sum of channels zkbalances denominated in satoshis
+    int64 total_received = 1 [json_name = "total_received"];
 }
 
 // ########### ln-mpc end ###########
