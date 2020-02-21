@@ -1425,6 +1425,21 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	var amount int64
 	err = json.Unmarshal(amountBytes, &amount)
 
+	// read totalAmount from ZkMerchDB
+	var totalAmountBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		_, v := c.Seek([]byte("totalAmountKey"))
+		totalAmountBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var totalAmount int64
+	err = json.Unmarshal(totalAmountBytes, &totalAmount)
+
 	zkMerchDB.Close()
 
 	zkchLog.Debug("Variables going into PayMerchant:")
@@ -1442,11 +1457,16 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 
 	maskedTxInputs, merchState, err := libzkchannels.PayMerchant(channelState, stateNonce, payTokenMaskCom, revLockCom, amount, merchState)
 
+	totalAmount += amount
+
 	// Update merchState in zkMerchDB
 	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
 
 	merchStateBytes, _ = json.Marshal(merchState)
 	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+
+	totalAmountBytes, _ = json.Marshal(totalAmount)
+	zkchanneldb.AddMerchField(zkMerchDB, totalAmountBytes, "totalAmountKey")
 
 	zkMerchDB.Close()
 
@@ -1813,34 +1833,26 @@ func ZkChannelBalance() (int64, error) {
 
 	case "merch":
 
-		// open the zkchanneldb to load merchState
 		zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
 
-		// read merchState from ZkMerchDB
-		var merchStateBytes []byte
+		// read totalAmount from ZkMerchDB
+		var totalAmountBytes []byte
 		err = zkMerchDB.View(func(tx *bolt.Tx) error {
 			c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
-			_, v := c.Seek([]byte("merchStateKey"))
-			merchStateBytes = v
+			_, v := c.Seek([]byte("totalAmountKey"))
+			totalAmountBytes = v
 			return nil
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		var merchState libzkchannels.MerchState
-		err = json.Unmarshal(merchStateBytes, &merchState)
-		if err != nil {
-			log.Fatal(err)
-		}
+		var totalAmount int64
+		err = json.Unmarshal(totalAmountBytes, &totalAmount)
 
-		// zkchLog.Info("Merch balance: %v", merchState.MerchBalance)
+		zkMerchDB.Close()
 
-		// zkMerchDB.Close()
-
-		// zkbalance = merchState.MerchBalance
-
-		fmt.Errorf("zkchannel balance command for merch node is not currently available")
+		zkbalance = totalAmount
 
 	}
 

@@ -216,43 +216,54 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 					"Delete zkcust.db and try again to run zklnd as a merchant")
 			}
 
-			zkchLog.Infof("Initializing MPC merchant setup")
+			// If there is already a zkmerch.db set up, skip the initialization step
+			isMerch := DetermineIfMerch()
+			if !isMerch {
 
-			merchName := cfg.Alias
-			if merchName == "" {
-				merchName = "Merchant"
+				zkchLog.Infof("Initializing MPC merchant setup")
+
+				merchName := cfg.Alias
+				if merchName == "" {
+					merchName = "Merchant"
+				}
+
+				channelState, err := libzkchannels.ChannelSetup("channel", false)
+				zkchLog.Infof("libzkchannels.ChannelSetup done")
+
+				channelState, merchState, err := libzkchannels.InitMerchant(channelState, "merch")
+				zkchLog.Infof("InitMerchant done")
+
+				file, err := json.MarshalIndent(merchState.PkM, "", " ")
+				if err != nil {
+					return err
+				}
+				_ = ioutil.WriteFile("../merchPubKey.json", file, 0644)
+
+				fmt.Println("channelState MerchPayOutPk => ", *channelState.MerchPayOutPk)
+				fmt.Println("channelState MerchDisputePk => ", *channelState.MerchDisputePk)
+
+				// zkDB add merchState & channelState
+				zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+				if err != nil {
+					return err
+				}
+
+				// save merchStateBytes in zkMerchDB
+				merchStateBytes, _ := json.Marshal(merchState)
+				zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+
+				// save channelStateBytes in zkMerchDB
+				channelStateBytes, _ := json.Marshal(channelState)
+				zkchanneldb.AddMerchField(zkMerchDB, channelStateBytes, "channelStateKey")
+
+				// save totalBalance in zkMerchDB.
+				// With no channels initially, the total balance starts off at 0
+				totalBalance := int64(0)
+				totalBalanceBytes, _ := json.Marshal(totalBalance)
+				zkchanneldb.AddMerchField(zkMerchDB, totalBalanceBytes, "totalBalanceKey")
+
+				zkMerchDB.Close()
 			}
-
-			channelState, err := libzkchannels.ChannelSetup("channel", false)
-			zkchLog.Infof("libzkchannels.ChannelSetup done")
-
-			channelState, merchState, err := libzkchannels.InitMerchant(channelState, "merch")
-			zkchLog.Infof("InitMerchant done")
-
-			file, err := json.MarshalIndent(merchState.PkM, "", " ")
-			if err != nil {
-				return err
-			}
-			_ = ioutil.WriteFile("../merchPubKey.json", file, 0644)
-
-			fmt.Println("channelState MerchPayOutPk => ", *channelState.MerchPayOutPk)
-			fmt.Println("channelState MerchDisputePk => ", *channelState.MerchDisputePk)
-
-			// zkDB add merchState & channelState
-			zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
-			if err != nil {
-				return err
-			}
-
-			// save merchStateBytes in zkMerchDB
-			merchStateBytes, _ := json.Marshal(merchState)
-			zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
-
-			// // save channelStateBytes in zkMerchDB
-			channelStateBytes, _ := json.Marshal(channelState)
-			zkchanneldb.AddMerchField(zkMerchDB, channelStateBytes, "channelStateKey")
-
-			zkMerchDB.Close()
 
 		} else { // if not zk merchant, then create customer db.
 
@@ -262,13 +273,17 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 					"Delete zkmerch.db and try again to run zklnd as a customer")
 			}
 
-			zkchLog.Infof("Creating customer zkchannel db")
+			isCust := DetermineIfCust()
+			if !isCust {
 
-			zkCustDB, err := zkchanneldb.SetupZkCustDB()
-			if err != nil {
-				return err
+				zkchLog.Infof("Creating customer zkchannel db")
+
+				zkCustDB, err := zkchanneldb.SetupZkCustDB()
+				if err != nil {
+					return err
+				}
+				zkCustDB.Close()
 			}
-			zkCustDB.Close()
 		}
 	}
 
