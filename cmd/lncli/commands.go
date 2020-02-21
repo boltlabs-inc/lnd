@@ -3233,10 +3233,8 @@ func openZkChannel(ctx *cli.Context) error {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
-	isCustomer, err := lnd.DetermineIfCustomer()
-	if err != nil {
-		log.Fatal(err)
-	}
+	isCustomer := lnd.DetermineIfCust()
+
 	if !isCustomer {
 		return fmt.Errorf("You are a operating as a merchant, only customers can make payments")
 	}
@@ -3326,10 +3324,8 @@ func zkPay(ctx *cli.Context) error {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
-	isCustomer, err := lnd.DetermineIfCustomer()
-	if err != nil {
-		log.Fatal(err)
-	}
+	isCustomer := lnd.DetermineIfCust()
+
 	if !isCustomer {
 		return fmt.Errorf("You are a operating as a merchant, only customers can make payments")
 	}
@@ -3389,10 +3385,7 @@ var closeZkChannelCommand = cli.Command{
 }
 
 func closeZkChannel(ctx *cli.Context) error {
-	isCustomer, err := lnd.DetermineIfCustomer()
-	if err != nil {
-		log.Fatal(err)
-	}
+	isCustomer := lnd.DetermineIfCust()
 
 	// If the customer is initiating closeZkChannel, they must be absolutely sure not to make
 	// any further payments on the channel, so as to not revoke the state they are broadcasting on.
@@ -3456,6 +3449,29 @@ func closeZkChannel(ctx *cli.Context) error {
 	}
 
 	printRespJSON(lnid)
+	return nil
+}
+
+var zkChannelBalanceCommand = cli.Command{
+	Name:     "zkchannelbalance",
+	Category: "zkChannels",
+	Usage: "Returns the sum of the total available channel balance across " +
+		"all open zkchannels.",
+	Action: actionDecorator(zkChannelBalance),
+}
+
+func zkChannelBalance(ctx *cli.Context) error {
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	req := &lnrpc.ZkChannelBalanceRequest{}
+	resp, err := client.ZkChannelBalance(ctxb, req)
+	if err != nil {
+		return err
+	}
+
+	printRespJSON(resp)
 	return nil
 }
 

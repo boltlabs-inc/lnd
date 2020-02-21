@@ -314,6 +314,7 @@ func main() {
 		openZkChannelCommand,
 		zkPayCommand,
 		closeZkChannelCommand,
+		zkChannelBalanceCommand,
 	}
 
 	// Add any extra commands determined by build flags.

@@ -39,6 +39,7 @@ import (
 	"github.com/lightningnetwork/lnd/chanacceptor"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/keychain"
+	"github.com/lightningnetwork/lnd/libzkchannels"
 	"github.com/lightningnetwork/lnd/lncfg"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/lnwallet"
@@ -208,6 +209,13 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 	if !cfg.LNMode {
 		// Do merchant initialization if merchant flag was set
 		if cfg.ZkMerchant {
+
+			isCust := DetermineIfCust()
+			if isCust {
+				return fmt.Errorf("Current directory has already been set up with zk customer DB. " +
+					"Delete zkcust.db and try again to run zklnd as a merchant")
+			}
+
 			zkchLog.Infof("Initializing MPC merchant setup")
 
 			merchName := cfg.Alias
@@ -247,6 +255,13 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 			zkMerchDB.Close()
 
 		} else { // if not zk merchant, then create customer db.
+
+			isMerch := DetermineIfMerch()
+			if isMerch {
+				return fmt.Errorf("Current directory has already been set up with zk merchant DB. " +
+					"Delete zkmerch.db and try again to run zklnd as a customer")
+			}
+
 			zkchLog.Infof("Creating customer zkchannel db")
 
 			zkCustDB, err := zkchanneldb.SetupZkCustDB()

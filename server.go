@@ -3591,4 +3591,11 @@ func (s *server) CloseZkChannel(pubKey *btcec.PublicKey, Force bool) error {
 	return nil
 }
 
+// ZkChannelBalance sends the request to server to close the connection with peer
+// identified by public key.
+func (s *server) ZkChannelBalance() int64 {
+	zkbalance, _ := ZkChannelBalance()
+	return zkbalance
+}
+
 // ########### ln-mpc end ###########

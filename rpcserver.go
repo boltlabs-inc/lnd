@@ -6504,4 +6504,39 @@ func (r *rpcServer) CloseZkChannel(ctx context.Context,
 	return &lnrpc.CloseZkChannelResponse{}, nil
 }
 
+// ZkChannelBalance returns the total available channel flow across all open
+// channels in satoshis.
+func (r *rpcServer) ZkChannelBalance(ctx context.Context,
+	in *lnrpc.ZkChannelBalanceRequest) (*lnrpc.ZkChannelBalanceResponse, error) {
+
+	// openChannels, err := r.server.chanDB.FetchAllOpenChannels()
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// var balance btcutil.Amount
+	// for _, channel := range openChannels {
+	// 	balance += channel.LocalCommitment.LocalBalance.ToSatoshis()
+	// }
+
+	// pendingChannels, err := r.server.chanDB.FetchPendingChannels()
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// var pendingOpenBalance btcutil.Amount
+	// for _, channel := range pendingChannels {
+	// 	pendingOpenBalance += channel.LocalCommitment.LocalBalance.ToSatoshis()
+	// }
+
+	// rpcsLog.Debugf("[channelbalance] balance=%v pending-open=%v",
+	// 	balance, pendingOpenBalance)
+
+	zkbalance := r.server.ZkChannelBalance()
+
+	return &lnrpc.ZkChannelBalanceResponse{
+		ZkBalance: int64(zkbalance),
+	}, nil
+}
+
 // ########### ln-mpc ###########

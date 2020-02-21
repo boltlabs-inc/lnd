@@ -1675,18 +1675,20 @@ func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p l
 // CloseZkChannel broadcasts a close transaction
 func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet) {
 
-	isCustomer, err := DetermineIfCustomer()
-	if err != nil {
-		zkchLog.Error(err)
-	}
-
 	// TODO: If --force is not set, initiate a mutual close
 
 	// Set closeInitiated flag to prevent further zkpayments
 	closeInitiated := true
 
 	var CloseEscrowTx string
-	if isCustomer {
+
+	user, err := CustOrMerch()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	switch user {
+	case "cust":
 		// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
 		// This is used to prevent another payment being made
 		zkCustDB, err := zkchanneldb.SetupZkCustDB()
@@ -1716,7 +1718,7 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet) {
 
 		CloseEscrowTx = custState.CloseEscrowTx
 
-	} else if !isCustomer {
+	case "merch":
 
 		// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
 		// This is used to prevent another payment being made
@@ -1767,9 +1769,109 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet) {
 
 }
 
-// DetermineIfCustomer is used to make sure that only the Customer is able
-// to execute certain commands. e.g. openZkChannel, closeZkChannel, zkPay
-func DetermineIfCustomer() (bool, error) {
+// ZkChannelBalance returns the balance on the customer's zkchannel
+func ZkChannelBalance() (int64, error) {
+
+	var zkbalance int64
+
+	user, err := CustOrMerch()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	switch user {
+	case "cust":
+		// open the zkchanneldb to load custState
+		zkCustDB, err := zkchanneldb.SetupZkCustDB()
+
+		// TODO: Add error message for the case where custState does not exist,
+		// it's because the user hasn't opened a zkchannel.
+
+		// read custState from ZkCustDB
+		var custStateBytes []byte
+		err = zkCustDB.View(func(tx *bolt.Tx) error {
+			c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
+			_, v := c.Seek([]byte("custStateKey"))
+			custStateBytes = v
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var custState libzkchannels.CustState
+		err = json.Unmarshal(custStateBytes, &custState)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		zkchLog.Info("Cust balance: %v", custState.CustBalance)
+
+		zkCustDB.Close()
+
+		zkbalance = custState.CustBalance
+
+	case "merch":
+
+		// open the zkchanneldb to load merchState
+		zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
+		// read merchState from ZkMerchDB
+		var merchStateBytes []byte
+		err = zkMerchDB.View(func(tx *bolt.Tx) error {
+			c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+			_, v := c.Seek([]byte("merchStateKey"))
+			merchStateBytes = v
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var merchState libzkchannels.MerchState
+		err = json.Unmarshal(merchStateBytes, &merchState)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// zkchLog.Info("Merch balance: %v", merchState.MerchBalance)
+
+		// zkMerchDB.Close()
+
+		// zkbalance = merchState.MerchBalance
+
+		fmt.Errorf("zkchannel balance command for merch node is not currently available")
+
+	}
+
+	return zkbalance, nil
+}
+
+// DetermineIfCust is used to check the user is a customer
+func DetermineIfCust() bool {
+	if user, err := CustOrMerch(); user == "cust" {
+		if err != nil {
+			log.Fatal(err)
+		}
+		return true
+	}
+	return false
+}
+
+// DetermineIfMerch is used to check the user is a merchant
+func DetermineIfMerch() bool {
+	if user, err := CustOrMerch(); user == "merch" {
+		if err != nil {
+			log.Fatal(err)
+		}
+		return true
+	}
+	return false
+}
+
+// CustOrMerch determines if the user is a customer or merchant,
+// based on whether they have zkcust.db or zkmerch.db set up
+func CustOrMerch() (string, error) {
 
 	var custdbExists, merchdbExists bool
 	if _, err := os.Stat("zkcust.db"); err == nil {
@@ -1780,13 +1882,12 @@ func DetermineIfCustomer() (bool, error) {
 	}
 
 	if custdbExists && merchdbExists {
-		return false, fmt.Errorf("Cannot run both a Customer and Merchant node. " +
+		return "both", fmt.Errorf("Cannot run both a Customer and Merchant node. " +
 			"Both zkcust.cb and zkmerch.db exist")
 	} else if custdbExists {
-		return true, nil
+		return "cust", nil
 	} else if merchdbExists {
-		return false, nil
+		return "merch", nil
 	}
-
-	return false, fmt.Errorf("neither zkcust.db or zkmerch.db found")
+	return "neither", fmt.Errorf("neither zkcust.db or zkmerch.db found")
 }

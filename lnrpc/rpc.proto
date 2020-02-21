@@ -668,7 +668,7 @@ service Lightning {
     rpc OpenZkChannel (OpenZkChannelRequest) returns (OpenZkChannelResponse) {
         /// darius TODO: Figure out what this does. Copied from rpc disconnect
         option (google.api.http) = {
-            delete: "/v1/peers/{pub_key}"
+            delete: "/v1/openzkchannel/{pub_key}"
         };
     }
 
@@ -689,7 +689,17 @@ service Lightning {
     */
     rpc CloseZkChannel (CloseZkChannelRequest) returns (CloseZkChannelResponse) {
         option (google.api.http) = {
-            delete: "/v1/peers/{pub_key}"
+            delete: "/v1/closezkchannel/{pub_key}"
+        };
+    }
+
+    /** lncli: `channelbalance`
+    ChannelBalance returns the total funds available across all open channels
+    in satoshis.
+    */
+    rpc ZkChannelBalance (ZkChannelBalanceRequest) returns (ZkChannelBalanceResponse) {
+        option (google.api.http) = {
+            get: "/v1/balance/zkchannels"
         };
     }
     // ########### ln-mpc end ###########
@@ -3593,4 +3603,13 @@ message CloseZkChannelRequest {
 }
 message CloseZkChannelResponse {
 }
+
+
+message ZkChannelBalanceRequest {
+}
+message ZkChannelBalanceResponse {
+    /// Sum of channels zkbalances denominated in satoshis
+    int64 zk_balance = 1 [json_name = "zk_balance"];
+}
+
 // ########### ln-mpc end ###########

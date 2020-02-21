@@ -516,6 +516,31 @@
         ]
       }
     },
+    "/v1/closezkchannel/{pub_key}": {
+      "delete": {
+        "summary": "* lncli: `closezkchannel`\nZkPay attempts to closezkchannel a zk payment to a peer with whom we have established a\nzkChannel.",
+        "operationId": "CloseZkChannel",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/lnrpcCloseZkChannelResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pub_key",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Lightning"
+        ]
+      }
+    },
     "/v1/fees": {
       "get": {
         "summary": "lncli: `feereport`\nFeeReport allows the caller to obtain a report detailing the current fee\nschedule enforced by the node globally for each channel.",
@@ -1047,6 +1072,31 @@
         ]
       }
     },
+    "/v1/openzkchannel/{pub_key}": {
+      "delete": {
+        "summary": "* lncli: `openzkchannel`\nOpenZkChannel establishes a zkchannel with a merchant.",
+        "operationId": "OpenZkChannel",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/lnrpcOpenZkChannelResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pub_key",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Lightning"
+        ]
+      }
+    },
     "/v1/payments": {
       "get": {
         "summary": "lncli: `listpayments`\nListPayments returns a list of all outgoing payments.",
@@ -1199,7 +1249,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/lnrpcCloseZkChannelResponse"
+              "$ref": "#/definitions/lnrpcDisconnectPeerResponse"
             }
           }
         },
@@ -1414,6 +1464,31 @@
             "schema": {
               "$ref": "#/definitions/lnrpcVerifyMessageRequest"
             }
+          }
+        ],
+        "tags": [
+          "Lightning"
+        ]
+      }
+    },
+    "/v1/zkpay/{pub_key}": {
+      "delete": {
+        "summary": "* lncli: `zkpay`\nZkPay attempts to make a zk payment to a peer with whom we have established a\nzkChannel.",
+        "operationId": "ZkPay",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/lnrpcZkPayResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pub_key",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -4557,6 +4632,16 @@
           "type": "string",
           "format": "int64",
           "title": "The unconfirmed balance of a wallet(with 0 confirmations)"
+        }
+      }
+    },
+    "lnrpcZkChannelBalanceResponse": {
+      "type": "object",
+      "properties": {
+        "zk_balance": {
+          "type": "string",
+          "format": "int64",
+          "title": "/ Sum of channels zkbalances denominated in satoshis"
         }
       }
     },
