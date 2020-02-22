@@ -4645,6 +4645,15 @@
         }
       }
     },
+    "lnrpcZkInfoResponse": {
+      "type": "object",
+      "properties": {
+        "merch_pubkey": {
+          "type": "string",
+          "title": "/ Merchant's pubkey"
+        }
+      }
+    },
     "lnrpcZkPayResponse": {
       "type": "object"
     }

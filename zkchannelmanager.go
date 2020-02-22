@@ -1852,6 +1852,31 @@ func TotalReceived() (int64, error) {
 	return totalReceived, nil
 }
 
+// ZkInfo returns info about this zklnd node
+func ZkInfo() (string, error) {
+
+	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
+	// read merchState from ZkMerchDB
+	var merchStateBytes []byte
+	err = zkMerchDB.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+		_, v := c.Seek([]byte("merchStateKey"))
+		merchStateBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var merchState libzkchannels.MerchState
+	err = json.Unmarshal(merchStateBytes, &merchState)
+
+	zkMerchDB.Close()
+
+	return *merchState.PkM, nil
+}
+
 // DetermineIfCust is used to check the user is a customer
 func DetermineIfCust() bool {
 	if user, err := CustOrMerch(); user == "cust" {

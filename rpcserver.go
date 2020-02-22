@@ -6528,4 +6528,15 @@ func (r *rpcServer) TotalReceived(ctx context.Context,
 	}, nil
 }
 
+// ZkInfo returns information about this zklnd node.
+func (r *rpcServer) ZkInfo(ctx context.Context,
+	in *lnrpc.ZkInfoRequest) (*lnrpc.ZkInfoResponse, error) {
+
+	merch_pubkey := r.server.ZkInfo()
+
+	return &lnrpc.ZkInfoResponse{
+		MerchPubkey: merch_pubkey,
+	}, nil
+}
+
 // ########### ln-mpc ###########

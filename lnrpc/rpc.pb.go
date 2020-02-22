@@ -11748,6 +11748,77 @@ func (m *TotalReceivedResponse) GetTotalReceived() int64 {
 	return 0
 }
 
+type ZkInfoRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ZkInfoRequest) Reset()         { *m = ZkInfoRequest{} }
+func (m *ZkInfoRequest) String() string { return proto.CompactTextString(m) }
+func (*ZkInfoRequest) ProtoMessage()    {}
+func (*ZkInfoRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{156}
+}
+
+func (m *ZkInfoRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ZkInfoRequest.Unmarshal(m, b)
+}
+func (m *ZkInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ZkInfoRequest.Marshal(b, m, deterministic)
+}
+func (m *ZkInfoRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ZkInfoRequest.Merge(m, src)
+}
+func (m *ZkInfoRequest) XXX_Size() int {
+	return xxx_messageInfo_ZkInfoRequest.Size(m)
+}
+func (m *ZkInfoRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ZkInfoRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ZkInfoRequest proto.InternalMessageInfo
+
+type ZkInfoResponse struct {
+	/// Merchant's pubkey
+	MerchPubkey          string   `protobuf:"bytes,1,opt,name=merch_pubkey,proto3" json:"merch_pubkey,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ZkInfoResponse) Reset()         { *m = ZkInfoResponse{} }
+func (m *ZkInfoResponse) String() string { return proto.CompactTextString(m) }
+func (*ZkInfoResponse) ProtoMessage()    {}
+func (*ZkInfoResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{157}
+}
+
+func (m *ZkInfoResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ZkInfoResponse.Unmarshal(m, b)
+}
+func (m *ZkInfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ZkInfoResponse.Marshal(b, m, deterministic)
+}
+func (m *ZkInfoResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ZkInfoResponse.Merge(m, src)
+}
+func (m *ZkInfoResponse) XXX_Size() int {
+	return xxx_messageInfo_ZkInfoResponse.Size(m)
+}
+func (m *ZkInfoResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ZkInfoResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ZkInfoResponse proto.InternalMessageInfo
+
+func (m *ZkInfoResponse) GetMerchPubkey() string {
+	if m != nil {
+		return m.MerchPubkey
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterEnum("lnrpc.AddressType", AddressType_name, AddressType_value)
 	proto.RegisterEnum("lnrpc.CommitmentType", CommitmentType_name, CommitmentType_value)
@@ -13023,6 +13094,9 @@ type LightningClient interface {
 	//TotalReceived returns the total funds available across all open channels
 	//in satoshis.
 	TotalReceived(ctx context.Context, in *TotalReceivedRequest, opts ...grpc.CallOption) (*TotalReceivedResponse, error)
+	//* lncli: `zkinfo`
+	//ZkInfo returns information about this zklnd node.
+	ZkInfo(ctx context.Context, in *ZkInfoRequest, opts ...grpc.CallOption) (*ZkInfoResponse, error)
 }
 
 type lightningClient struct {
@@ -13825,6 +13899,15 @@ func (c *lightningClient) TotalReceived(ctx context.Context, in *TotalReceivedRe
 	return out, nil
 }
 
+func (c *lightningClient) ZkInfo(ctx context.Context, in *ZkInfoRequest, opts ...grpc.CallOption) (*ZkInfoResponse, error) {
+	out := new(ZkInfoResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ZkInfo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LightningServer is the server API for Lightning service.
 type LightningServer interface {
 	// lncli: `walletbalance`
@@ -14166,6 +14249,9 @@ type LightningServer interface {
 	//TotalReceived returns the total funds available across all open channels
 	//in satoshis.
 	TotalReceived(context.Context, *TotalReceivedRequest) (*TotalReceivedResponse, error)
+	//* lncli: `zkinfo`
+	//ZkInfo returns information about this zklnd node.
+	ZkInfo(context.Context, *ZkInfoRequest) (*ZkInfoResponse, error)
 }
 
 func RegisterLightningServer(s *grpc.Server, srv LightningServer) {
@@ -15300,6 +15386,24 @@ func _Lightning_TotalReceived_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Lightning_ZkInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ZkInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).ZkInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/ZkInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).ZkInfo(ctx, req.(*ZkInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Lightning_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "lnrpc.Lightning",
 	HandlerType: (*LightningServer)(nil),
@@ -15499,6 +15603,10 @@ var _Lightning_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TotalReceived",
 			Handler:    _Lightning_TotalReceived_Handler,
+		},
+		{
+			MethodName: "ZkInfo",
+			Handler:    _Lightning_ZkInfo_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

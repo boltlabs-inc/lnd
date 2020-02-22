@@ -3513,4 +3513,33 @@ func totalReceived(ctx *cli.Context) error {
 	return nil
 }
 
+var zkInfoCommand = cli.Command{
+	Name:     "zkinfo",
+	Category: "ZkChannels",
+	Usage:    "Return information about this zklnd node.",
+	Action:   actionDecorator(zkInfo),
+}
+
+func zkInfo(ctx *cli.Context) error {
+
+	isMerchant := lnd.DetermineIfMerch()
+
+	if !isMerchant {
+		return fmt.Errorf("This feature is not available for customers yet.")
+	}
+
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	req := &lnrpc.ZkInfoRequest{}
+	resp, err := client.ZkInfo(ctxb, req)
+	if err != nil {
+		return err
+	}
+
+	printRespJSON(resp)
+	return nil
+}
+
 // ########### ln-mpc end ###########

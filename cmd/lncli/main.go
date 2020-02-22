@@ -316,6 +316,7 @@ func main() {
 		closeZkChannelCommand,
 		zkChannelBalanceCommand,
 		totalReceivedCommand,
+		zkInfoCommand,
 	}
 
 	// Add any extra commands determined by build flags.

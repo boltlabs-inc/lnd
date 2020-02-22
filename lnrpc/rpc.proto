@@ -702,7 +702,6 @@ service Lightning {
             get: "/v1/balance/zkchannels"
         };
     }
-    // ########### ln-mpc end ###########
 
     /** lncli: `totalreceived`
     TotalReceived returns the total funds available across all open channels
@@ -711,6 +710,15 @@ service Lightning {
     rpc TotalReceived (TotalReceivedRequest) returns (TotalReceivedResponse) {
         option (google.api.http) = {
             get: "/v1/balance/totalreceived"
+        };
+    }
+
+    /** lncli: `zkinfo`
+    ZkInfo returns information about this zklnd node.
+    */
+    rpc ZkInfo (ZkInfoRequest) returns (ZkInfoResponse) {
+        option (google.api.http) = {
+            get: "/v1/balance/zkinfo"
         };
     }
     // ########### ln-mpc end ###########
@@ -3628,6 +3636,13 @@ message TotalReceivedRequest {
 message TotalReceivedResponse {
     /// Sum of channels zkbalances denominated in satoshis
     int64 total_received = 1 [json_name = "total_received"];
+}
+
+message ZkInfoRequest {
+}
+message ZkInfoResponse {
+    /// Merchant's pubkey
+    string merch_pubkey = 1 [json_name = "merch_pubkey"];
 }
 
 // ########### ln-mpc end ###########

@@ -3605,4 +3605,11 @@ func (s *server) TotalReceived() int64 {
 	return total
 }
 
+// TotalReceived sends the request to server to close the connection with peer
+// identified by public key.
+func (s *server) ZkInfo() string {
+	total, _ := ZkInfo()
+	return total
+}
+
 // ########### ln-mpc end ###########
