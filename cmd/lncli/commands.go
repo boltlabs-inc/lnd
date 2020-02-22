@@ -3250,32 +3250,32 @@ func openZkChannel(ctx *cli.Context) error {
 	}
 
 	// Load Merchant's bitcoin pubkey
-	var merchPubKey string
 	if !ctx.IsSet("merch_pubkey") {
 		return fmt.Errorf("(Temporary solution). Must specify json containing merchant's pubkey")
-	} else {
-		merchPubKeyFile, err := ioutil.ReadFile("../" + ctx.String("merch_pubkey"))
-		if err != nil {
-			return err
-		}
-		_ = json.Unmarshal(merchPubKeyFile, &merchPubKey)
 	}
+
+	var merchPubKey string
+	merchPubKey = ctx.String("merch_pubkey")
+
+	// merchPubKeyFile, err := ioutil.ReadFile("../" + ctx.String("merch_pubkey"))
+	// if err != nil {
+	// 	return err
+	// }
+	// _ = json.Unmarshal(merchPubKeyFile, &merchPubKey)
 
 	fmt.Println("\n\nConnecting to merchant with bitcoin PubKey:", merchPubKey)
 
-	var custBalance int64
 	if !ctx.IsSet("cust_balance") {
 		return fmt.Errorf("must specify amount of satoshis for customer balance")
-	} else {
-		custBalance = ctx.Int64("cust_balance")
 	}
+	var custBalance int64
+	custBalance = ctx.Int64("cust_balance")
 
-	var merchBalance int64
 	if !ctx.IsSet("merch_balance") {
 		return fmt.Errorf("must specify amount of satoshis to send to the merchant")
-	} else {
-		merchBalance = ctx.Int64("merch_balance")
 	}
+	var merchBalance int64
+	merchBalance = ctx.Int64("merch_balance")
 
 	req := &lnrpc.OpenZkChannelRequest{
 		PubKey:       pubKey,
