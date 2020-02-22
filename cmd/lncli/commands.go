@@ -3293,10 +3293,9 @@ func openZkChannel(ctx *cli.Context) error {
 	return nil
 }
 
-// ########### zkChannels ###########
 var zkPayCommand = cli.Command{
 	Name:     "zkpay",
-	Category: "Payments",
+	Category: "ZkChannels",
 	Usage:    "Send a zero-knowledge payment over zkChannel.",
 	Description: `
 	Send a zkPayment to a merchant over an already established zkChannel.`,
@@ -3455,7 +3454,7 @@ func closeZkChannel(ctx *cli.Context) error {
 
 var zkChannelBalanceCommand = cli.Command{
 	Name:     "zkchannelbalance",
-	Category: "zkChannels",
+	Category: "ZkChannels",
 	Usage: "Returns the total available channel balance" +
 		"all open zkchannels.",
 	Action: actionDecorator(zkChannelBalance),
@@ -3486,7 +3485,7 @@ func zkChannelBalance(ctx *cli.Context) error {
 
 var totalReceivedCommand = cli.Command{
 	Name:     "totalreceived",
-	Category: "zkChannels",
+	Category: "ZkChannels",
 	Usage:    "Returns the sum of the total payments received across all zkchannels.",
 	Action:   actionDecorator(totalReceived),
 }

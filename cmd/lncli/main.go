@@ -251,13 +251,13 @@ func main() {
 			Name:  "macaroonip",
 			Usage: "if set, lock macaroon to specific IP address",
 		},
-		cli.StringFlag{
+		cli.BoolFlag{
 			Name:  "lnmode",
 			Usage: "if set, skip zkchannel initialization",
 		},
-		cli.StringFlag{
+		cli.BoolFlag{
 			Name:  "zkmerchant",
-			Usage: "if set, initialize for zkmerchant. If not, initialize for customer",
+			Usage: "if set, initialize for zkmerchant, if not, initialize for customer",
 		},
 	}
 	app.Commands = []cli.Command{
