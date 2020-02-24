@@ -2,6 +2,7 @@ package zkchanneldb
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/boltdb/bolt"
 )
@@ -117,4 +118,68 @@ func AddCustField(db *bolt.DB, fieldBytes []byte, fieldName string) error {
 		return nil
 	})
 	return err
+}
+
+// GetCustState custState from zkCustDB
+func GetCustState(db *bolt.DB) ([]byte, error) {
+
+	var fieldBytes []byte
+	err := db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(CustBucket).Cursor()
+		_, v := c.Seek([]byte("custStateKey"))
+		fieldBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	return fieldBytes, err
+}
+
+// GetMerchState gets merchState from zkMerchDB
+func GetMerchState(db *bolt.DB) ([]byte, error) {
+
+	var fieldBytes []byte
+	err := db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(MerchBucket).Cursor()
+		_, v := c.Seek([]byte("merchStateKey"))
+		fieldBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	return fieldBytes, err
+}
+
+// GetCustField gets a field from zkCustDB
+func GetCustField(db *bolt.DB, fieldName string) ([]byte, error) {
+
+	var fieldBytes []byte
+	err := db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(CustBucket).Cursor()
+		_, v := c.Seek([]byte(fieldName))
+		fieldBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	return fieldBytes, err
+}
+
+// GetMerchField gets a field from zkMerchDB
+func GetMerchField(db *bolt.DB, fieldName string) ([]byte, error) {
+
+	var fieldBytes []byte
+	err := db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(MerchBucket).Cursor()
+		_, v := c.Seek([]byte(fieldName))
+		fieldBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	return fieldBytes, err
 }
