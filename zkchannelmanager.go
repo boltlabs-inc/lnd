@@ -366,6 +366,9 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 
 	merchBalBytes = make([]byte, 8)
 	binary.LittleEndian.PutUint64(merchBalBytes, uint64(merchBal))
+
+	escrowTxidBytes = []byte(escrowTxid)
+
 	escrowPrevoutBytes = []byte(escrowPrevout)
 
 	custPkBytes := []byte(custPk)
@@ -379,6 +382,7 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 		// MerchTxPreimage: merchTxPreimageBytes,
 		CustBal:       custBalBytes,
 		MerchBal:      custBalBytes,
+		EscrowTxid:    escrowTxidBytes,
 		EscrowPrevout: escrowPrevoutBytes,
 		CustPk:        custPkBytes,
 		CustSig:       custSigBytes,
@@ -396,6 +400,7 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	custPk := string(msg.CustPk)
 	custBal := int64(binary.LittleEndian.Uint64(msg.CustBal))
 	merchBal := int64(binary.LittleEndian.Uint64(msg.MerchBal))
+	escrowTxid := string(msg.EscrowTxid)
 	escrowPrevout := string(msg.EscrowPrevout)
 	revLock := string(msg.RevLock)
 
@@ -436,20 +441,20 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	var toSelfDelay string
 	err = json.Unmarshal(toSelfDelayBytes, &toSelfDelay)
 
-	// read escrowTxidBytes from ZkMerchDB
-	var escrowTxidBytes []byte
-	err = zkMerchDB.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
-		_, v := c.Seek([]byte("escrowTxidKey"))
-		escrowTxidBytes = v
-		return nil
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
+	// // read escrowTxidBytes from ZkMerchDB
+	// var escrowTxidBytes []byte
+	// err = zkMerchDB.View(func(tx *bolt.Tx) error {
+	// 	c := tx.Bucket(zkchanneldb.MerchBucket).Cursor()
+	// 	_, v := c.Seek([]byte("escrowTxidKey"))
+	// 	escrowTxidBytes = v
+	// 	return nil
+	// })
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	var escrowTxid string
-	err = json.Unmarshal(escrowTxidBytes, &escrowTxid)
+	// var escrowTxid string
+	// err = json.Unmarshal(escrowTxidBytes, &escrowTxid)
 
 	// // read custPkBytes from ZkMerchDB
 	// var custPkBytes []byte

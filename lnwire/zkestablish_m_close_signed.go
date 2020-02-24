@@ -7,6 +7,7 @@ type ZkEstablishMCloseSigned struct {
 	// Payment contains the payment from generatePaymentProof
 	CustBal       ZkMsgType
 	MerchBal      ZkMsgType
+	EscrowTxid    ZkMsgType
 	EscrowPrevout ZkMsgType
 	CustPk        ZkMsgType
 	CustSig       ZkMsgType
@@ -25,6 +26,7 @@ func (p *ZkEstablishMCloseSigned) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
 		&p.CustBal,
 		&p.MerchBal,
+		&p.EscrowTxid,
 		&p.EscrowPrevout,
 		&p.CustPk,
 		&p.CustSig,
@@ -40,6 +42,7 @@ func (p *ZkEstablishMCloseSigned) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
 		p.CustBal,
 		p.MerchBal,
+		p.EscrowTxid,
 		p.EscrowPrevout,
 		p.CustPk,
 		p.CustSig,
