@@ -13,7 +13,7 @@ type ZkPayMaskCom struct {
 	// Customer to close the channel unilaterally, paying out to each party
 	// the channel balances specified in the Customer's original openChannel
 	// request.
-	PayTokenMaskCom ZkChannelSigType
+	PayTokenMaskCom ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.

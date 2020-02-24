@@ -13,8 +13,9 @@ type ZkPayMPC struct {
 	// Customer to close the channel unilaterally, paying out to each party
 	// the channel balances specified in the Customer's original openChannel
 	// request.
-	PayTokenMaskCom ZkChannelSigType
-	RevLockCom 		ZkChannelSigType
+	Amount          ZkMsgType
+	PayTokenMaskCom ZkMsgType
+	RevLockCom      ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -25,7 +26,8 @@ var _ Message = (*ZkPayMPC)(nil)
 //
 // This is part of the lnwire.Message interface.
 func (p *ZkPayMPC) Decode(r io.Reader, pver uint32) error {
-	return ReadElements(r, 
+	return ReadElements(r,
+		&p.Amount,
 		&p.PayTokenMaskCom,
 		&p.RevLockCom)
 }
@@ -35,7 +37,8 @@ func (p *ZkPayMPC) Decode(r io.Reader, pver uint32) error {
 //
 // This is part of the lnwire.Message interface.
 func (p *ZkPayMPC) Encode(w io.Writer, pver uint32) error {
-	return WriteElements(w, 
+	return WriteElements(w,
+		p.Amount,
 		p.PayTokenMaskCom,
 		p.RevLockCom)
 }
