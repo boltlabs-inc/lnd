@@ -338,7 +338,6 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	zkMerchDB.Close()
 
 	// MERCH SIGN CUST CLOSE
-
 	txInfo := libzkchannels.FundingTxInfo{
 		EscrowTxId:    escrowTxid,
 		EscrowPrevout: escrowPrevout,
@@ -664,8 +663,6 @@ func (z *zkChannelManager) processZkEstablishCustActivated(msg *lnwire.ZkEstabli
 
 	payToken0, merchState, err := libzkchannels.ActivateMerchant(channelToken, state, merchState)
 
-	// Darius: Do we save 'state' here?
-
 	// Add variables to zkchannelsdb
 	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
 
@@ -809,12 +806,6 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 	merchStateBytes, _ = json.Marshal(merchState)
 	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
 
-	// stateNonceBytes, _ := json.Marshal(stateNonce)
-	// zkchanneldb.AddMerchField(zkMerchDB, stateNonceBytes, "stateNonceKey")
-
-	// amountBytes, _ := json.Marshal(amount)
-	// zkchanneldb.AddMerchField(zkMerchDB, amountBytes, "amountKey")
-
 	zkMerchDB.Close()
 
 	payTokenMaskComBytes := []byte(payTokenMaskCom)
@@ -950,10 +941,6 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	var channelState libzkchannels.ChannelState
 	channelStateBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "channelStateKey")
 	err = json.Unmarshal(channelStateBytes, &channelState)
-
-	// var stateNonce string
-	// stateNonceBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "stateNonceKey")
-	// err = json.Unmarshal(stateNonceBytes, &stateNonce)
 
 	var totalReceived int64
 	totalReceivedBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "totalReceivedKey")
