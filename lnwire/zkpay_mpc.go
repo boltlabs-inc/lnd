@@ -13,6 +13,7 @@ type ZkPayMPC struct {
 	// Customer to close the channel unilaterally, paying out to each party
 	// the channel balances specified in the Customer's original openChannel
 	// request.
+	StateNonce      ZkMsgType
 	Amount          ZkMsgType
 	PayTokenMaskCom ZkMsgType
 	RevLockCom      ZkMsgType
@@ -27,6 +28,7 @@ var _ Message = (*ZkPayMPC)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkPayMPC) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
+		&p.StateNonce,
 		&p.Amount,
 		&p.PayTokenMaskCom,
 		&p.RevLockCom)
@@ -38,6 +40,7 @@ func (p *ZkPayMPC) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkPayMPC) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
+		p.StateNonce,
 		p.Amount,
 		p.PayTokenMaskCom,
 		p.RevLockCom)

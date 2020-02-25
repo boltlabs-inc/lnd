@@ -92,7 +92,7 @@ func AddCustState(db *bolt.DB, custStateBytes []byte) error {
 	return err
 }
 
-// AddField adds arbitrary field to the zkMerchDB
+// AddMerchField adds arbitrary field to the zkMerchDB
 func AddMerchField(db *bolt.DB, fieldBytes []byte, fieldName string) error {
 
 	err := db.Update(func(tx *bolt.Tx) error {
@@ -106,7 +106,7 @@ func AddMerchField(db *bolt.DB, fieldBytes []byte, fieldName string) error {
 	return err
 }
 
-// AddField adds arbitrary field to the zkCustDB
+// AddCustField adds arbitrary field to the zkCustDB
 func AddCustField(db *bolt.DB, fieldBytes []byte, fieldName string) error {
 
 	err := db.Update(func(tx *bolt.Tx) error {

@@ -10,6 +10,7 @@ type ZkPayNonce struct {
 	// Payment contains the payment from generatePaymentProof
 	StateNonce ZkMsgType
 	Amount     ZkMsgType
+	RevLockCom ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -22,7 +23,8 @@ var _ Message = (*ZkPayNonce)(nil)
 func (p *ZkPayNonce) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
 		&p.StateNonce,
-		&p.Amount)
+		&p.Amount,
+		&p.RevLockCom)
 }
 
 // Encode serializes the target Ping into the passed io.Writer observing the
@@ -32,7 +34,8 @@ func (p *ZkPayNonce) Decode(r io.Reader, pver uint32) error {
 func (p *ZkPayNonce) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
 		p.StateNonce,
-		p.Amount)
+		p.Amount,
+		p.RevLockCom)
 }
 
 // MsgType returns the integer uniquely identifying this message type on the
