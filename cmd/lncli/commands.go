@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"math"
 	"os"
 	"strconv"
@@ -18,7 +17,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/lightninglabs/protobuf-hex-display/json"
@@ -3263,8 +3261,8 @@ func openZkChannel(ctx *cli.Context) error {
 	if !ctx.IsSet("channel_name") {
 		return fmt.Errorf("enter a unique name for channel_name")
 	}
-	var channelName string
-	channelName = ctx.String("channel_name")
+	var zkChannelName string
+	zkChannelName = ctx.String("channel_name")
 
 	fmt.Println("\n\nConnecting to merchant with bitcoin PubKey:", merchPubKey)
 
@@ -3281,11 +3279,11 @@ func openZkChannel(ctx *cli.Context) error {
 	merchBalance = ctx.Int64("merch_balance")
 
 	req := &lnrpc.OpenZkChannelRequest{
-		PubKey:       pubKey,
-		MerchPubKey:  merchPubKey,
-		ChannelName:  channelName,
-		CustBalance:  custBalance,
-		MerchBalance: merchBalance,
+		PubKey:        pubKey,
+		MerchPubKey:   merchPubKey,
+		ZkChannelName: zkChannelName,
+		CustBalance:   custBalance,
+		MerchBalance:  merchBalance,
 	}
 
 	lnid, err := client.OpenZkChannel(ctxb, req)
@@ -3309,6 +3307,10 @@ var zkPayCommand = cli.Command{
 			Name: "node_key",
 			Usage: "the identity public key of the target node/peer " +
 				"serialized in compressed format",
+		},
+		cli.StringFlag{
+			Name:  "channel_name",
+			Usage: "the name of the zkchannel to make a payment on",
 		},
 		cli.IntFlag{
 			Name: "amt",
@@ -3344,16 +3346,22 @@ func zkPay(ctx *cli.Context) error {
 		return fmt.Errorf("must specify target public key")
 	}
 
+	var zkChannelName string
+	if !ctx.IsSet("channel_name") {
+		return fmt.Errorf("must specify which channel to make the payment on")
+	}
+	zkChannelName = ctx.String("channel_name")
+
 	var amt int64
 	if !ctx.IsSet("amt") {
 		return fmt.Errorf("must specify amount of satoshis to send")
-	} else {
-		amt = ctx.Int64("amt")
 	}
+	amt = ctx.Int64("amt")
 
 	req := &lnrpc.ZkPayRequest{
-		PubKey: pubKey,
-		Amount: amt,
+		PubKey:        pubKey,
+		ZkChannelName: zkChannelName,
+		Amount:        amt,
 	}
 
 	lnid, err := client.ZkPay(ctxb, req)
@@ -3390,28 +3398,27 @@ var closeZkChannelCommand = cli.Command{
 
 func closeZkChannel(ctx *cli.Context) error {
 	isCustomer := lnd.DetermineIfCust()
+	if !isCustomer {
+		return fmt.Errorf("This command doesn't work for merchants. " +
+			"TODO: make a command to close channel by channelID that merch can use too")
+	}
+
+	zkChannelName := ctx.String("channel_name")
 
 	// If the customer is initiating closeZkChannel, they must be absolutely sure not to make
 	// any further payments on the channel, so as to not revoke the state they are broadcasting on.
 	if isCustomer {
-
-		// open the zkchanneldb to check closeInitiated flag
-		zkCustDB, err := zkchanneldb.SetupZkCustDB()
-
-		// read custState from ZkCustDB
-		var closeInitiatedBytes []byte
-		err = zkCustDB.View(func(tx *bolt.Tx) error {
-			c := tx.Bucket(zkchanneldb.CustBucket).Cursor()
-			_, v := c.Seek([]byte("closeInitiatedKey"))
-			closeInitiatedBytes = v
-			return nil
-		})
-		if err != nil {
-			log.Fatal(err)
+		if !ctx.IsSet("channel_name") {
+			return fmt.Errorf("enter a unique name for channel_name")
 		}
 
+		// open the zkchanneldb to check closeInitiated flag for that channel
+		zkCustDB, _ := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+
 		var closeInitiated bool
-		err = json.Unmarshal(closeInitiatedBytes, &closeInitiated)
+		closeInitiatedBytes, _ := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "closeInitiatedKey")
+		_ = json.Unmarshal(closeInitiatedBytes, &closeInitiated)
+
 		zkCustDB.Close()
 
 		if closeInitiated {
@@ -3443,8 +3450,9 @@ func closeZkChannel(ctx *cli.Context) error {
 	}
 
 	req := &lnrpc.CloseZkChannelRequest{
-		PubKey: pubKey,
-		Force:  force,
+		PubKey:        pubKey,
+		ZkChannelName: zkChannelName,
+		Force:         force,
 	}
 
 	// TODO: Define request in rpc.proto

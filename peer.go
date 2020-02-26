@@ -1211,36 +1211,36 @@ out:
 		case *lnwire.ZkEstablishOpen:
 			p.server.zkchannelMgr.processZkEstablishOpen(msg, p)
 		case *lnwire.ZkEstablishAccept:
-			p.server.zkchannelMgr.processZkEstablishAccept(msg, p)
+			p.server.zkchannelMgr.processZkEstablishAccept(msg, p, p.server.zkChannelName)
 		case *lnwire.ZkEstablishMCloseSigned:
 			p.server.zkchannelMgr.processZkEstablishMCloseSigned(msg, p)
 		case *lnwire.ZkEstablishCCloseSigned:
-			p.server.zkchannelMgr.processZkEstablishCCloseSigned(msg, p)
+			p.server.zkchannelMgr.processZkEstablishCCloseSigned(msg, p, p.server.zkChannelName)
 		case *lnwire.ZkEstablishInitialState:
 			p.server.zkchannelMgr.processZkEstablishInitialState(msg, p)
 		case *lnwire.ZkEstablishStateValidated:
-			p.server.zkchannelMgr.processZkEstablishStateValidated(msg, p, p.server.cc.wallet)
+			p.server.zkchannelMgr.processZkEstablishStateValidated(msg, p, p.server.zkChannelName, p.server.cc.wallet)
 		case *lnwire.ZkEstablishFundingLocked:
 			p.server.zkchannelMgr.processZkEstablishFundingLocked(msg, p)
 		case *lnwire.ZkEstablishFundingConfirmed:
-			p.server.zkchannelMgr.processZkEstablishFundingConfirmed(msg, p)
+			p.server.zkchannelMgr.processZkEstablishFundingConfirmed(msg, p, p.server.zkChannelName)
 		case *lnwire.ZkEstablishCustActivated:
 			p.server.zkchannelMgr.processZkEstablishCustActivated(msg, p)
 		case *lnwire.ZkEstablishPayToken:
-			p.server.zkchannelMgr.processZkEstablishPayToken(msg, p)
+			p.server.zkchannelMgr.processZkEstablishPayToken(msg, p, p.server.zkChannelName)
 
 		case *lnwire.ZkPayNonce:
 			p.server.zkchannelMgr.processZkPayNonce(msg, p)
 		case *lnwire.ZkPayMaskCom:
-			p.server.zkchannelMgr.processZkPayMaskCom(msg, p)
+			p.server.zkchannelMgr.processZkPayMaskCom(msg, p, p.server.zkChannelName)
 		case *lnwire.ZkPayMPC:
 			p.server.zkchannelMgr.processZkPayMPC(msg, p)
 		case *lnwire.ZkPayMaskedTxInputs:
-			p.server.zkchannelMgr.processZkPayMaskedTxInputs(msg, p)
+			p.server.zkchannelMgr.processZkPayMaskedTxInputs(msg, p, p.server.zkChannelName)
 		case *lnwire.ZkPayRevoke:
 			p.server.zkchannelMgr.processZkPayRevoke(msg, p)
 		case *lnwire.ZkPayTokenMask:
-			p.server.zkchannelMgr.processZkPayTokenMask(msg, p)
+			p.server.zkchannelMgr.processZkPayTokenMask(msg, p, p.server.zkChannelName)
 
 		case *lnwire.OpenChannel:
 			p.server.fundingMgr.processFundingOpen(msg, p)

@@ -203,6 +203,8 @@ type server struct {
 
 	fundingMgr *fundingManager
 
+	zkChannelName string
+
 	zkchannelMgr *zkChannelManager
 
 	chanDB *channeldb.DB
@@ -3523,7 +3525,7 @@ func newSweepPkScriptGen(
 // OpenZkChannel sends the request to establish a zkchannel with a merchant.
 //
 // ########### ln-mpc start ###########
-func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, merchPubKey string, channelName string, custBalance int64, merchBalance int64) error {
+func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, merchPubKey string, zkChannelName string, custBalance int64, merchBalance int64) error {
 	pubBytes := pubKey.SerializeCompressed()
 	pubStr := string(pubBytes)
 
@@ -3538,14 +3540,15 @@ func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, merchPubKey string, chan
 		return fmt.Errorf("peer %x is not connected", pubBytes)
 	}
 
-	peer.server.zkchannelMgr.initZkEstablish(merchPubKey, channelName, custBalance, merchBalance, peer)
+	// peer.server.zkchannelMgr.zkChannelName = zkChannelName
+	peer.server.zkchannelMgr.initZkEstablish(merchPubKey, zkChannelName, custBalance, merchBalance, peer)
 
 	return nil
 }
 
 // ZkPay sends the request to server to close the connection with peer
 // identified by public key.
-func (s *server) ZkPay(pubKey *btcec.PublicKey, Amount int64) error {
+func (s *server) ZkPay(pubKey *btcec.PublicKey, zkChannelName string, Amount int64) error {
 	zkchLog.Infof("zkPay initiated")
 
 	pubBytes := pubKey.SerializeCompressed()
@@ -3562,14 +3565,14 @@ func (s *server) ZkPay(pubKey *btcec.PublicKey, Amount int64) error {
 		return fmt.Errorf("peer %x is not connected", pubBytes)
 	}
 
-	peer.server.zkchannelMgr.InitZkPay(Amount, peer)
+	peer.server.zkchannelMgr.InitZkPay(peer, zkChannelName, Amount)
 
 	return nil
 }
 
 // CloseZkChannel sends the request to server to close the connection with peer
 // identified by public key.
-func (s *server) CloseZkChannel(pubKey *btcec.PublicKey, Force bool) error {
+func (s *server) CloseZkChannel(pubKey *btcec.PublicKey, zkChannelName string, Force bool) error {
 	zkchLog.Infof("CloseZkChannel initiated")
 
 	pubBytes := pubKey.SerializeCompressed()
@@ -3586,7 +3589,7 @@ func (s *server) CloseZkChannel(pubKey *btcec.PublicKey, Force bool) error {
 		return fmt.Errorf("peer %x is not connected", pubBytes)
 	}
 
-	peer.server.zkchannelMgr.CloseZkChannel(peer.server.cc.wallet)
+	peer.server.zkchannelMgr.CloseZkChannel(peer.server.cc.wallet, zkChannelName)
 
 	return nil
 }

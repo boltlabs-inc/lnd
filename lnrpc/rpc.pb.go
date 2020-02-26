@@ -11449,8 +11449,10 @@ func (m *ChannelUpdate) GetExtraOpaqueData() []byte {
 type ZkPayRequest struct {
 	/// The pubkey of the node to pay
 	PubKey string `protobuf:"bytes,1,opt,name=pub_key,proto3" json:"pub_key,omitempty"`
+	/// A unique name for the zkchannel
+	ZkChannelName string `protobuf:"bytes,2,opt,name=zk_channel_name,json=zkchannel_name,proto3" json:"zk_channel_name,omitempty"`
 	/// The number of satoshis to send
-	Amount               int64    `protobuf:"varint,2,opt,name=amount,proto3" json:"amount,omitempty"`
+	Amount               int64    `protobuf:"varint,3,opt,name=amount,proto3" json:"amount,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -11484,6 +11486,13 @@ var xxx_messageInfo_ZkPayRequest proto.InternalMessageInfo
 func (m *ZkPayRequest) GetPubKey() string {
 	if m != nil {
 		return m.PubKey
+	}
+	return ""
+}
+
+func (m *ZkPayRequest) GetZkChannelName() string {
+	if m != nil {
+		return m.ZkChannelName
 	}
 	return ""
 }
@@ -11529,8 +11538,10 @@ var xxx_messageInfo_ZkPayResponse proto.InternalMessageInfo
 type CloseZkChannelRequest struct {
 	/// The pubkey of the node to pay
 	PubKey string `protobuf:"bytes,1,opt,name=pub_key,proto3" json:"pub_key,omitempty"`
+	/// A unique name for the zkchannel
+	ZkChannelName string `protobuf:"bytes,2,opt,name=zk_channel_name,json=zkchannel_name,proto3" json:"zk_channel_name,omitempty"`
 	/// The number of satoshis to send
-	Force                bool     `protobuf:"varint,2,opt,name=force,proto3" json:"force,omitempty"`
+	Force                bool     `protobuf:"varint,3,opt,name=force,proto3" json:"force,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -11564,6 +11575,13 @@ var xxx_messageInfo_CloseZkChannelRequest proto.InternalMessageInfo
 func (m *CloseZkChannelRequest) GetPubKey() string {
 	if m != nil {
 		return m.PubKey
+	}
+	return ""
+}
+
+func (m *CloseZkChannelRequest) GetZkChannelName() string {
+	if m != nil {
+		return m.ZkChannelName
 	}
 	return ""
 }

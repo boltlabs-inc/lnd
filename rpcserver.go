@@ -6428,9 +6428,10 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 		return nil, fmt.Errorf("unable to parse pubkey: %v", err)
 	}
 
+	r.server.zkChannelName = in.ZkChannelName
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
-	if err := r.server.OpenZkChannel(peerPubKey, in.MerchPubKey, in.ChannelName, in.CustBalance, in.MerchBalance); err != nil {
+	if err := r.server.OpenZkChannel(peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
 		return nil, fmt.Errorf("Could not send payment "+
 			"to peer: %v", err)
 	}
@@ -6461,9 +6462,10 @@ func (r *rpcServer) ZkPay(ctx context.Context,
 		return nil, fmt.Errorf("unable to parse pubkey: %v", err)
 	}
 
+	r.server.zkChannelName = in.ZkChannelName
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
-	if err := r.server.ZkPay(peerPubKey, in.Amount); err != nil {
+	if err := r.server.ZkPay(peerPubKey, in.ZkChannelName, in.Amount); err != nil {
 		return nil, fmt.Errorf("Could not send payment "+
 			"to peer: %v", err)
 	}
@@ -6496,7 +6498,7 @@ func (r *rpcServer) CloseZkChannel(ctx context.Context,
 
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
-	if err := r.server.CloseZkChannel(peerPubKey, in.Force); err != nil {
+	if err := r.server.CloseZkChannel(peerPubKey, in.ZkChannelName, in.Force); err != nil {
 		return nil, fmt.Errorf("Could not send payment "+
 			"to peer: %v", err)
 	}

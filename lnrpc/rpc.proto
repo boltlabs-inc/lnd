@@ -3597,7 +3597,7 @@ message OpenZkChannelRequest {
     /// The merchant's bitcoin pubkey
     string merch_pub_key = 2 [json_name = "merch_pubkey"];
     /// A unique name for the zkchannel
-    string channel_name = 3 [json_name = "channel_name"];
+    string zk_channel_name = 3 [json_name = "zkchannel_name"];
     /// Customer balance
     int64 cust_balance = 4 [json_name = "cust_balance"];
     /// Merchant balance
@@ -3610,8 +3610,10 @@ message OpenZkChannelResponse {
 message ZkPayRequest {
     /// The pubkey of the node to pay
     string pub_key = 1 [json_name = "pub_key"];
+    /// A unique name for the zkchannel
+    string zk_channel_name = 2 [json_name = "zkchannel_name"];
     /// The number of satoshis to send
-    int64 amount = 2 [json_name = "amount"];
+    int64 amount = 3 [json_name = "amount"];
 }
 message ZkPayResponse {
 }
@@ -3619,8 +3621,10 @@ message ZkPayResponse {
 message CloseZkChannelRequest {
     /// The pubkey of the node to pay
     string pub_key = 1 [json_name = "pub_key"];
+    /// A unique name for the zkchannel
+    string zk_channel_name = 2 [json_name = "zkchannel_name"];
     /// The number of satoshis to send
-    bool force = 2 [json_name = "force"];
+    bool force = 3 [json_name = "force"];
 }
 message CloseZkChannelResponse {
 }
