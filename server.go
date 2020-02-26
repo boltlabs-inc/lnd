@@ -3523,7 +3523,7 @@ func newSweepPkScriptGen(
 // OpenZkChannel sends the request to establish a zkchannel with a merchant.
 //
 // ########### ln-mpc start ###########
-func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, merchPubKey string, custBalance int64, merchBalance int64) error {
+func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, merchPubKey string, channelName string, custBalance int64, merchBalance int64) error {
 	pubBytes := pubKey.SerializeCompressed()
 	pubStr := string(pubBytes)
 
@@ -3538,7 +3538,7 @@ func (s *server) OpenZkChannel(pubKey *btcec.PublicKey, merchPubKey string, cust
 		return fmt.Errorf("peer %x is not connected", pubBytes)
 	}
 
-	peer.server.zkchannelMgr.initZkEstablish(merchPubKey, custBalance, merchBalance, peer)
+	peer.server.zkchannelMgr.initZkEstablish(merchPubKey, channelName, custBalance, merchBalance, peer)
 
 	return nil
 }

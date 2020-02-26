@@ -3212,6 +3212,10 @@ var openZkChannelCommand = cli.Command{
 			Usage: "the merchant's public key for the escrow tx" +
 				"serialized in compressed format",
 		},
+		cli.StringFlag{
+			Name:  "channel_name",
+			Usage: "create a name to identify the channel for future use",
+		},
 		cli.IntFlag{
 			Name:  "cust_balance",
 			Usage: "the number of satoshis the wallet should commit to the customer's balance (local side)",
@@ -3251,17 +3255,16 @@ func openZkChannel(ctx *cli.Context) error {
 
 	// Load Merchant's bitcoin pubkey
 	if !ctx.IsSet("merch_pubkey") {
-		return fmt.Errorf("(Temporary solution). Must specify json containing merchant's pubkey")
+		return fmt.Errorf("merch_pubkey is missing")
 	}
-
 	var merchPubKey string
 	merchPubKey = ctx.String("merch_pubkey")
 
-	// merchPubKeyFile, err := ioutil.ReadFile("../" + ctx.String("merch_pubkey"))
-	// if err != nil {
-	// 	return err
-	// }
-	// _ = json.Unmarshal(merchPubKeyFile, &merchPubKey)
+	if !ctx.IsSet("channel_name") {
+		return fmt.Errorf("enter a unique name for channel_name")
+	}
+	var channelName string
+	channelName = ctx.String("channel_name")
 
 	fmt.Println("\n\nConnecting to merchant with bitcoin PubKey:", merchPubKey)
 
@@ -3280,6 +3283,7 @@ func openZkChannel(ctx *cli.Context) error {
 	req := &lnrpc.OpenZkChannelRequest{
 		PubKey:       pubKey,
 		MerchPubKey:  merchPubKey,
+		ChannelName:  channelName,
 		CustBalance:  custBalance,
 		MerchBalance: merchBalance,
 	}
@@ -3430,9 +3434,10 @@ func closeZkChannel(ctx *cli.Context) error {
 	}
 
 	// TODO: set force bool flag
+	// TODO: Allow for mutual close
 	var force bool
 	if !ctx.IsSet("force") {
-		return fmt.Errorf("must specify amount of satoshis to send")
+		return fmt.Errorf("set 'force' flag to do a force closure. Mutual closure not supported in this version")
 	} else {
 		force = ctx.Bool("force")
 	}

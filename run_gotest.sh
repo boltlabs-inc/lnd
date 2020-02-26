@@ -1,5 +1,5 @@
 #!/bin/bash
 
-export UTXO_TXID=682f1672534e56c602f5ea227250493229d61713d48347579cc4a46389a227e2
+export UTXO_TXID=bd4ee7169bdd611442bf3e2e98cbb17e210da6930bcb3c80b385bcd5689d8756
 cd ../..
 make mpcgotest

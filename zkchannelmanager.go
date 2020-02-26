@@ -21,7 +21,7 @@ import (
 type zkChannelManager struct {
 }
 
-func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, merchBal int64, p lnpeer.Peer) {
+func (z *zkChannelManager) initZkEstablish(merchPubKey string, channelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
 
 	inputSats := int64(50 * 100000000)
 	cust_utxo_txid := "682f1672534e56c602f5ea227250493229d61713d48347579cc4a46389a227e2"
@@ -62,6 +62,7 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, custBal int64, me
 	zkchLog.Debug("escrow prevout => ", escrowPrevout)
 	zkchLog.Info("signedEscrowTx => ", signedEscrowTx)
 
+	zkchLog.Info("storing new zkchannel variables for:", channelName)
 	// TODO: Write a function to handle the storing of variables in zkchanneldb
 	// Add variables to zkchannelsdb
 	zkCustDB, err := zkchanneldb.SetupZkCustDB()
