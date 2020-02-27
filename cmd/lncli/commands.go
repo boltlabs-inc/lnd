@@ -3352,6 +3352,10 @@ func zkPay(ctx *cli.Context) error {
 	}
 	zkChannelName = ctx.String("channel_name")
 
+	if !lnd.ChannelExists(zkChannelName) {
+		return fmt.Errorf("there is no payment channel with that name")
+	}
+
 	var amt int64
 	if !ctx.IsSet("amt") {
 		return fmt.Errorf("must specify amount of satoshis to send")

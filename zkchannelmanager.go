@@ -1300,3 +1300,19 @@ func CustOrMerch() (string, error) {
 	}
 	return "neither", fmt.Errorf("neither zkcust.db or zkmerch.db found")
 }
+
+// StringInSlice checks if a string exists in a slice of strings
+func StringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
+// ChannelExists checks if a channel with that name has been established
+func ChannelExists(zkChannelName string) bool {
+	zkChannelList := zkchanneldb.Buckets("zkcust.db")
+	return StringInSlice(zkChannelName, zkChannelList)
+}
