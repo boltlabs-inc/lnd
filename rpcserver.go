@@ -6526,8 +6526,8 @@ func (r *rpcServer) ZkChannelBalance(ctx context.Context,
 		zkchLog.Info("channelBalance:", channelBalance)
 
 		zkchannel := &lnrpc.ZkChannelInfo{
-			ZkChannelName:  zkChannelName,
-			ChannelBalance: channelBalance,
+			ZkChannelName: zkChannelName,
+			LocalBalance:  channelBalance,
 		}
 		zkchLog.Info("zkchannel:", zkchannel)
 

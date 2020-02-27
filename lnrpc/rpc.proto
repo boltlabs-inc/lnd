@@ -3633,9 +3633,8 @@ message CloseZkChannelResponse {
 message ZkChannelInfo {
     /// The channel name
     string zk_channel_name = 1 [json_name = "channel_name"];
-
     /// Number of satoshis in the balance
-    int64 channel_balance = 2 [json_name = "channel_balance"];
+    int64 local_balance = 2 [json_name = "local_balance"];
 }
 
 message ZkChannelBalanceRequest {

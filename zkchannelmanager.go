@@ -1202,28 +1202,22 @@ func ZkChannelBalance(zkChannelName string) (int64, error) {
 
 	var zkbalance int64
 
-	zkchLog.Info("zkchmgr 1")
-
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
 	if err != nil {
 		log.Fatal(err)
 	}
-	zkchLog.Info("zkchmgr 2")
 
-	custStateBytes, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
 	var custState libzkchannels.CustState
+	custStateBytes, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
 	err = json.Unmarshal(custStateBytes, &custState)
 	if err != nil {
 		log.Fatal(err)
 	}
-	zkchLog.Info("zkchmgr 3")
 
 	zkbalance = custState.CustBalance
 
 	zkCustDB.Close()
-
-	zkchLog.Info("zkchmgr 4")
 
 	return zkbalance, nil
 }

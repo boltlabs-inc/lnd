@@ -11628,7 +11628,7 @@ type ZkChannelInfo struct {
 	/// The channel name
 	ZkChannelName string `protobuf:"bytes,1,opt,name=zk_channel_name,json=channel_name,proto3" json:"zk_channel_name,omitempty"`
 	/// Number of satoshis in the balance
-	ChannelBalance       int64    `protobuf:"varint,2,opt,name=channel_balance,proto3" json:"channel_balance,omitempty"`
+	LocalBalance         int64    `protobuf:"varint,2,opt,name=local_balance,proto3" json:"local_balance,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -11666,9 +11666,9 @@ func (m *ZkChannelInfo) GetZkChannelName() string {
 	return ""
 }
 
-func (m *ZkChannelInfo) GetChannelBalance() int64 {
+func (m *ZkChannelInfo) GetLocalBalance() int64 {
 	if m != nil {
-		return m.ChannelBalance
+		return m.LocalBalance
 	}
 	return 0
 }

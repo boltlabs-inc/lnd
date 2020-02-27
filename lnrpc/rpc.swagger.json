@@ -4654,7 +4654,7 @@
           "type": "string",
           "title": "/ The channel name"
         },
-        "channel_balance": {
+        "local_balance": {
           "type": "string",
           "format": "int64",
           "title": "/ Number of satoshis in the balance"
