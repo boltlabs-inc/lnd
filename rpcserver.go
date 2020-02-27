@@ -64,6 +64,7 @@ import (
 	"github.com/lightningnetwork/lnd/signal"
 	"github.com/lightningnetwork/lnd/sweep"
 	"github.com/lightningnetwork/lnd/watchtower"
+	"github.com/lightningnetwork/lnd/zkchanneldb"
 	"github.com/lightningnetwork/lnd/zpay32"
 	"github.com/tv42/zbase32"
 	"google.golang.org/grpc"
@@ -6511,11 +6512,32 @@ func (r *rpcServer) CloseZkChannel(ctx context.Context,
 func (r *rpcServer) ZkChannelBalance(ctx context.Context,
 	in *lnrpc.ZkChannelBalanceRequest) (*lnrpc.ZkChannelBalanceResponse, error) {
 
-	zkbalance := r.server.ZkChannelBalance()
+	zkChannelList := zkchanneldb.Buckets("zkcust.db")
+	zkchLog.Info("bucketList:", zkChannelList)
 
-	return &lnrpc.ZkChannelBalanceResponse{
-		ZkBalance: int64(zkbalance),
-	}, nil
+	resp := &lnrpc.ZkChannelBalanceResponse{
+		ZkChannel: make([]*lnrpc.ZkChannelInfo, 0, len(zkChannelList)),
+	}
+
+	for _, zkChannelName := range zkChannelList {
+		zkchLog.Info("zkChannelName:", zkChannelName)
+
+		channelBalance := r.server.ZkChannelBalance(zkChannelName)
+		zkchLog.Info("channelBalance:", channelBalance)
+
+		zkchannel := &lnrpc.ZkChannelInfo{
+			ZkChannelName:  zkChannelName,
+			ChannelBalance: channelBalance,
+		}
+		zkchLog.Info("zkchannel:", zkchannel)
+
+		resp.ZkChannel = append(resp.ZkChannel, zkchannel)
+		zkchLog.Info("resp:", resp)
+
+	}
+
+	return resp, nil
+
 }
 
 // TotalReceived returns the total available channel flow across all open

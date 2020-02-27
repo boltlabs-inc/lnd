@@ -4638,10 +4638,26 @@
     "lnrpcZkChannelBalanceResponse": {
       "type": "object",
       "properties": {
-        "zk_balance": {
+        "zk_channel": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/lnrpcZkChannelInfo"
+          },
+          "title": "/ Sum of channels zkbalances denominated in satoshis"
+        }
+      }
+    },
+    "lnrpcZkChannelInfo": {
+      "type": "object",
+      "properties": {
+        "zk_channel_name": {
+          "type": "string",
+          "title": "/ The channel name"
+        },
+        "channel_balance": {
           "type": "string",
           "format": "int64",
-          "title": "/ Sum of channels zkbalances denominated in satoshis"
+          "title": "/ Number of satoshis in the balance"
         }
       }
     },

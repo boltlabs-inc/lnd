@@ -33,8 +33,8 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, zkChannelName str
 	}
 
 	zkchLog.Debug("Generated channelToken and custState")
-	zkchLog.Debug("channelToken => ", channelToken)
-	zkchLog.Debug("custState => ", custState)
+	zkchLog.Debugf("%#v\n", channelToken)
+	zkchLog.Debugf("%#v\n", custState)
 
 	custPk := fmt.Sprintf("%v", custState.PkC)
 	revLock := fmt.Sprintf("%v", custState.RevLock)
@@ -42,14 +42,6 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, zkChannelName str
 	merchPk := fmt.Sprintf("%v", merchPubKey)
 	// changeSk := "4157697b6428532758a9d0f9a73ce58befe3fd665797427d1c5bb3d33f6a132e"
 	changePk := "037bed6ab680a171ef2ab564af25eff15c0659313df0bbfb96414da7c7d1e65882"
-
-	zkchLog.Debug("cust_utxo_txid :=> ", cust_utxo_txid)
-	zkchLog.Debug("inputSats :=> ", inputSats)
-	zkchLog.Debug("custBal :=> ", custBal)
-	zkchLog.Debug("custSk :=> ", custInputSk)
-	zkchLog.Debug("custPk :=> ", custPk)
-	zkchLog.Debug("merchPk :=> ", merchPk)
-	zkchLog.Debug("changePk :=> ", changePk)
 
 	zkchLog.Debug("Variables going into FormEscrowTx :=> ", cust_utxo_txid, 0, inputSats, custBal, custInputSk, custPk, merchPk, changePk)
 
@@ -59,7 +51,6 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, zkChannelName str
 	}
 
 	zkchLog.Info("escrow txid => ", escrowTxid)
-	zkchLog.Debug("escrow prevout => ", escrowPrevout)
 	zkchLog.Info("signedEscrowTx => ", signedEscrowTx)
 
 	zkchLog.Info("storing new zkchannel variables for:", zkChannelName)
@@ -136,13 +127,6 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 
 	// custBal := int64(binary.LittleEndian.Uint64(msg.CustBal))
 	// merchBal := int64(binary.LittleEndian.Uint64(msg.MerchBal))
-
-	// zkchLog.Info("Initial Customer Balance: ", custBal)
-	// zkchLog.Info("Initial Merchant Balance: ", merchBal)
-
-	// zkchLog.Debug("received escrow txid => ", escrowTxid)
-
-	// TODO: If the variables are not checked, they can be saved directly, skipping the step above/
 
 	// Add variables to zkchannelsdb
 	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
@@ -1214,31 +1198,33 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, zkCh
 }
 
 // ZkChannelBalance returns the balance on the customer's zkchannel
-func ZkChannelBalance() (int64, error) {
+func ZkChannelBalance(zkChannelName string) (int64, error) {
 
 	var zkbalance int64
 
-	// // open the zkchanneldb to load custState
-	// zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	zkchLog.Info("zkchmgr 1")
 
-	// custStateBytes, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
-	// var custState libzkchannels.CustState
-	// err = json.Unmarshal(custStateBytes, &custState)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	// open the zkchanneldb to load custState
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	zkchLog.Info("zkchmgr 2")
 
-	// zkchLog.Info("Cust balance:", custState.CustBalance)
+	custStateBytes, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
+	var custState libzkchannels.CustState
+	err = json.Unmarshal(custStateBytes, &custState)
+	if err != nil {
+		log.Fatal(err)
+	}
+	zkchLog.Info("zkchmgr 3")
 
-	// zkCustDB.Close()
+	zkbalance = custState.CustBalance
 
-	// zkbalance = custState.CustBalance
+	zkCustDB.Close()
 
-	fmt.Errorf("TODO: show balance across all zkchannels")
-	zkbalance = 9999999
+	zkchLog.Info("zkchmgr 4")
+
 	return zkbalance, nil
 }
 

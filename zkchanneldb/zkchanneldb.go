@@ -3,6 +3,7 @@ package zkchanneldb
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/boltdb/bolt"
 )
@@ -40,6 +41,35 @@ func SetupZkCustDB() (*bolt.DB, error) {
 	}
 
 	return db, nil
+}
+
+// Buckets returns a list of all buckets.
+func Buckets(path string) []string {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		fmt.Println(err)
+		return nil
+	}
+
+	db, err := bolt.Open(path, 0600, nil)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	defer db.Close()
+
+	var bucketList []string
+	err = db.View(func(tx *bolt.Tx) error {
+		return tx.ForEach(func(name []byte, _ *bolt.Bucket) error {
+			// fmt.Println(string(name))
+			bucketList = append(bucketList, string(name))
+			return nil
+		})
+	})
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	return bucketList
 }
 
 // OpenZkChannelBucket opens or creates the bucket for a zkchannel

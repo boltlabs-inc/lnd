@@ -3596,8 +3596,8 @@ func (s *server) CloseZkChannel(pubKey *btcec.PublicKey, zkChannelName string, F
 
 // ZkChannelBalance sends the request to server to close the connection with peer
 // identified by public key.
-func (s *server) ZkChannelBalance() int64 {
-	zkbalance, _ := ZkChannelBalance()
+func (s *server) ZkChannelBalance(zkChannelName string) int64 {
+	zkbalance, _ := ZkChannelBalance(zkChannelName)
 	return zkbalance
 }
 
