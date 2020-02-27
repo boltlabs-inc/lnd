@@ -3252,17 +3252,21 @@ func openZkChannel(ctx *cli.Context) error {
 	}
 
 	// Load Merchant's bitcoin pubkey
+	var merchPubKey string
 	if !ctx.IsSet("merch_pubkey") {
 		return fmt.Errorf("merch_pubkey is missing")
 	}
-	var merchPubKey string
 	merchPubKey = ctx.String("merch_pubkey")
 
+	var zkChannelName string
 	if !ctx.IsSet("channel_name") {
 		return fmt.Errorf("enter a unique name for channel_name")
 	}
-	var zkChannelName string
 	zkChannelName = ctx.String("channel_name")
+
+	if lnd.ChannelExists(zkChannelName) {
+		return fmt.Errorf("there is already a payment channel with that name")
+	}
 
 	fmt.Println("\n\nConnecting to merchant with bitcoin PubKey:", merchPubKey)
 
@@ -3408,6 +3412,9 @@ func closeZkChannel(ctx *cli.Context) error {
 	}
 
 	zkChannelName := ctx.String("channel_name")
+	if !lnd.ChannelExists(zkChannelName) {
+		return fmt.Errorf("there no payment channel with that name")
+	}
 
 	// If the customer is initiating closeZkChannel, they must be absolutely sure not to make
 	// any further payments on the channel, so as to not revoke the state they are broadcasting on.
