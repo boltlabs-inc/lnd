@@ -115,7 +115,7 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, zkChannelName str
 func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p lnpeer.Peer) {
 
 	// NOTE: For now, toSelfDelay is hardcoded
-	toSelfDelay := "cf05"
+	toSelfDelay := "05cf"
 
 	zkchLog.Debug("Just received ZkEstablishOpen")
 
@@ -416,7 +416,13 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 		InitMerchBal:  merchBal,
 	}
 
-	zkchLog.Debug("Variables going into CustomerSignInitCustCloseTx:", txInfo, channelState, channelToken, escrowSig, merchSig, custState)
+	zkchLog.Debug("Variables going into CustomerSignInitCustCloseTx:")
+	zkchLog.Debugf("%#v\n", txInfo)
+	zkchLog.Debugf("%#v\n", channelState)
+	zkchLog.Debugf("%#v\n", channelToken)
+	zkchLog.Debugf("%#v\n", escrowSig)
+	zkchLog.Debugf("%#v\n", merchSig)
+	zkchLog.Debugf("%#v\n", custState)
 
 	isOk, channelToken, custState, err := libzkchannels.CustomerSignInitCustCloseTx(txInfo, channelState, channelToken, escrowSig, merchSig, custState)
 	if err != nil {
@@ -429,9 +435,6 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 	case false:
 		zkchLog.Info("Merch signature on Cust Close is invalid")
 	}
-
-	zkchLog.Info("CloseEscrowTx: ", string(custState.CloseEscrowTx))
-	zkchLog.Info("CloseMerchTx: ", string(custState.CloseMerchTx))
 
 	// Add variables to zkchannelsdb
 	zkCustDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName)
@@ -846,16 +849,6 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 	zkCustDB.Close()
 	revLockCom := revState.RevLockCom
 
-	zkchLog.Debug("Variables going into PayCustomer:")
-	zkchLog.Debug("channelState => ", channelState)
-	zkchLog.Debug("channelToken => ", channelToken)
-	zkchLog.Debug("oldState => ", oldState)
-	zkchLog.Debug("newState => ", newState)
-	zkchLog.Debug("payTokenMaskCom => ", payTokenMaskCom)
-	zkchLog.Debug("revLockCom => ", revLockCom)
-	zkchLog.Debug("amount => ", amount)
-	zkchLog.Debug("custState => ", custState)
-
 	zkchLog.Debug("channelState MerchPayOutPk => ", *channelState.MerchPayOutPk)
 	zkchLog.Debug("channelState MerchDisputePk => ", *channelState.MerchDisputePk)
 
@@ -877,7 +870,7 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 
 	zkchLog.Debug("channelState channelTokenPkM => ", channelToken.PkM)
 
-	isOk, custState, err := libzkchannels.PayCustomer(channelState, channelToken, oldState, newState, payTokenMaskCom, revLockCom, amount, custState)
+	isOk, custState, err := libzkchannels.PayUpdateCustomer(channelState, channelToken, oldState, newState, payTokenMaskCom, revLockCom, amount, custState)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -934,19 +927,11 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 
 	zkMerchDB.Close()
 
-	zkchLog.Debug("Variables going into PayMerchant:")
-	zkchLog.Debug("channelState => ", channelState)
-	zkchLog.Debug("stateNonce => ", stateNonce)
-	zkchLog.Debug("revLock => ", revLockCom)
-	zkchLog.Debug("merchState => ", merchState)
-	zkchLog.Debug("payTokenMaskCom => ", payTokenMaskCom)
-	zkchLog.Debug("amount => ", amount)
-
 	zkchLog.Debug("channelState MerchPayOutPk => ", *channelState.MerchPayOutPk)
 	zkchLog.Debug("channelState MerchDisputePk => ", *channelState.MerchDisputePk)
 	zkchLog.Debug("channelState MerchStatePkM => ", *merchState.PkM)
 
-	maskedTxInputs, merchState, err := libzkchannels.PayMerchant(channelState, stateNonce, payTokenMaskCom, revLockCom, amount, merchState)
+	maskedTxInputs, merchState, err := libzkchannels.PayUpdateMerchant(channelState, stateNonce, payTokenMaskCom, revLockCom, amount, merchState)
 
 	totalReceived += amount
 
@@ -996,7 +981,7 @@ func (z *zkChannelManager) processZkPayMaskedTxInputs(msg *lnwire.ZkPayMaskedTxI
 
 	zkCustDB.Close()
 
-	isOk, custState, err := libzkchannels.PayUnmaskTxCustomer(channelState, channelToken, maskedTxInputs, custState)
+	isOk, custState, err := libzkchannels.PayUnmaskSigsCustomer(channelState, channelToken, maskedTxInputs, custState)
 
 	switch isOk {
 	case true:
@@ -1149,9 +1134,18 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, zkCh
 		var custState libzkchannels.CustState
 		err = json.Unmarshal(custStateBytes, &custState)
 
+		channelStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelStateKey")
+		var channelState libzkchannels.ChannelState
+		err = json.Unmarshal(channelStateBytes, &channelState)
+
+		//MAKE THIS CHANNEL TOKEN
+		channelTokenBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelTokenKey")
+		var channelToken libzkchannels.ChannelToken
+		err = json.Unmarshal(channelTokenBytes, &channelToken)
+
 		zkCustDB.Close()
 
-		CloseEscrowTx = custState.CloseEscrowTx
+		CloseEscrowTx, _, _, _, err = libzkchannels.CustomerCloseTx(channelState, channelToken, custState)
 
 	case "merch":
 

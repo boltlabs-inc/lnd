@@ -3608,11 +3608,10 @@ func (s *server) TotalReceived() int64 {
 	return total
 }
 
-// TotalReceived sends the request to server to close the connection with peer
-// identified by public key.
+// ZkInfo returns the merch's pubkey
 func (s *server) ZkInfo() string {
-	total, _ := ZkInfo()
-	return total
+	merchPubKey, _ := ZkInfo()
+	return merchPubKey
 }
 
 // ########### ln-mpc end ###########
