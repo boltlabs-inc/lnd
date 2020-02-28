@@ -8,9 +8,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/jinzhu/copier"
+	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/libzkchannels"
 	"github.com/lightningnetwork/lnd/lnpeer"
 	"github.com/lightningnetwork/lnd/lnwallet"
@@ -20,6 +23,8 @@ import (
 
 type zkChannelManager struct {
 	zkChannelName string
+	Notifier      chainntnfs.ChainNotifier
+	wg            sync.WaitGroup
 }
 
 func (z *zkChannelManager) initZkEstablish(merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
@@ -34,7 +39,6 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, zkChannelName str
 
 	zkchLog.Debug("Generated channelToken and custState")
 	zkchLog.Debugf("%#v\n", channelToken)
-	zkchLog.Debugf("%#v\n", custState)
 
 	custPk := fmt.Sprintf("%v", custState.PkC)
 	revLock := fmt.Sprintf("%v", custState.RevLock)
@@ -518,7 +522,7 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 
 }
 
-func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstablishStateValidated, p lnpeer.Peer, zkChannelName string, wallet *lnwallet.LightningWallet) {
+func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstablishStateValidated, p lnpeer.Peer, zkChannelName string, wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier) {
 
 	zkchLog.Debug("Just received ZkEstablishStateValidated: ", string(msg.SuccessMsg))
 
@@ -551,6 +555,17 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 		zkchLog.Error(err)
 	}
 
+	//
+	zkchLog.Debug("\n\n\n>>>>>>>>>>>>>>>>>>>>>> waitForFundingWithTimeout\n\n\n")
+
+	confChannel, err := z.waitForFundingWithTimeout(notifier)
+	if err != nil {
+		zkchLog.Infof("error waiting for funding "+
+			"confirmation: %v", err)
+	}
+
+	zkchLog.Debugf("\n\n%#v\n", confChannel)
+
 	// TEMPORARY DUMMY MESSAGE
 	fundingLockedBytes := []byte("Funding Locked")
 	zkEstablishFundingLocked := lnwire.ZkEstablishFundingLocked{
@@ -568,6 +583,244 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 
 	p.SendMessage(false, &zkEstablishFundingLocked)
 
+}
+
+// waitForFundingWithTimeout is a wrapper around waitForFundingConfirmation and
+// waitForTimeout that will return ErrConfirmationTimeout if we are not the
+// channel initiator and the maxWaitNumBlocksFundingConf has passed from the
+// funding broadcast height. In case of confirmation, the short channel ID of
+// // the channel and the funding transaction will be returned.
+// func (z *zkChannelManager) waitForFundingWithTimeout(
+// 	ch *channeldb.OpenChannel) (*confirmedChannel, error) {
+
+func (z *zkChannelManager) waitForFundingWithTimeout(notifier chainntnfs.ChainNotifier) (*confirmedChannel, error) {
+	zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>>>>> 1")
+
+	confChan := make(chan *confirmedChannel)
+	timeoutChan := make(chan error, 1)
+	cancelChan := make(chan struct{})
+	zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>>>>> 2")
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>> ADD ")
+
+	go z.waitForFundingConfirmation(notifier, cancelChan, confChan, wg)
+	zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>>>>> 3")
+
+	// If we are not the initiator, we have no money at stake and will
+	// timeout waiting for the funding transaction to confirm after a
+	// while.
+	IsInitiator := true
+	if !IsInitiator {
+		wg.Add(1)
+		go z.waitForTimeout(notifier, cancelChan, timeoutChan, wg)
+	}
+	zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>>>>> 4")
+
+	defer close(cancelChan)
+
+	select {
+	case err := <-timeoutChan:
+		zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>>>>> 5")
+
+		if err != nil {
+			return nil, err
+		}
+		return nil, ErrConfirmationTimeout
+
+	// case <-z.quit:
+	// 	// The fundingManager is shutting down, and will resume wait on
+	// 	// startup.
+	// 	return nil, ErrFundingManagerShuttingDown
+
+	case confirmedChannel, ok := <-confChan:
+		zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>>>>> 6")
+
+		if !ok {
+			return nil, fmt.Errorf("waiting for funding" +
+				"confirmation failed")
+		}
+		return confirmedChannel, nil
+	}
+
+}
+
+// waitForFundingConfirmation handles the final stages of the channel funding
+// process once the funding transaction has been broadcast. The primary
+// function of waitForFundingConfirmation is to wait for blockchain
+// confirmation, and then to notify the other systems that must be notified
+// when a channel has become active for lightning transactions.
+// The wait can be canceled by closing the cancelChan. In case of success,
+// a *lnwire.ShortChannelID will be passed to confChan.
+//
+// NOTE: This MUST be run as a goroutine.
+func (z *zkChannelManager) waitForFundingConfirmation(notifier chainntnfs.ChainNotifier,
+	cancelChan <-chan struct{},
+	confChan chan<- *confirmedChannel, wg sync.WaitGroup) {
+	zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>> waitForFundingConfirmation ")
+
+	defer wg.Done()
+	zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>> waitForFundingConfirmation confChan")
+
+	defer close(confChan)
+	zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>> waitForFundingConfirmation  close(confChan)")
+
+	// // Register with the ChainNotifier for a notification once the funding
+	// // transaction reaches `numConfs` confirmations.
+	// fundingScript, err := makeFundingScript(completeChan)
+	// if err != nil {
+	// 	fndgLog.Errorf("unable to create funding script for "+
+	// 		"ChannelPoint(%v): %v", completeChan.FundingOutpoint,
+	// 		err)
+	// 	return
+	// }
+
+	txid_str := "9daeb2adabfe0b25e5098a9aa85002126d6c086028515edfdeb96ea8cb2c1828"
+
+	var txid chainhash.Hash
+	chainhash.Decode(&txid, txid_str)
+	zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>> waitForFundingConfirmation chainhash")
+
+	pkscript_hex := []byte("a914be44770004d40b5d21b6f5ac43996905fad2e68987")
+	pkscript := make([]byte, hex.DecodedLen(len(pkscript_hex)))
+	_, err := hex.Decode(pkscript, pkscript_hex)
+
+	zkchLog.Debugf("%#v\n", pkscript_hex)
+	zkchLog.Debugf("%#v\n", pkscript)
+
+	NumConfsRequired := 3
+	numConfs := uint32(NumConfsRequired)
+	FundingBroadcastHeight := uint32(420)
+	zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>> waitForFundingConfirmation RegisterConfirmationsNtfn before")
+
+	confNtfn, err := notifier.RegisterConfirmationsNtfn(
+		&txid, pkscript, numConfs,
+		FundingBroadcastHeight,
+	)
+	zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>> waitForFundingConfirmation RegisterConfirmationsNtfn after")
+
+	if err != nil {
+		zkchLog.Errorf("Unable to register for confirmation of "+
+			"ChannelPoint", err)
+		return
+	}
+	zkchLog.Debug("\n>>>>>>>>>>>>>>>>>>> waitForFundingConfirmation 2")
+
+	zkchLog.Infof("Waiting for funding tx (%v) to reach %v confirmations",
+		txid, numConfs)
+
+	var confDetails *chainntnfs.TxConfirmation
+	var ok bool
+
+	// Wait until the specified number of confirmations has been reached,
+	// we get a cancel signal, or the wallet signals a shutdown.
+	select {
+	case confDetails, ok = <-confNtfn.Confirmed:
+		// fallthrough
+
+	case <-cancelChan:
+		zkchLog.Warnf("canceled waiting for funding confirmation, " +
+			"stopping funding flow for ChannelPoint")
+		return
+
+		// case <-z.quit:
+		// 	zkchLog.Warnf("fundingManager shutting down, stopping funding "+
+		// 		"flow for ChannelPoint(%v)")
+		// return
+	}
+
+	if !ok {
+		zkchLog.Warnf("ChainNotifier shutting down, cannot complete " +
+			"funding flow for ChannelPoint")
+		return
+	}
+
+	zkchLog.Debugf("%#v\n", confDetails)
+
+	// fundingPoint := completeChan.FundingOutpoint
+	// fndgLog.Infof("ChannelPoint(%v) is now active: ChannelID(%v)",
+	// 	fundingPoint, lnwire.NewChanIDFromOutPoint(&fundingPoint))
+
+	// // With the block height and the transaction index known, we can
+	// // construct the compact chanID which is used on the network to unique
+	// // identify channels.
+	Index := 0
+	shortChanID := lnwire.ShortChannelID{
+		BlockHeight: confDetails.BlockHeight,
+		TxIndex:     confDetails.TxIndex,
+		TxPosition:  uint16(Index),
+	}
+
+	select {
+	case confChan <- &confirmedChannel{
+		shortChanID: shortChanID,
+		fundingTx:   confDetails.Tx,
+	}:
+		// case <-z.quit:
+		// return
+	}
+}
+
+// waitForTimeout will close the timeout channel if maxWaitNumBlocksFundingConf
+// has passed from the broadcast height of the given channel. In case of error,
+// the error is sent on timeoutChan. The wait can be canceled by closing the
+// cancelChan.
+//
+// NOTE: timeoutChan MUST be buffered.
+// NOTE: This MUST be run as a goroutine.
+func (z *zkChannelManager) waitForTimeout(notifier chainntnfs.ChainNotifier,
+	cancelChan <-chan struct{}, timeoutChan chan<- error, wg sync.WaitGroup) {
+	defer wg.Done()
+
+	epochClient, err := notifier.RegisterBlockEpochNtfn(nil)
+	if err != nil {
+		timeoutChan <- fmt.Errorf("unable to register for epoch "+
+			"notification: %v", err)
+		return
+	}
+
+	defer epochClient.Cancel()
+
+	// // On block maxHeight we will cancel the funding confirmation wait.
+	// maxHeight := completeChan.FundingBroadcastHeight + maxWaitNumBlocksFundingConf
+	maxHeight := uint32(10)
+	for {
+		select {
+		case epoch, ok := <-epochClient.Epochs:
+			if !ok {
+				timeoutChan <- fmt.Errorf("epoch client " +
+					"shutting down")
+				return
+			}
+
+			// Close the timeout channel and exit if the block is
+			// aboce the max height.
+			if uint32(epoch.Height) >= maxHeight {
+				zkchLog.Warnf("Waited for %v blocks without "+
+					"seeing funding transaction confirmed,"+
+					" cancelling.",
+					maxWaitNumBlocksFundingConf)
+
+				// Notify the caller of the timeout.
+				close(timeoutChan)
+				return
+			}
+
+			// TODO: If we are the channel initiator implement
+			// a method for recovering the funds from the funding
+			// transaction
+
+		case <-cancelChan:
+			return
+
+			// case <-z.quit:
+			// 	// The fundingManager is shutting down, will resume
+			// 	// waiting for the funding transaction on startup.
+			// 	return
+		}
+	}
 }
 
 func (z *zkChannelManager) processZkEstablishFundingLocked(msg *lnwire.ZkEstablishFundingLocked, p lnpeer.Peer) {

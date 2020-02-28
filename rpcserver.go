@@ -6429,6 +6429,9 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 		return nil, fmt.Errorf("unable to parse pubkey: %v", err)
 	}
 
+	idkey := r.server.fundingMgr.cfg.IDKey
+	fmt.Println("IDKEY HERE >>>>>>>>>>>", *idkey)
+
 	r.server.zkChannelName = in.ZkChannelName
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
