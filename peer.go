@@ -1217,7 +1217,7 @@ out:
 		case *lnwire.ZkEstablishCCloseSigned:
 			p.server.zkchannelMgr.processZkEstablishCCloseSigned(msg, p, p.server.zkChannelName)
 		case *lnwire.ZkEstablishInitialState:
-			p.server.zkchannelMgr.processZkEstablishInitialState(msg, p)
+			p.server.zkchannelMgr.processZkEstablishInitialState(msg, p, p.server.cc.chainNotifier)
 		case *lnwire.ZkEstablishStateValidated:
 			p.server.zkchannelMgr.processZkEstablishStateValidated(msg, p, p.server.zkChannelName, p.server.cc.wallet, p.server.cc.chainNotifier)
 		case *lnwire.ZkEstablishFundingLocked:

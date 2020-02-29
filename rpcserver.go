@@ -6429,9 +6429,6 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 		return nil, fmt.Errorf("unable to parse pubkey: %v", err)
 	}
 
-	idkey := r.server.fundingMgr.cfg.IDKey
-	fmt.Println("IDKEY HERE >>>>>>>>>>>", *idkey)
-
 	r.server.zkChannelName = in.ZkChannelName
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
@@ -6516,26 +6513,22 @@ func (r *rpcServer) ZkChannelBalance(ctx context.Context,
 	in *lnrpc.ZkChannelBalanceRequest) (*lnrpc.ZkChannelBalanceResponse, error) {
 
 	zkChannelList := zkchanneldb.Buckets("zkcust.db")
-	zkchLog.Info("bucketList:", zkChannelList)
+	zkchLog.Info("zkChannelList:", zkChannelList)
 
 	resp := &lnrpc.ZkChannelBalanceResponse{
 		ZkChannel: make([]*lnrpc.ZkChannelInfo, 0, len(zkChannelList)),
 	}
 
 	for _, zkChannelName := range zkChannelList {
-		zkchLog.Info("zkChannelName:", zkChannelName)
 
 		channelBalance := r.server.ZkChannelBalance(zkChannelName)
-		zkchLog.Info("channelBalance:", channelBalance)
 
 		zkchannel := &lnrpc.ZkChannelInfo{
 			ZkChannelName: zkChannelName,
 			LocalBalance:  channelBalance,
 		}
-		zkchLog.Info("zkchannel:", zkchannel)
 
 		resp.ZkChannel = append(resp.ZkChannel, zkchannel)
-		zkchLog.Info("resp:", resp)
 
 	}
 
