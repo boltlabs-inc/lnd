@@ -30,7 +30,7 @@ type zkChannelManager struct {
 
 func (z *zkChannelManager) initZkEstablish(merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
 	inputSats := int64(50 * 100000000)
-	cust_utxo_txid := "f733320c1c38e5c0aa91240a6359df0b34d4d7798672a60e3dbeb71a0229bc24"
+	cust_utxo_txid := "777793278143f313a80f3bfc25ad0212e5e77d481863f13d04ea93dd5cbbb204"
 	custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
 
 	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
@@ -323,6 +323,14 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Add update merchState in db
+	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
+
+	merchStateBytes, _ = json.Marshal(merchState)
+	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+
+	zkMerchDB.Close()
 
 	switch isOk {
 	case true:
@@ -1460,6 +1468,9 @@ func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, EscrowTx
 
 	zkchLog.Debug("EscrowTxid to close =>:", EscrowTxid)
 
+	zkchLog.Debugf("\n\nmerchState =>:%+v", merchState)
+	zkchLog.Debugf("\n\nCloseTxMap =>:%+v", merchState.CloseTxMap)
+
 	signedMerchCloseTx, merchTxid2, err := libzkchannels.MerchantCloseTx(EscrowTxid, merchState)
 	if err != nil {
 		zkchLog.Error(err)
@@ -1481,7 +1492,7 @@ func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, EscrowTx
 	}
 
 	zkchLog.Info("Broadcasting close transaction")
-	// wallet.PublishTransaction(&msgTx)
+	wallet.PublishTransaction(&msgTx)
 }
 
 // ZkChannelBalance returns the balance on the customer's zkchannel
