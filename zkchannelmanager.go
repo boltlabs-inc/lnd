@@ -30,7 +30,7 @@ type zkChannelManager struct {
 
 func (z *zkChannelManager) initZkEstablish(merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
 	inputSats := int64(50 * 100000000)
-	cust_utxo_txid := "777793278143f313a80f3bfc25ad0212e5e77d481863f13d04ea93dd5cbbb204"
+	cust_utxo_txid := "043b6d38dd40c97f7cd05adc650a70a257c6ef369f5b3b598f54b38919cd3cb4"
 	custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
 
 	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
@@ -1425,7 +1425,6 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, zkCh
 	var channelState libzkchannels.ChannelState
 	err = json.Unmarshal(channelStateBytes, &channelState)
 
-	//MAKE THIS CHANNEL TOKEN
 	channelTokenBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelTokenKey")
 	var channelToken libzkchannels.ChannelToken
 	err = json.Unmarshal(channelTokenBytes, &channelToken)
@@ -1453,7 +1452,7 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, zkCh
 }
 
 // MerchClose broadcasts a close transaction for a given escrow txid
-func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, EscrowTxid string, Force bool) {
+func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, EscrowTxid string, Force bool) {
 
 	// TODO: If --force is not set, initiate a mutual close
 
@@ -1491,8 +1490,23 @@ func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, EscrowTx
 		zkchLog.Error(err)
 	}
 
-	zkchLog.Info("Broadcasting close transaction")
+	zkchLog.Info("Broadcasting merch close transaction")
 	wallet.PublishTransaction(&msgTx)
+
+	// Start watching for on-chain notifications of merchClose
+	pkScript := msgTx.TxOut[0].PkScript
+
+	zkchLog.Debugf("\nwaitForFundingWithTimeout\npkScript: %#x\n\n", pkScript)
+
+	confChannel, err := z.waitForFundingWithTimeout(notifier, merchTxid2, pkScript)
+	if err != nil {
+		zkchLog.Infof("error waiting for funding "+
+			"confirmation: %v", err)
+	}
+
+	zkchLog.Debugf("\n\n%#v\n", confChannel)
+	zkchLog.Infof("\n\nMerch close transaction has 3 confirmations\n\n")
+
 }
 
 // ZkChannelBalance returns the balance on the customer's zkchannel

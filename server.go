@@ -3596,12 +3596,12 @@ func (s *server) CloseZkChannel(pubKey *btcec.PublicKey, zkChannelName string, F
 
 // MerchClose closes a channel with a given escrowTxid for the merchant
 func (s *server) MerchClose(EscrowTxid string, Force bool) error {
-	zkchLog.Infof("CloseZkChannel initiated")
+	zkchLog.Infof("MerchClose initiated")
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.zkchannelMgr.MerchClose(s.cc.wallet, EscrowTxid, Force)
+	s.zkchannelMgr.MerchClose(s.cc.wallet, s.cc.chainNotifier, EscrowTxid, Force)
 
 	return nil
 }
