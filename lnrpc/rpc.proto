@@ -684,12 +684,20 @@ service Lightning {
     }
 
     /** lncli: `closezkchannel`
-    ZkPay attempts to closezkchannel a zk payment to a peer with whom we have established a
-    zkChannel.
+    CloseZkChannel attempts to close a zkchannel for the customer.
     */
     rpc CloseZkChannel (CloseZkChannelRequest) returns (CloseZkChannelResponse) {
         option (google.api.http) = {
             delete: "/v1/closezkchannel/{pub_key}"
+        };
+    }
+
+    /** lncli: `merchclose`
+    MerchClose attempts to close a zk channel for the merchant.
+    */
+    rpc MerchClose (MerchCloseRequest) returns (MerchCloseResponse) {
+        option (google.api.http) = {
+            delete: "/v1/merchclose/{pub_key}"
         };
     }
 
@@ -3623,10 +3631,19 @@ message CloseZkChannelRequest {
     string pub_key = 1 [json_name = "pub_key"];
     /// A unique name for the zkchannel
     string zk_channel_name = 2 [json_name = "zkchannel_name"];
-    /// The number of satoshis to send
+    /// To force close a channel
     bool force = 3 [json_name = "force"];
 }
 message CloseZkChannelResponse {
+}
+
+message MerchCloseRequest {
+    /// The escrowtxid of the channel to be closed
+    string escrow_txid = 1 [json_name = "escrow_txid"];
+    /// To force close a channel
+    bool force = 3 [json_name = "force"];
+}
+message MerchCloseResponse {
 }
 
 

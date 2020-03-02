@@ -30,7 +30,7 @@ type zkChannelManager struct {
 
 func (z *zkChannelManager) initZkEstablish(merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
 	inputSats := int64(50 * 100000000)
-	cust_utxo_txid := "e4482dc4992223b592121970df5f7d6a0bd392b46f9f85a7f1d1873dfa0801ec"
+	cust_utxo_txid := "f733320c1c38e5c0aa91240a6359df0b34d4d7798672a60e3dbeb71a0229bc24"
 	custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
 
 	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
@@ -1393,60 +1393,38 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, zkCh
 
 	var CloseEscrowTx string
 
-	user, err := CustOrMerch()
+	// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
+	// This is used to prevent another payment being made
+	closeInitiated := true
+
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	switch user {
-	case "cust":
+	closeInitiatedBytes, _ := json.Marshal(closeInitiated)
+	zkchanneldb.AddCustField(zkCustDB, zkChannelName, closeInitiatedBytes, "closeInitiatedKey")
+	zkCustDB.Close()
 
-		// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
-		// This is used to prevent another payment being made
-		closeInitiated := true
+	// open the zkchanneldb to load custState
+	zkCustDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName)
 
-		zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
-		if err != nil {
-			log.Fatal(err)
-		}
+	custStateBytes, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
+	var custState libzkchannels.CustState
+	err = json.Unmarshal(custStateBytes, &custState)
 
-		closeInitiatedBytes, _ := json.Marshal(closeInitiated)
-		zkchanneldb.AddCustField(zkCustDB, zkChannelName, closeInitiatedBytes, "closeInitiatedKey")
-		zkCustDB.Close()
+	channelStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelStateKey")
+	var channelState libzkchannels.ChannelState
+	err = json.Unmarshal(channelStateBytes, &channelState)
 
-		// open the zkchanneldb to load custState
-		zkCustDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	//MAKE THIS CHANNEL TOKEN
+	channelTokenBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelTokenKey")
+	var channelToken libzkchannels.ChannelToken
+	err = json.Unmarshal(channelTokenBytes, &channelToken)
 
-		custStateBytes, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
-		var custState libzkchannels.CustState
-		err = json.Unmarshal(custStateBytes, &custState)
+	zkCustDB.Close()
 
-		channelStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelStateKey")
-		var channelState libzkchannels.ChannelState
-		err = json.Unmarshal(channelStateBytes, &channelState)
-
-		//MAKE THIS CHANNEL TOKEN
-		channelTokenBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelTokenKey")
-		var channelToken libzkchannels.ChannelToken
-		err = json.Unmarshal(channelTokenBytes, &channelToken)
-
-		zkCustDB.Close()
-
-		// CloseEscrowTx, _, _, _, err = libzkchannels.CustomerCloseTx(channelState, channelToken, custState)
-
-	case "merch":
-
-		// // open the zkchanneldb to load signedMerchCloseTx
-		// zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
-
-		// signedMerchCloseTxBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "signedMerchCloseTxKey")
-		// var signedMerchCloseTx string
-		// err = json.Unmarshal(signedMerchCloseTxBytes, &signedMerchCloseTx)
-
-		// zkMerchDB.Close()
-
-		// CloseEscrowTx = signedMerchCloseTx
-	}
+	// CloseEscrowTx, _, _, _, err = libzkchannels.CustomerCloseTx(channelState, channelToken, custState)
 
 	zkchLog.Debug("Loaded CloseEscrowTx =>:", CloseEscrowTx)
 
@@ -1464,6 +1442,46 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, zkCh
 
 	zkchLog.Info("Broadcasting close transaction")
 	wallet.PublishTransaction(&msgTx)
+}
+
+// MerchClose broadcasts a close transaction for a given escrow txid
+func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, EscrowTxid string, Force bool) {
+
+	// TODO: If --force is not set, initiate a mutual close
+
+	// open the zkchanneldb to create signedMerchCloseTx
+	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
+	var merchState libzkchannels.MerchState
+	merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
+	err = json.Unmarshal(merchStateBytes, &merchState)
+
+	zkMerchDB.Close()
+
+	zkchLog.Debug("EscrowTxid to close =>:", EscrowTxid)
+
+	signedMerchCloseTx, merchTxid2, err := libzkchannels.MerchantCloseTx(EscrowTxid, merchState)
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	zkchLog.Debug("signedMerchCloseTx =>:", signedMerchCloseTx)
+	zkchLog.Debug("signedMerchCloseTxid =>:", merchTxid2)
+
+	// Broadcast escrow tx on chain
+	serializedTx, err := hex.DecodeString(signedMerchCloseTx)
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	var msgTx wire.MsgTx
+	err = msgTx.Deserialize(bytes.NewReader(serializedTx))
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	zkchLog.Info("Broadcasting close transaction")
+	// wallet.PublishTransaction(&msgTx)
 }
 
 // ZkChannelBalance returns the balance on the customer's zkchannel

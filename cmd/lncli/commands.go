@@ -3476,6 +3476,68 @@ func closeZkChannel(ctx *cli.Context) error {
 	return nil
 }
 
+var merchCloseCommand = cli.Command{
+	Name:     "merchclose",
+	Category: "ZkChannels",
+	Usage:    "Allows a merchant to close an existing zkchannel.",
+	Description: `
+	*** For now, only capable of force close. (--force)
+	Close an existing channel. The channel can be closed either cooperatively,
+	or unilaterally (--force).`,
+	ArgsUsage: "node_key",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "escrowtxid",
+			Usage: "the txid of the channel's funding transaction",
+		},
+		cli.BoolFlag{
+			Name:  "force",
+			Usage: "attempt an uncooperative closure",
+		},
+	},
+	Action: actionDecorator(merchClose),
+}
+
+func merchClose(ctx *cli.Context) error {
+	isMerch := lnd.DetermineIfMerch()
+	if !isMerch {
+		return fmt.Errorf("This command doesn't work for customers. " +
+			"Instead, use closezkchannel to close a zk channel.")
+	}
+
+	if !ctx.IsSet("escrowtxid") {
+		return fmt.Errorf("enter the escrow txid for the channel to be closed")
+	}
+
+	escrowTxid := ctx.String("escrowtxid")
+	// TODO: Make a function to check that a channel with that txid exists
+
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	// TODO?: Allow for mutual close
+	var force bool
+	if !ctx.IsSet("force") {
+		return fmt.Errorf("set 'force' flag to do a force closure. Mutual closure not supported in this version")
+	} else {
+		force = ctx.Bool("force")
+	}
+
+	req := &lnrpc.MerchCloseRequest{
+		EscrowTxid: escrowTxid,
+		Force:      force,
+	}
+
+	lnid, err := client.MerchClose(ctxb, req)
+	if err != nil {
+		return err
+	}
+
+	printRespJSON(lnid)
+	return nil
+}
+
 var zkChannelBalanceCommand = cli.Command{
 	Name:     "zkchannelbalance",
 	Category: "ZkChannels",

@@ -11540,7 +11540,7 @@ type CloseZkChannelRequest struct {
 	PubKey string `protobuf:"bytes,1,opt,name=pub_key,proto3" json:"pub_key,omitempty"`
 	/// A unique name for the zkchannel
 	ZkChannelName string `protobuf:"bytes,2,opt,name=zk_channel_name,json=zkchannel_name,proto3" json:"zk_channel_name,omitempty"`
-	/// The number of satoshis to send
+	/// To force close a channel
 	Force                bool     `protobuf:"varint,3,opt,name=force,proto3" json:"force,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -11624,6 +11624,86 @@ func (m *CloseZkChannelResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_CloseZkChannelResponse proto.InternalMessageInfo
 
+type MerchCloseRequest struct {
+	/// The escrowtxid of the channel to be closed
+	EscrowTxid string `protobuf:"bytes,1,opt,name=escrow_txid,proto3" json:"escrow_txid,omitempty"`
+	/// To force close a channel
+	Force                bool     `protobuf:"varint,3,opt,name=force,proto3" json:"force,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *MerchCloseRequest) Reset()         { *m = MerchCloseRequest{} }
+func (m *MerchCloseRequest) String() string { return proto.CompactTextString(m) }
+func (*MerchCloseRequest) ProtoMessage()    {}
+func (*MerchCloseRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{152}
+}
+
+func (m *MerchCloseRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MerchCloseRequest.Unmarshal(m, b)
+}
+func (m *MerchCloseRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MerchCloseRequest.Marshal(b, m, deterministic)
+}
+func (m *MerchCloseRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MerchCloseRequest.Merge(m, src)
+}
+func (m *MerchCloseRequest) XXX_Size() int {
+	return xxx_messageInfo_MerchCloseRequest.Size(m)
+}
+func (m *MerchCloseRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_MerchCloseRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MerchCloseRequest proto.InternalMessageInfo
+
+func (m *MerchCloseRequest) GetEscrowTxid() string {
+	if m != nil {
+		return m.EscrowTxid
+	}
+	return ""
+}
+
+func (m *MerchCloseRequest) GetForce() bool {
+	if m != nil {
+		return m.Force
+	}
+	return false
+}
+
+type MerchCloseResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *MerchCloseResponse) Reset()         { *m = MerchCloseResponse{} }
+func (m *MerchCloseResponse) String() string { return proto.CompactTextString(m) }
+func (*MerchCloseResponse) ProtoMessage()    {}
+func (*MerchCloseResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{153}
+}
+
+func (m *MerchCloseResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MerchCloseResponse.Unmarshal(m, b)
+}
+func (m *MerchCloseResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MerchCloseResponse.Marshal(b, m, deterministic)
+}
+func (m *MerchCloseResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MerchCloseResponse.Merge(m, src)
+}
+func (m *MerchCloseResponse) XXX_Size() int {
+	return xxx_messageInfo_MerchCloseResponse.Size(m)
+}
+func (m *MerchCloseResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MerchCloseResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MerchCloseResponse proto.InternalMessageInfo
+
 type ZkChannelInfo struct {
 	/// The channel name
 	ZkChannelName string `protobuf:"bytes,1,opt,name=zk_channel_name,json=channel_name,proto3" json:"zk_channel_name,omitempty"`
@@ -11638,7 +11718,7 @@ func (m *ZkChannelInfo) Reset()         { *m = ZkChannelInfo{} }
 func (m *ZkChannelInfo) String() string { return proto.CompactTextString(m) }
 func (*ZkChannelInfo) ProtoMessage()    {}
 func (*ZkChannelInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{152}
+	return fileDescriptor_77a6da22d6a3feb1, []int{154}
 }
 
 func (m *ZkChannelInfo) XXX_Unmarshal(b []byte) error {
@@ -11683,7 +11763,7 @@ func (m *ZkChannelBalanceRequest) Reset()         { *m = ZkChannelBalanceRequest
 func (m *ZkChannelBalanceRequest) String() string { return proto.CompactTextString(m) }
 func (*ZkChannelBalanceRequest) ProtoMessage()    {}
 func (*ZkChannelBalanceRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{153}
+	return fileDescriptor_77a6da22d6a3feb1, []int{155}
 }
 
 func (m *ZkChannelBalanceRequest) XXX_Unmarshal(b []byte) error {
@@ -11716,7 +11796,7 @@ func (m *ZkChannelBalanceResponse) Reset()         { *m = ZkChannelBalanceRespon
 func (m *ZkChannelBalanceResponse) String() string { return proto.CompactTextString(m) }
 func (*ZkChannelBalanceResponse) ProtoMessage()    {}
 func (*ZkChannelBalanceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{154}
+	return fileDescriptor_77a6da22d6a3feb1, []int{156}
 }
 
 func (m *ZkChannelBalanceResponse) XXX_Unmarshal(b []byte) error {
@@ -11754,7 +11834,7 @@ func (m *TotalReceivedRequest) Reset()         { *m = TotalReceivedRequest{} }
 func (m *TotalReceivedRequest) String() string { return proto.CompactTextString(m) }
 func (*TotalReceivedRequest) ProtoMessage()    {}
 func (*TotalReceivedRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{155}
+	return fileDescriptor_77a6da22d6a3feb1, []int{157}
 }
 
 func (m *TotalReceivedRequest) XXX_Unmarshal(b []byte) error {
@@ -11787,7 +11867,7 @@ func (m *TotalReceivedResponse) Reset()         { *m = TotalReceivedResponse{} }
 func (m *TotalReceivedResponse) String() string { return proto.CompactTextString(m) }
 func (*TotalReceivedResponse) ProtoMessage()    {}
 func (*TotalReceivedResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{156}
+	return fileDescriptor_77a6da22d6a3feb1, []int{158}
 }
 
 func (m *TotalReceivedResponse) XXX_Unmarshal(b []byte) error {
@@ -11825,7 +11905,7 @@ func (m *ZkInfoRequest) Reset()         { *m = ZkInfoRequest{} }
 func (m *ZkInfoRequest) String() string { return proto.CompactTextString(m) }
 func (*ZkInfoRequest) ProtoMessage()    {}
 func (*ZkInfoRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{157}
+	return fileDescriptor_77a6da22d6a3feb1, []int{159}
 }
 
 func (m *ZkInfoRequest) XXX_Unmarshal(b []byte) error {
@@ -11858,7 +11938,7 @@ func (m *ZkInfoResponse) Reset()         { *m = ZkInfoResponse{} }
 func (m *ZkInfoResponse) String() string { return proto.CompactTextString(m) }
 func (*ZkInfoResponse) ProtoMessage()    {}
 func (*ZkInfoResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{158}
+	return fileDescriptor_77a6da22d6a3feb1, []int{160}
 }
 
 func (m *ZkInfoResponse) XXX_Unmarshal(b []byte) error {
@@ -13150,9 +13230,11 @@ type LightningClient interface {
 	//zkChannel.
 	ZkPay(ctx context.Context, in *ZkPayRequest, opts ...grpc.CallOption) (*ZkPayResponse, error)
 	//* lncli: `closezkchannel`
-	//ZkPay attempts to closezkchannel a zk payment to a peer with whom we have established a
-	//zkChannel.
+	//CloseZkChannel attempts to close a zkchannel for the customer.
 	CloseZkChannel(ctx context.Context, in *CloseZkChannelRequest, opts ...grpc.CallOption) (*CloseZkChannelResponse, error)
+	//* lncli: `merchclose`
+	//MerchClose attempts to close a zk channel for the merchant.
+	MerchClose(ctx context.Context, in *MerchCloseRequest, opts ...grpc.CallOption) (*MerchCloseResponse, error)
 	//* lncli: `channelbalance`
 	//ChannelBalance returns the total funds available across all open channels
 	//in satoshis.
@@ -13948,6 +14030,15 @@ func (c *lightningClient) CloseZkChannel(ctx context.Context, in *CloseZkChannel
 	return out, nil
 }
 
+func (c *lightningClient) MerchClose(ctx context.Context, in *MerchCloseRequest, opts ...grpc.CallOption) (*MerchCloseResponse, error) {
+	out := new(MerchCloseResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/MerchClose", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *lightningClient) ZkChannelBalance(ctx context.Context, in *ZkChannelBalanceRequest, opts ...grpc.CallOption) (*ZkChannelBalanceResponse, error) {
 	out := new(ZkChannelBalanceResponse)
 	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ZkChannelBalance", in, out, opts...)
@@ -14305,9 +14396,11 @@ type LightningServer interface {
 	//zkChannel.
 	ZkPay(context.Context, *ZkPayRequest) (*ZkPayResponse, error)
 	//* lncli: `closezkchannel`
-	//ZkPay attempts to closezkchannel a zk payment to a peer with whom we have established a
-	//zkChannel.
+	//CloseZkChannel attempts to close a zkchannel for the customer.
 	CloseZkChannel(context.Context, *CloseZkChannelRequest) (*CloseZkChannelResponse, error)
+	//* lncli: `merchclose`
+	//MerchClose attempts to close a zk channel for the merchant.
+	MerchClose(context.Context, *MerchCloseRequest) (*MerchCloseResponse, error)
 	//* lncli: `channelbalance`
 	//ChannelBalance returns the total funds available across all open channels
 	//in satoshis.
@@ -15417,6 +15510,24 @@ func _Lightning_CloseZkChannel_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Lightning_MerchClose_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MerchCloseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).MerchClose(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/MerchClose",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).MerchClose(ctx, req.(*MerchCloseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Lightning_ZkChannelBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ZkChannelBalanceRequest)
 	if err := dec(in); err != nil {
@@ -15662,6 +15773,10 @@ var _Lightning_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CloseZkChannel",
 			Handler:    _Lightning_CloseZkChannel_Handler,
+		},
+		{
+			MethodName: "MerchClose",
+			Handler:    _Lightning_MerchClose_Handler,
 		},
 		{
 			MethodName: "ZkChannelBalance",

@@ -6474,7 +6474,7 @@ func (r *rpcServer) ZkPay(ctx context.Context,
 	return &lnrpc.ZkPayResponse{}, nil
 }
 
-// ZkPay attempts to pay a peer.
+// CloseZkChannel closes a zkchannel for the customer
 func (r *rpcServer) CloseZkChannel(ctx context.Context,
 	in *lnrpc.CloseZkChannelRequest) (*lnrpc.CloseZkChannelResponse, error) {
 
@@ -6500,11 +6500,29 @@ func (r *rpcServer) CloseZkChannel(ctx context.Context,
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
 	if err := r.server.CloseZkChannel(peerPubKey, in.ZkChannelName, in.Force); err != nil {
-		return nil, fmt.Errorf("Could not send payment "+
-			"to peer: %v", err)
+		return nil, fmt.Errorf("Could not close channel %v"+
+			": %v", in.ZkChannelName, err)
 	}
 
 	return &lnrpc.CloseZkChannelResponse{}, nil
+}
+
+// MerchClose closes a zkchannel for the merchant
+func (r *rpcServer) MerchClose(ctx context.Context,
+	in *lnrpc.MerchCloseRequest) (*lnrpc.MerchCloseResponse, error) {
+
+	zkchLog.Debugf("MerchClose initiated for escrowTxid: %v", in.EscrowTxid)
+
+	if !r.server.Started() {
+		return nil, fmt.Errorf("chain backend is still syncing, server " +
+			"not active yet")
+	}
+
+	if err := r.server.MerchClose(in.EscrowTxid, in.Force); err != nil {
+		return nil, fmt.Errorf("could not close channel: ", err)
+	}
+
+	return &lnrpc.MerchCloseResponse{}, nil
 }
 
 // ZkChannelBalance returns the total available channel flow across all open

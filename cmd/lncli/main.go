@@ -314,6 +314,7 @@ func main() {
 		openZkChannelCommand,
 		zkPayCommand,
 		closeZkChannelCommand,
+		merchCloseCommand,
 		zkChannelBalanceCommand,
 		totalReceivedCommand,
 		zkInfoCommand,
