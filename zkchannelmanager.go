@@ -319,14 +319,6 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 
 	zkMerchDB.Close()
 
-	zkchLog.Debug("Variables going into MerchantVerifyMerchCloseTx:")
-	zkchLog.Debugf("escrowTxid: %#v", escrowTxid)
-	zkchLog.Debugf("custPk: %#v", custPk)
-	zkchLog.Debugf("custBal: %#v", custBal)
-	zkchLog.Debugf("merchBal: %#v", merchBal)
-	zkchLog.Debugf("toSelfDelay: %#v", toSelfDelay)
-	zkchLog.Debugf("custSig: %#v", custSig)
-	zkchLog.Debugf("merchState: %#v", merchState)
 	isOk, merchTxid, merchPrevout, merchState, err := libzkchannels.MerchantVerifyMerchCloseTx(escrowTxid, custPk, custBal, merchBal, toSelfDelay, custSig, merchState)
 	if err != nil {
 		log.Fatal(err)
@@ -466,14 +458,6 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 		InitCustBal:   custBal,
 		InitMerchBal:  merchBal,
 	}
-
-	zkchLog.Debugf("\n\nVariables going into CustomerVerifyInitCustCloseTx:\n")
-	zkchLog.Debugf("txInfo: %#v", txInfo)
-	zkchLog.Debugf("channelState: %#v", channelState)
-	zkchLog.Debugf("channelToken: %#v", channelToken)
-	zkchLog.Debugf("escrowSig: %#v", escrowSig)
-	zkchLog.Debugf("merchSig: %#v", merchSig)
-	zkchLog.Debugf("custState: %#v\n\n", custState)
 
 	isOk, channelToken, custState, err := libzkchannels.CustomerVerifyInitCustCloseTx(txInfo, channelState, channelToken, escrowSig, merchSig, custState)
 	if err != nil {
