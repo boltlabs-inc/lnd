@@ -30,7 +30,7 @@ type zkChannelManager struct {
 
 func (z *zkChannelManager) initZkEstablish(merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
 	inputSats := int64(50 * 100000000)
-	cust_utxo_txid := "05be52c9f072623f553e7e6633abfbbb00a6867e8638195e1a4af734c5550498"
+	cust_utxo_txid := "e4482dc4992223b592121970df5f7d6a0bd392b46f9f85a7f1d1873dfa0801ec"
 	custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
 
 	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
@@ -319,28 +319,28 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 
 	zkMerchDB.Close()
 
-	merchPk := fmt.Sprintf("%v", *merchState.PkM)
-	merchSk := fmt.Sprintf("\"%v\"", *merchState.SkM)
-
-	merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
-
-	zkchLog.Debug("Variables going into MerchantSignMerchClose:", escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay, custSig, merchSk)
-	signedMerchCloseTx, merchTxid, merchPrevout, err := libzkchannels.MerchantSignMerchCloseTx(escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay, custSig, merchSk)
+	zkchLog.Debug("Variables going into MerchantVerifyMerchCloseTx:")
+	zkchLog.Debugf("escrowTxid: %#v", escrowTxid)
+	zkchLog.Debugf("custPk: %#v", custPk)
+	zkchLog.Debugf("custBal: %#v", custBal)
+	zkchLog.Debugf("merchBal: %#v", merchBal)
+	zkchLog.Debugf("toSelfDelay: %#v", toSelfDelay)
+	zkchLog.Debugf("custSig: %#v", custSig)
+	zkchLog.Debugf("merchState: %#v", merchState)
+	isOk, merchTxid, merchPrevout, merchState, err := libzkchannels.MerchantVerifyMerchCloseTx(escrowTxid, custPk, custBal, merchBal, toSelfDelay, custSig, merchState)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	zkchLog.Info("Signed merch close tx => ", signedMerchCloseTx)
+	switch isOk {
+	case true:
+		zkchLog.Info("MerchantVerifyMerchCloseTx succeeded")
+	case false:
+		zkchLog.Info("MerchantVerifyMerchCloseTx failed")
+	}
+
 	zkchLog.Info("Merch close txid = ", merchTxid)
 	zkchLog.Debug("merch prevout = ", merchPrevout)
-
-	// Update merchState in zkchannelsdb
-	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
-
-	signedMerchCloseTxBytes, _ := json.Marshal(signedMerchCloseTx)
-	zkchanneldb.AddMerchField(zkMerchDB, signedMerchCloseTxBytes, "signedMerchCloseTxKey")
-
-	zkMerchDB.Close()
 
 	// MERCH SIGN CUST CLOSE
 	txInfo := libzkchannels.FundingTxInfo{
@@ -377,19 +377,20 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	// Create and save pkScript and escrowTxid
 	// Note that we are reversing the bytes to correct escrowTxid into little endian
 
-	multisigScript_hex := []byte("5221" + merchPk + "21" + custPk + "52ae")
-	multisigScript := make([]byte, hex.DecodedLen(len(multisigScript_hex)))
-	_, err = hex.Decode(multisigScript, multisigScript_hex)
+	merchPk := fmt.Sprintf("%v", *merchState.PkM)
+	multisigScriptHex := []byte("5221" + merchPk + "21" + custPk + "52ae")
+	multisigScript := make([]byte, hex.DecodedLen(len(multisigScriptHex)))
+	_, err = hex.Decode(multisigScript, multisigScriptHex)
 
 	h := sha256.New()
 	h.Write(multisigScript)
 
 	scriptSha := fmt.Sprintf("%x", h.Sum(nil))
 
-	pkScript_hex := []byte("0020" + scriptSha)
+	pkScriptHex := []byte("0020" + scriptSha)
 
-	pkScript := make([]byte, hex.DecodedLen(len(pkScript_hex)))
-	_, err = hex.Decode(pkScript, pkScript_hex)
+	pkScript := make([]byte, hex.DecodedLen(len(pkScriptHex)))
+	_, err = hex.Decode(pkScript, pkScriptHex)
 
 	zkchLog.Debugf("\n\nmultisigScript: %#x", multisigScript)
 	zkchLog.Debugf("pkScript: %#x\n\n", pkScript)
@@ -466,7 +467,15 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 		InitMerchBal:  merchBal,
 	}
 
-	isOk, channelToken, custState, err := libzkchannels.CustomerSignInitCustCloseTx(txInfo, channelState, channelToken, escrowSig, merchSig, custState)
+	zkchLog.Debugf("\n\nVariables going into CustomerVerifyInitCustCloseTx:\n")
+	zkchLog.Debugf("txInfo: %#v", txInfo)
+	zkchLog.Debugf("channelState: %#v", channelState)
+	zkchLog.Debugf("channelToken: %#v", channelToken)
+	zkchLog.Debugf("escrowSig: %#v", escrowSig)
+	zkchLog.Debugf("merchSig: %#v", merchSig)
+	zkchLog.Debugf("custState: %#v\n\n", custState)
+
+	isOk, channelToken, custState, err := libzkchannels.CustomerVerifyInitCustCloseTx(txInfo, channelState, channelToken, escrowSig, merchSig, custState)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -1398,9 +1407,6 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, zkCh
 
 	// TODO: If --force is not set, initiate a mutual close
 
-	// Set closeInitiated flag to prevent further zkpayments
-	closeInitiated := true
-
 	var CloseEscrowTx string
 
 	user, err := CustOrMerch()
@@ -1410,8 +1416,11 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, zkCh
 
 	switch user {
 	case "cust":
+
 		// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
 		// This is used to prevent another payment being made
+		closeInitiated := true
+
 		zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
 		if err != nil {
 			log.Fatal(err)
@@ -1439,31 +1448,20 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, zkCh
 
 		zkCustDB.Close()
 
-		CloseEscrowTx, _, _, _, err = libzkchannels.CustomerCloseTx(channelState, channelToken, custState)
+		// CloseEscrowTx, _, _, _, err = libzkchannels.CustomerCloseTx(channelState, channelToken, custState)
 
 	case "merch":
 
-		// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
-		// This is used to prevent another payment being made
-		zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
-		if err != nil {
-			log.Fatal(err)
-		}
+		// // open the zkchanneldb to load signedMerchCloseTx
+		// zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
 
-		closeInitiatedBytes, _ := json.Marshal(closeInitiated)
-		zkchanneldb.AddMerchField(zkMerchDB, closeInitiatedBytes, "closeInitiatedKey")
-		zkMerchDB.Close()
+		// signedMerchCloseTxBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "signedMerchCloseTxKey")
+		// var signedMerchCloseTx string
+		// err = json.Unmarshal(signedMerchCloseTxBytes, &signedMerchCloseTx)
 
-		// open the zkchanneldb to load signedMerchCloseTx
-		zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
+		// zkMerchDB.Close()
 
-		signedMerchCloseTxBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "signedMerchCloseTxKey")
-		var signedMerchCloseTx string
-		err = json.Unmarshal(signedMerchCloseTxBytes, &signedMerchCloseTx)
-
-		zkMerchDB.Close()
-
-		CloseEscrowTx = signedMerchCloseTx
+		// CloseEscrowTx = signedMerchCloseTx
 	}
 
 	zkchLog.Debug("Loaded CloseEscrowTx =>:", CloseEscrowTx)
