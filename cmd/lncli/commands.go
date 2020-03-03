@@ -26,7 +26,6 @@ import (
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/routing/route"
 	"github.com/lightningnetwork/lnd/walletunlocker"
-	"github.com/lightningnetwork/lnd/zkchanneldb"
 
 	"github.com/urfave/cli"
 	"golang.org/x/crypto/ssh/terminal"
@@ -3390,11 +3389,11 @@ var closeZkChannelCommand = cli.Command{
 	
 	Close an existing channel. The channel can be closed either cooperatively,
 	or unilaterally (--force).`,
-	ArgsUsage: "node_key",
+	ArgsUsage: "channel_name",
 	Flags: []cli.Flag{
 		cli.StringFlag{
-			Name:  "node_key",
-			Usage: "the txid of the channel's funding transaction",
+			Name:  "channel_name",
+			Usage: "the name of the channel to be closed",
 		},
 		cli.BoolFlag{
 			Name:  "force",
@@ -3413,43 +3412,12 @@ func closeZkChannel(ctx *cli.Context) error {
 
 	zkChannelName := ctx.String("channel_name")
 	if !lnd.ChannelExists(zkChannelName) {
-		return fmt.Errorf("there no payment channel with that name")
-	}
-
-	// If the customer is initiating closeZkChannel, they must be absolutely sure not to make
-	// any further payments on the channel, so as to not revoke the state they are broadcasting on.
-	if isCustomer {
-		if !ctx.IsSet("channel_name") {
-			return fmt.Errorf("enter a unique name for channel_name")
-		}
-
-		// open the zkchanneldb to check closeInitiated flag for that channel
-		zkCustDB, _ := zkchanneldb.OpenZkChannelBucket(zkChannelName)
-
-		var closeInitiated bool
-		closeInitiatedBytes, _ := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "closeInitiatedKey")
-		_ = json.Unmarshal(closeInitiatedBytes, &closeInitiated)
-
-		zkCustDB.Close()
-
-		if closeInitiated {
-			return fmt.Errorf("Cannot make a payment, closeZkChannel has been initiated on this channel")
-		}
+		return fmt.Errorf("there is no payment channel with that name")
 	}
 
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
-
-	var pubKey string
-	switch {
-	case ctx.IsSet("node_key"):
-		pubKey = ctx.String("node_key")
-	case ctx.Args().Present():
-		pubKey = ctx.Args().First()
-	default:
-		return fmt.Errorf("must specify target public key")
-	}
 
 	// TODO: set force bool flag
 	// TODO: Allow for mutual close
@@ -3461,12 +3429,10 @@ func closeZkChannel(ctx *cli.Context) error {
 	}
 
 	req := &lnrpc.CloseZkChannelRequest{
-		PubKey:        pubKey,
 		ZkChannelName: zkChannelName,
 		Force:         force,
 	}
 
-	// TODO: Define request in rpc.proto
 	lnid, err := client.CloseZkChannel(ctxb, req)
 	if err != nil {
 		return err

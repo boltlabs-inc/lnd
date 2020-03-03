@@ -677,9 +677,8 @@ service Lightning {
     zkChannel.
     */
     rpc ZkPay (ZkPayRequest) returns (ZkPayResponse) {
-    /// darius TODO: figure out what this function does. Copied from rpc disconnect
-        // option (google.api.http) = {
-        //     delete: "/v1/peers/{pub_key}"
+        option (google.api.http) = {
+            delete: "/v1/zkpay/{pub_key}"
         };
     }
 
@@ -3627,8 +3626,6 @@ message ZkPayResponse {
 }
 
 message CloseZkChannelRequest {
-    /// The pubkey of the node to pay
-    string pub_key = 1 [json_name = "pub_key"];
     /// A unique name for the zkchannel
     string zk_channel_name = 2 [json_name = "zkchannel_name"];
     /// To force close a channel

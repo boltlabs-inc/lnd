@@ -3572,24 +3572,13 @@ func (s *server) ZkPay(pubKey *btcec.PublicKey, zkChannelName string, Amount int
 
 // CloseZkChannel sends the request to server to close the connection with peer
 // identified by public key.
-func (s *server) CloseZkChannel(pubKey *btcec.PublicKey, zkChannelName string, Force bool) error {
+func (s *server) CloseZkChannel(zkChannelName string, Force bool) error {
 	zkchLog.Infof("CloseZkChannel initiated")
-
-	pubBytes := pubKey.SerializeCompressed()
-	pubStr := string(pubBytes)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Check that were actually connected to this peer. If not, then we'll
-	// exit in an error as we can't disconnect from a peer that we're not
-	// currently connected to.
-	peer, err := s.findPeerByPubStr(pubStr)
-	if err == ErrPeerNotConnected {
-		return fmt.Errorf("peer %x is not connected", pubBytes)
-	}
-
-	peer.server.zkchannelMgr.CloseZkChannel(peer.server.cc.wallet, zkChannelName)
+	s.zkchannelMgr.CloseZkChannel(s.cc.wallet, s.cc.chainNotifier, zkChannelName)
 
 	return nil
 }

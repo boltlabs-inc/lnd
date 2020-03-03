@@ -11536,8 +11536,6 @@ func (m *ZkPayResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_ZkPayResponse proto.InternalMessageInfo
 
 type CloseZkChannelRequest struct {
-	/// The pubkey of the node to pay
-	PubKey string `protobuf:"bytes,1,opt,name=pub_key,proto3" json:"pub_key,omitempty"`
 	/// A unique name for the zkchannel
 	ZkChannelName string `protobuf:"bytes,2,opt,name=zk_channel_name,json=zkchannel_name,proto3" json:"zk_channel_name,omitempty"`
 	/// To force close a channel
@@ -11571,13 +11569,6 @@ func (m *CloseZkChannelRequest) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_CloseZkChannelRequest proto.InternalMessageInfo
-
-func (m *CloseZkChannelRequest) GetPubKey() string {
-	if m != nil {
-		return m.PubKey
-	}
-	return ""
-}
 
 func (m *CloseZkChannelRequest) GetZkChannelName() string {
 	if m != nil {

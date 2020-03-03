@@ -30,7 +30,7 @@ type zkChannelManager struct {
 
 func (z *zkChannelManager) initZkEstablish(merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
 	inputSats := int64(50 * 100000000)
-	cust_utxo_txid := "043b6d38dd40c97f7cd05adc650a70a257c6ef369f5b3b598f54b38919cd3cb4"
+	cust_utxo_txid := "21779e66bdf89e943ae5b16ae63240a41c5e6ab937dde7b5811c64f13729bb03"
 	custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
 
 	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
@@ -1395,11 +1395,7 @@ func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p l
 }
 
 // CloseZkChannel broadcasts a close transaction
-func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, zkChannelName string) {
-
-	// TODO: If --force is not set, initiate a mutual close
-
-	var CloseEscrowTx string
+func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, zkChannelName string) {
 
 	// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
 	// This is used to prevent another payment being made
@@ -1431,9 +1427,12 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, zkCh
 
 	zkCustDB.Close()
 
-	// CloseEscrowTx, _, _, _, err = libzkchannels.CustomerCloseTx(channelState, channelToken, custState)
+	fromEscrow := true
 
-	zkchLog.Debug("Loaded CloseEscrowTx =>:", CloseEscrowTx)
+	CloseEscrowTx, CloseEscrowTxid, err := libzkchannels.CustomerCloseTx(channelState, channelToken, fromEscrow, custState)
+
+	zkchLog.Debug("Signed CloseEscrowTx =>:", CloseEscrowTx)
+	zkchLog.Debug("CloseEscrowTx =>:", CloseEscrowTxid)
 
 	// Broadcast escrow tx on chain
 	serializedTx, err := hex.DecodeString(CloseEscrowTx)
@@ -1449,6 +1448,28 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, zkCh
 
 	zkchLog.Info("Broadcasting close transaction")
 	wallet.PublishTransaction(&msgTx)
+
+	// Start watching for on-chain notifications of merchClose
+	pkScript := msgTx.TxOut[0].PkScript
+
+	zkchLog.Debugf("\nwaitForFundingWithTimeout\npkScript: %#x\n\n", pkScript)
+
+	// TEMPORARY CODE TO FLIP BYTES
+	s := ""
+	for i := 0; i < len(CloseEscrowTxid)/2; i++ {
+		s = CloseEscrowTxid[i*2:i*2+2] + s
+	}
+	CloseEscrowTxid = s
+
+	confChannel, err := z.waitForFundingWithTimeout(notifier, CloseEscrowTxid, pkScript)
+	if err != nil {
+		zkchLog.Infof("error waiting for funding "+
+			"confirmation: %v", err)
+	}
+
+	zkchLog.Debugf("\n\n%#v\n", confChannel)
+	zkchLog.Infof("\n\nCustClose (from escrow) close transaction has 3 confirmations\n\n")
+
 }
 
 // MerchClose broadcasts a close transaction for a given escrow txid
