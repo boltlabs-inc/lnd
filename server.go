@@ -223,6 +223,8 @@ type server struct {
 
 	breachArbiter *breachArbiter
 
+	zkBreachArbiter *zkBreachArbiter
+
 	missionControl *routing.MissionControl
 
 	chanRouter *routing.ChannelRouter
@@ -327,7 +329,7 @@ func noiseDial(idKey keychain.SingleKeyECDH,
 
 // newServer creates a new instance of the server which is to listen using the
 // passed listener address.
-func newServer(cfg *Config, listenAddrs []net.Addr, chanDB *channeldb.DB,
+func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channeldb.DB,
 	towerClientDB *wtdb.ClientDB, cc *chainControl,
 	nodeKeyDesc *keychain.KeyDescriptor,
 	chansToRestore walletunlocker.ChannelsToRecover,
@@ -962,17 +964,32 @@ func newServer(cfg *Config, listenAddrs []net.Addr, chanDB *channeldb.DB,
 		Clock:                         clock.NewDefaultClock(),
 	}, chanDB)
 
-	s.breachArbiter = newBreachArbiter(&BreachConfig{
-		CloseLink:          closeLink,
-		DB:                 chanDB,
-		Estimator:          s.cc.feeEstimator,
-		GenSweepScript:     newSweepPkScriptGen(cc.wallet),
-		Notifier:           cc.chainNotifier,
-		PublishTransaction: cc.wallet.PublishTransaction,
-		ContractBreaches:   contractBreaches,
-		Signer:             cc.wallet.Cfg.Signer,
-		Store:              newRetributionStore(chanDB),
-	})
+	if LNMode {
+		s.breachArbiter = newBreachArbiter(&BreachConfig{
+			CloseLink:          closeLink,
+			DB:                 chanDB,
+			Estimator:          s.cc.feeEstimator,
+			GenSweepScript:     newSweepPkScriptGen(cc.wallet),
+			Notifier:           cc.chainNotifier,
+			PublishTransaction: cc.wallet.PublishTransaction,
+			ContractBreaches:   contractBreaches,
+			Signer:             cc.wallet.Cfg.Signer,
+			Store:              newRetributionStore(chanDB),
+		})
+	} else {
+		srvrLog.Infof("Starting up zkBreachArbiter")
+		s.zkBreachArbiter = newZkBreachArbiter(&ZkBreachConfig{
+			CloseLink:          closeLink,
+			DB:                 chanDB,
+			Estimator:          s.cc.feeEstimator,
+			GenSweepScript:     newSweepPkScriptGen(cc.wallet),
+			Notifier:           cc.chainNotifier,
+			PublishTransaction: cc.wallet.PublishTransaction,
+			ContractBreaches:   contractBreaches,
+			Signer:             cc.wallet.Cfg.Signer,
+			Store:              newZkRetributionStore(chanDB),
+		})
+	}
 
 	// Select the configuration and furnding parameters for Bitcoin or
 	// Litecoin, depending on the primary registered chain.

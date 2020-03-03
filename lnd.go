@@ -691,8 +691,8 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 
 	// Set up the core server which will listen for incoming peer
 	// connections.
-	server, err := newServer(
-		cfg, cfg.Listeners, chanDB, towerClientDB, activeChainControl,
+	server, err := newServer(cfg, cfg.LNMode,
+		cfg.Listeners, chanDB, towerClientDB, activeChainControl,
 		&idKeyDesc, walletInitParams.ChansToRestore, chainedAcceptor,
 		torController,
 	)
