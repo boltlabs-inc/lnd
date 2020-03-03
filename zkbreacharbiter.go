@@ -148,7 +148,7 @@ func (b *zkBreachArbiter) Start() error {
 }
 
 func (b *zkBreachArbiter) start() error {
-	brarLog.Tracef("Starting zk breach arbiter")
+	zkbaLog.Tracef("Starting zk breach arbiter")
 
 	// Load all zkretributions currently persisted in the zkretribution store.
 	breachRetInfos := make(map[wire.OutPoint]zkretributionInfo)
@@ -166,7 +166,7 @@ func (b *zkBreachArbiter) start() error {
 	// zkretribution store.
 	closedChans, err := b.cfg.DB.FetchClosedChannels(false)
 	if err != nil {
-		brarLog.Errorf("Unable to fetch closing channels: %v", err)
+		zkbaLog.Errorf("Unable to fetch closing channels: %v", err)
 		return err
 	}
 
@@ -186,7 +186,7 @@ func (b *zkBreachArbiter) start() error {
 		chanPoint := &chanSummary.ChanPoint
 		if _, ok := breachRetInfos[*chanPoint]; ok {
 			if err := b.cfg.Store.Remove(chanPoint); err != nil {
-				brarLog.Errorf("Unable to remove closed "+
+				zkbaLog.Errorf("Unable to remove closed "+
 					"chanid=%v from zk breach arbiter: %v",
 					chanPoint, err)
 				return err
@@ -208,7 +208,7 @@ func (b *zkBreachArbiter) start() error {
 			&breachTXID, breachScript, 1, retInfo.breachHeight,
 		)
 		if err != nil {
-			brarLog.Errorf("Unable to register for conf updates "+
+			zkbaLog.Errorf("Unable to register for conf updates "+
 				"for txid: %v, err: %v", breachTXID, err)
 			return err
 		}
@@ -231,7 +231,7 @@ func (b *zkBreachArbiter) start() error {
 // the zkBreachArbiter have gracefully exited.
 func (b *zkBreachArbiter) Stop() error {
 	b.stopped.Do(func() {
-		brarLog.Infof("zk Breach arbiter shutting down")
+		zkbaLog.Infof("zk Breach arbiter shutting down")
 
 		close(b.quit)
 		b.wg.Wait()
@@ -256,7 +256,7 @@ func (b *zkBreachArbiter) IsBreached(chanPoint *wire.OutPoint) (bool, error) {
 func (b *zkBreachArbiter) contractObserver() {
 	defer b.wg.Done()
 
-	brarLog.Infof("Starting contract observer, watching for breaches.")
+	zkbaLog.Infof("Starting contract observer, watching for breaches.")
 
 	for {
 		select {
@@ -308,7 +308,7 @@ func zkConvertToSecondLevelRevoke(bo *zkBreachedOutput, breachInfo *zkretributio
 	// SignDescriptor.
 	bo.signDesc.WitnessScript = bo.secondLevelWitnessScript
 
-	brarLog.Warnf("HTLC(%v) for ChannelPoint(%v) has been spent to the "+
+	zkbaLog.Warnf("HTLC(%v) for ChannelPoint(%v) has been spent to the "+
 		"second-level, adjusting -> %v", oldOp, breachInfo.chanPoint,
 		bo.outpoint)
 }
@@ -349,7 +349,7 @@ func (b *zkBreachArbiter) waitForSpendEvent(breachInfo *zkretributionInfo,
 	for i := range inputs {
 		zkBreachedOutput := &inputs[i]
 
-		brarLog.Infof("Checking spend from %v(%v) for ChannelPoint(%v)",
+		zkbaLog.Infof("Checking spend from %v(%v) for ChannelPoint(%v)",
 			zkBreachedOutput.witnessType, zkBreachedOutput.outpoint,
 			breachInfo.chanPoint)
 
@@ -364,7 +364,7 @@ func (b *zkBreachArbiter) waitForSpendEvent(breachInfo *zkretributionInfo,
 				breachInfo.breachHeight,
 			)
 			if err != nil {
-				brarLog.Errorf("Unable to check for spentness "+
+				zkbaLog.Errorf("Unable to check for spentness "+
 					"of outpoint=%v: %v",
 					zkBreachedOutput.outpoint, err)
 
@@ -395,7 +395,7 @@ func (b *zkBreachArbiter) waitForSpendEvent(breachInfo *zkretributionInfo,
 					return
 				}
 
-				brarLog.Infof("Detected spend on %s(%v) by "+
+				zkbaLog.Infof("Detected spend on %s(%v) by "+
 					"txid(%v) for ChannelPoint(%v)",
 					inputs[index].witnessType,
 					inputs[index].outpoint,
@@ -442,7 +442,7 @@ func (b *zkBreachArbiter) waitForSpendEvent(breachInfo *zkretributionInfo,
 			case input.HtlcAcceptedRevoke:
 				fallthrough
 			case input.HtlcOfferedRevoke:
-				brarLog.Infof("Spend on second-level"+
+				zkbaLog.Infof("Spend on second-level"+
 					"%s(%v) for ChannelPoint(%v) "+
 					"transitions to second-level output",
 					zkBreachedOutput.witnessType,
@@ -460,7 +460,7 @@ func (b *zkBreachArbiter) waitForSpendEvent(breachInfo *zkretributionInfo,
 				continue
 			}
 
-			brarLog.Infof("Spend on %s(%v) for ChannelPoint(%v) "+
+			zkbaLog.Infof("Spend on %s(%v) for ChannelPoint(%v) "+
 				"transitions output to terminal state, "+
 				"removing input from zkjustice transaction",
 				zkBreachedOutput.witnessType,
@@ -520,7 +520,7 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 		return
 	}
 
-	brarLog.Debugf("Breach transaction %v has been confirmed, sweeping "+
+	zkbaLog.Debugf("Breach transaction %v has been confirmed, sweeping "+
 		"revoked funds", breachInfo.commitHash)
 
 	// We may have to wait for some of the HTLC outputs to be spent to the
@@ -530,7 +530,7 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 
 	finalTx, err := b.cfg.Store.GetFinalizedTxn(&breachInfo.chanPoint)
 	if err != nil {
-		brarLog.Errorf("Unable to get finalized txn for"+
+		zkbaLog.Errorf("Unable to get finalized txn for"+
 			"chanid=%v: %v", &breachInfo.chanPoint, err)
 		return
 	}
@@ -546,7 +546,7 @@ zkjusticeTxBroadcast:
 		// channel.
 		finalTx, err = b.createZkJusticeTx(breachInfo)
 		if err != nil {
-			brarLog.Errorf("Unable to create zkjustice tx: %v", err)
+			zkbaLog.Errorf("Unable to create zkjustice tx: %v", err)
 			return
 		}
 
@@ -554,13 +554,13 @@ zkjusticeTxBroadcast:
 		// attempt to broadcast.
 		err := b.cfg.Store.Finalize(&breachInfo.chanPoint, finalTx)
 		if err != nil {
-			brarLog.Errorf("Unable to finalize zkjustice tx for "+
+			zkbaLog.Errorf("Unable to finalize zkjustice tx for "+
 				"chanid=%v: %v", &breachInfo.chanPoint, err)
 			return
 		}
 	}
 
-	brarLog.Debugf("Broadcasting zkjustice tx: %v", newLogClosure(func() string {
+	zkbaLog.Debugf("Broadcasting zkjustice tx: %v", newLogClosure(func() string {
 		return spew.Sdump(finalTx)
 	}))
 
@@ -568,7 +568,7 @@ zkjusticeTxBroadcast:
 	// channel's zkretribution against the cheating counter party.
 	err = b.cfg.PublishTransaction(finalTx)
 	if err != nil {
-		brarLog.Errorf("Unable to broadcast zkjustice tx: %v", err)
+		zkbaLog.Errorf("Unable to broadcast zkjustice tx: %v", err)
 
 		if err == lnwallet.ErrDoubleSpend {
 			// Broadcasting the transaction failed because of a
@@ -577,34 +577,34 @@ zkjusticeTxBroadcast:
 			// on the commitment transaction that could possibly
 			// have been spent, and wait for any of them to
 			// trigger.
-			brarLog.Infof("Waiting for a spend event before " +
+			zkbaLog.Infof("Waiting for a spend event before " +
 				"attempting to craft new zkjustice tx.")
 			finalTx = nil
 
 			err := b.waitForSpendEvent(breachInfo, spendNtfns)
 			if err != nil {
 				if err != errZkBrarShuttingDown {
-					brarLog.Errorf("error waiting for "+
+					zkbaLog.Errorf("error waiting for "+
 						"spend event: %v", err)
 				}
 				return
 			}
 
 			if len(breachInfo.zkBreachedOutputs) == 0 {
-				brarLog.Debugf("No more outputs to sweep for "+
+				zkbaLog.Debugf("No more outputs to sweep for "+
 					"breach, marking ChannelPoint(%v) "+
 					"fully resolved", breachInfo.chanPoint)
 
 				err = b.cleanupBreach(&breachInfo.chanPoint)
 				if err != nil {
-					brarLog.Errorf("Failed to cleanup "+
+					zkbaLog.Errorf("Failed to cleanup "+
 						"breached ChannelPoint(%v): %v",
 						breachInfo.chanPoint, err)
 				}
 				return
 			}
 
-			brarLog.Infof("Attempting another zkjustice tx "+
+			zkbaLog.Infof("Attempting another zkjustice tx "+
 				"with %d inputs",
 				len(breachInfo.zkBreachedOutputs))
 
@@ -622,7 +622,7 @@ zkjusticeTxBroadcast:
 		&zkjusticeTXID, zkjusticeScript, 1, breachConfHeight,
 	)
 	if err != nil {
-		brarLog.Errorf("Unable to register for conf for txid(%v): %v",
+		zkbaLog.Errorf("Unable to register for conf for txid(%v): %v",
 			zkjusticeTXID, err)
 		return
 	}
@@ -652,14 +652,14 @@ zkjusticeTxBroadcast:
 			}
 		}
 
-		brarLog.Infof("ZkJustice for ChannelPoint(%v) has "+
+		zkbaLog.Infof("ZkJustice for ChannelPoint(%v) has "+
 			"been served, %v revoked funds (%v total) "+
 			"have been claimed", breachInfo.chanPoint,
 			revokedFunds, totalFunds)
 
 		err = b.cleanupBreach(&breachInfo.chanPoint)
 		if err != nil {
-			brarLog.Errorf("Failed to cleanup breached "+
+			zkbaLog.Errorf("Failed to cleanup breached "+
 				"ChannelPoint(%v): %v", breachInfo.chanPoint,
 				err)
 		}
@@ -708,14 +708,14 @@ func (b *zkBreachArbiter) handleBreachHandoff(breachEvent *ContractBreachEvent) 
 	defer b.wg.Done()
 
 	chanPoint := breachEvent.ChanPoint
-	brarLog.Debugf("Handling breach handoff for ChannelPoint(%v)",
+	zkbaLog.Debugf("Handling breach handoff for ChannelPoint(%v)",
 		chanPoint)
 
 	// A read from this channel indicates that a channel breach has been
 	// detected! So we notify the main coordination goroutine with the
 	// information needed to bring the counterparty to zkjustice.
 	breachInfo := breachEvent.BreachRetribution
-	brarLog.Warnf("REVOKED STATE #%v FOR ChannelPoint(%v) "+
+	zkbaLog.Warnf("REVOKED STATE #%v FOR ChannelPoint(%v) "+
 		"broadcast, REMOTE PEER IS DOING SOMETHING "+
 		"SKETCHY!!!", breachInfo.RevokedStateNum,
 		chanPoint)
@@ -739,7 +739,7 @@ func (b *zkBreachArbiter) handleBreachHandoff(breachEvent *ContractBreachEvent) 
 	breached, err := b.cfg.Store.IsBreached(&chanPoint)
 	if err != nil {
 		b.Unlock()
-		brarLog.Errorf("Unable to check breach info in DB: %v", err)
+		zkbaLog.Errorf("Unable to check breach info in DB: %v", err)
 
 		select {
 		case breachEvent.ProcessACK <- err:
@@ -770,7 +770,7 @@ func (b *zkBreachArbiter) handleBreachHandoff(breachEvent *ContractBreachEvent) 
 	err = b.cfg.Store.Add(retInfo)
 	b.Unlock()
 	if err != nil {
-		brarLog.Errorf("Unable to persist zkretribution "+
+		zkbaLog.Errorf("Unable to persist zkretribution "+
 			"info to db: %v", err)
 	}
 
@@ -800,12 +800,12 @@ func (b *zkBreachArbiter) handleBreachHandoff(breachEvent *ContractBreachEvent) 
 		breachTXID, breachScript, 1, retInfo.breachHeight,
 	)
 	if err != nil {
-		brarLog.Errorf("Unable to register for conf updates for "+
+		zkbaLog.Errorf("Unable to register for conf updates for "+
 			"txid: %v, err: %v", breachTXID, err)
 		return
 	}
 
-	brarLog.Warnf("A channel has been breached with txid: %v. Waiting "+
+	zkbaLog.Warnf("A channel has been breached with txid: %v. Waiting "+
 		"for confirmation, then zkjustice will be served!", breachTXID)
 
 	// With the zkretribution state persisted, channel close persisted, and
@@ -1056,7 +1056,7 @@ func (b *zkBreachArbiter) createZkJusticeTx(
 		// transaction.
 		witnessWeight, _, err := inp.WitnessType().SizeUpperBound()
 		if err != nil {
-			brarLog.Warnf("could not determine witness weight "+
+			zkbaLog.Warnf("could not determine witness weight "+
 				"for breached output in zkretribution info: %v",
 				err)
 			continue
