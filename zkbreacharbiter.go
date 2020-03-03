@@ -62,10 +62,10 @@ var (
 // 	BreachRetribution *lnwallet.BreachRetribution
 // }
 
-// ZkBreachConfig bundles the required subsystems used by the breach arbiter. An
+// ZkBreachConfig bundles the required subsystems used by the zk breach arbiter. An
 // instance of ZkBreachConfig is passed to newZkBreachArbiter during instantiation.
 type ZkBreachConfig struct {
-	// CloseLink allows the breach arbiter to shutdown any channel links for
+	// CloseLink allows the zk breach arbiter to shutdown any channel links for
 	// which it detects a breach, ensuring now further activity will
 	// continue across the link. The method accepts link's channel point and
 	// a close type to be included in the channel close summary.
@@ -76,7 +76,7 @@ type ZkBreachConfig struct {
 	// it should respond to channel closure.
 	DB *channeldb.DB
 
-	// Estimator is used by the breach arbiter to determine an appropriate
+	// Estimator is used by the zk breach arbiter to determine an appropriate
 	// fee level when generating, signing, and broadcasting sweep
 	// transactions.
 	Estimator chainfee.Estimator
@@ -98,7 +98,7 @@ type ZkBreachConfig struct {
 	// the sending subsystem knows that the event is properly handed off.
 	ContractBreaches <-chan *ContractBreachEvent
 
-	// Signer is used by the breach arbiter to generate sweep transactions,
+	// Signer is used by the zk breach arbiter to generate sweep transactions,
 	// which move coins from previously open channels back to the user's
 	// wallet.
 	Signer input.Signer
@@ -148,7 +148,7 @@ func (b *zkBreachArbiter) Start() error {
 }
 
 func (b *zkBreachArbiter) start() error {
-	brarLog.Tracef("Starting breach arbiter")
+	brarLog.Tracef("Starting zk breach arbiter")
 
 	// Load all zkretributions currently persisted in the zkretribution store.
 	breachRetInfos := make(map[wire.OutPoint]zkretributionInfo)
@@ -187,7 +187,7 @@ func (b *zkBreachArbiter) start() error {
 		if _, ok := breachRetInfos[*chanPoint]; ok {
 			if err := b.cfg.Store.Remove(chanPoint); err != nil {
 				brarLog.Errorf("Unable to remove closed "+
-					"chanid=%v from breach arbiter: %v",
+					"chanid=%v from zk breach arbiter: %v",
 					chanPoint, err)
 				return err
 			}
@@ -231,7 +231,7 @@ func (b *zkBreachArbiter) start() error {
 // the zkBreachArbiter have gracefully exited.
 func (b *zkBreachArbiter) Stop() error {
 	b.stopped.Do(func() {
-		brarLog.Infof("Breach arbiter shutting down")
+		brarLog.Infof("zk Breach arbiter shutting down")
 
 		close(b.quit)
 		b.wg.Wait()
@@ -239,7 +239,7 @@ func (b *zkBreachArbiter) Stop() error {
 	return nil
 }
 
-// IsBreached queries the breach arbiter's zkretribution store to see if it is
+// IsBreached queries the zk breach arbiter's zkretribution store to see if it is
 // aware of any channel breaches for a particular channel point.
 func (b *zkBreachArbiter) IsBreached(chanPoint *wire.OutPoint) (bool, error) {
 	return b.cfg.Store.IsBreached(chanPoint)
@@ -537,7 +537,7 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 
 	// If this zkretribution has not been finalized before, we will first
 	// construct a sweep transaction and write it to disk. This will allow
-	// the breach arbiter to re-register for notifications for the zkjustice
+	// the zk breach arbiter to re-register for notifications for the zkjustice
 	// txid.
 zkjusticeTxBroadcast:
 	if finalTx == nil {
@@ -832,7 +832,7 @@ type zkBreachedOutput struct {
 }
 
 // makeZkBreachedOutput assembles a new zkBreachedOutput that can be used by the
-// breach arbiter to construct a zkjustice or sweep transaction.
+// zk breach arbiter to construct a zkjustice or sweep transaction.
 func makeZkBreachedOutput(outpoint *wire.OutPoint,
 	witnessType input.StandardWitnessType,
 	secondLevelScript []byte,
@@ -924,7 +924,7 @@ type zkretributionInfo struct {
 }
 
 // newZkRetributionInfo constructs a zkretributionInfo containing all the
-// information required by the breach arbiter to recover funds from breached
+// information required by the zk breach arbiter to recover funds from breached
 // channels.  The information is primarily populated using the BreachRetribution
 // delivered by the wallet when it detects a channel breach.
 func newZkRetributionInfo(chanPoint *wire.OutPoint,
@@ -1182,7 +1182,7 @@ type ZkRetributionStore interface {
 	// the addition fails.
 	Add(retInfo *zkretributionInfo) error
 
-	// IsBreached queries the zkretribution store to see if the breach arbiter
+	// IsBreached queries the zkretribution store to see if the zk breach arbiter
 	// is aware of any breaches for the provided channel point.
 	IsBreached(chanPoint *wire.OutPoint) (bool, error)
 
@@ -1340,7 +1340,7 @@ func (rs *zkretributionStore) Remove(chanPoint *wire.OutPoint) error {
 		retBucket := tx.Bucket(zkretributionBucket)
 
 		// We return an error if the bucket is not already created,
-		// since normal operation of the breach arbiter should never try
+		// since normal operation of the zk breach arbiter should never try
 		// to remove a finalized zkretribution state that is not already
 		// stored in the db.
 		if retBucket == nil {

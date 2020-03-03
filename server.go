@@ -964,32 +964,30 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 		Clock:                         clock.NewDefaultClock(),
 	}, chanDB)
 
-	if LNMode {
-		s.breachArbiter = newBreachArbiter(&BreachConfig{
-			CloseLink:          closeLink,
-			DB:                 chanDB,
-			Estimator:          s.cc.feeEstimator,
-			GenSweepScript:     newSweepPkScriptGen(cc.wallet),
-			Notifier:           cc.chainNotifier,
-			PublishTransaction: cc.wallet.PublishTransaction,
-			ContractBreaches:   contractBreaches,
-			Signer:             cc.wallet.Cfg.Signer,
-			Store:              newRetributionStore(chanDB),
-		})
-	} else {
-		srvrLog.Infof("Starting up zkBreachArbiter")
-		s.zkBreachArbiter = newZkBreachArbiter(&ZkBreachConfig{
-			CloseLink:          closeLink,
-			DB:                 chanDB,
-			Estimator:          s.cc.feeEstimator,
-			GenSweepScript:     newSweepPkScriptGen(cc.wallet),
-			Notifier:           cc.chainNotifier,
-			PublishTransaction: cc.wallet.PublishTransaction,
-			ContractBreaches:   contractBreaches,
-			Signer:             cc.wallet.Cfg.Signer,
-			Store:              newZkRetributionStore(chanDB),
-		})
-	}
+	s.breachArbiter = newBreachArbiter(&BreachConfig{
+		CloseLink:          closeLink,
+		DB:                 chanDB,
+		Estimator:          s.cc.feeEstimator,
+		GenSweepScript:     newSweepPkScriptGen(cc.wallet),
+		Notifier:           cc.chainNotifier,
+		PublishTransaction: cc.wallet.PublishTransaction,
+		ContractBreaches:   contractBreaches,
+		Signer:             cc.wallet.Cfg.Signer,
+		Store:              newRetributionStore(chanDB),
+	})
+
+	srvrLog.Infof("Starting up zkBreachArbiter")
+	s.zkBreachArbiter = newZkBreachArbiter(&ZkBreachConfig{
+		CloseLink:          closeLink,
+		DB:                 chanDB,
+		Estimator:          s.cc.feeEstimator,
+		GenSweepScript:     newSweepPkScriptGen(cc.wallet),
+		Notifier:           cc.chainNotifier,
+		PublishTransaction: cc.wallet.PublishTransaction,
+		ContractBreaches:   contractBreaches,
+		Signer:             cc.wallet.Cfg.Signer,
+		Store:              newZkRetributionStore(chanDB),
+	})
 
 	// Select the configuration and furnding parameters for Bitcoin or
 	// Litecoin, depending on the primary registered chain.
@@ -1354,6 +1352,10 @@ func (s *server) Start() error {
 			startErr = err
 			return
 		}
+		if err := s.zkBreachArbiter.Start(); err != nil {
+			startErr = err
+			return
+		}
 		if err := s.authGossiper.Start(); err != nil {
 			startErr = err
 			return
@@ -1480,6 +1482,7 @@ func (s *server) Stop() error {
 		s.sphinx.Stop()
 		s.utxoNursery.Stop()
 		s.breachArbiter.Stop()
+		s.zkBreachArbiter.Stop()
 		s.authGossiper.Stop()
 		s.chainArb.Stop()
 		s.sweeper.Stop()

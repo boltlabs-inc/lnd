@@ -194,8 +194,7 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 
 func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccept, p lnpeer.Peer, zkChannelName string) {
 
-	zkchLog.Debug("Just received ZkEstablishAccept")
-	fmt.Println("NEW ZKCHANNELNAME:", zkChannelName)
+	zkchLog.Debugf("Just received ZkEstablishAccept for %v", zkChannelName)
 
 	toSelfDelay := string(msg.ToSelfDelay)
 	merchClosePk := string(msg.MerchPayoutPk)
@@ -410,7 +409,7 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 
 func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablishCCloseSigned, p lnpeer.Peer, zkChannelName string) {
 
-	zkchLog.Debug("Just received CCloseSigned")
+	zkchLog.Debugf("Just received CCloseSigned for %v", zkChannelName)
 
 	// Convert variables received
 	escrowSig := string(msg.EscrowSig)
@@ -583,7 +582,7 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 
 func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstablishStateValidated, p lnpeer.Peer, zkChannelName string, wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier) {
 
-	zkchLog.Debug("Just received ZkEstablishStateValidated: ", string(msg.SuccessMsg))
+	zkchLog.Debugf("Just received ZkEstablishStateValidated for %v", zkChannelName)
 
 	// TODO: For now, we assume isOk is true
 	// Add alternative path for when isOk is false
@@ -888,7 +887,7 @@ func (z *zkChannelManager) processZkEstablishFundingLocked(msg *lnwire.ZkEstabli
 
 func (z *zkChannelManager) processZkEstablishFundingConfirmed(msg *lnwire.ZkEstablishFundingConfirmed, p lnpeer.Peer, zkChannelName string) {
 
-	zkchLog.Debug("Just received FundingConfirmed: ", string(msg.FundingConfirmed))
+	zkchLog.Debugf("Just received FundingConfirmed for %v", zkChannelName)
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
@@ -973,7 +972,7 @@ func (z *zkChannelManager) processZkEstablishCustActivated(msg *lnwire.ZkEstabli
 func (z *zkChannelManager) processZkEstablishPayToken(msg *lnwire.ZkEstablishPayToken, p lnpeer.Peer, zkChannelName string) {
 
 	payToken0 := string(msg.PayToken0)
-	zkchLog.Debug("Just received PayToken0: ", payToken0)
+	zkchLog.Debugf("Just received PayToken0 for %v: ", zkChannelName, payToken0)
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
