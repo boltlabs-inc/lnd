@@ -28,10 +28,10 @@ type zkChannelManager struct {
 	wg            sync.WaitGroup
 }
 
-func (z *zkChannelManager) initZkEstablish(merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
-	inputSats := int64(50 * 100000000)
-	cust_utxo_txid := "21779e66bdf89e943ae5b16ae63240a41c5e6ab937dde7b5811c64f13729bb03"
-	custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
+func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxid_LE string, custInputSk string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
+	// inputSats := int64(50 * 100000000)
+	// custUtxoTxid_LE := "21779e66bdf89e943ae5b16ae63240a41c5e6ab937dde7b5811c64f13729bb03"
+	// custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
 
 	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
 	if err != nil {
@@ -48,9 +48,9 @@ func (z *zkChannelManager) initZkEstablish(merchPubKey string, zkChannelName str
 	// changeSk := "4157697b6428532758a9d0f9a73ce58befe3fd665797427d1c5bb3d33f6a132e"
 	changePk := "037bed6ab680a171ef2ab564af25eff15c0659313df0bbfb96414da7c7d1e65882"
 
-	zkchLog.Debug("Variables going into FormEscrowTx :=> ", cust_utxo_txid, 0, inputSats, custBal, custInputSk, custPk, merchPk, changePk)
+	zkchLog.Debug("Variables going into FormEscrowTx :=> ", custUtxoTxid_LE, 0, inputSats, custBal, custInputSk, custPk, merchPk, changePk)
 
-	signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(cust_utxo_txid, uint32(0), inputSats, custBal, custInputSk, custPk, merchPk, changePk)
+	signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxid_LE, uint32(0), inputSats, custBal, custInputSk, custPk, merchPk, changePk)
 	if err != nil {
 		log.Fatal(err)
 	}

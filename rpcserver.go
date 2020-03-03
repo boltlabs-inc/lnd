@@ -6429,10 +6429,14 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 		return nil, fmt.Errorf("unable to parse pubkey: %v", err)
 	}
 
+	inputSats := int64(50 * 100000000)
+	custUtxoTxid_LE := "21779e66bdf89e943ae5b16ae63240a41c5e6ab937dde7b5811c64f13729bb03"
+	custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
+
 	r.server.zkChannelName = in.ZkChannelName
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
-	if err := r.server.OpenZkChannel(peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
+	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, custInputSk, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
 		return nil, fmt.Errorf("Could not send payment "+
 			"to peer: %v", err)
 	}
