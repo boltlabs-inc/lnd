@@ -6487,7 +6487,7 @@ func (r *rpcServer) CloseZkChannel(ctx context.Context,
 
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
-	if err := r.server.CloseZkChannel(in.ZkChannelName, in.Force); err != nil {
+	if err := r.server.CloseZkChannel(in.ZkChannelName); err != nil {
 		return nil, fmt.Errorf("Could not close channel %v"+
 			": %v", in.ZkChannelName, err)
 	}
@@ -6506,7 +6506,7 @@ func (r *rpcServer) MerchClose(ctx context.Context,
 			"not active yet")
 	}
 
-	if err := r.server.MerchClose(in.EscrowTxid, in.Force); err != nil {
+	if err := r.server.MerchClose(in.EscrowTxid); err != nil {
 		return nil, fmt.Errorf("could not close channel: ", err)
 	}
 

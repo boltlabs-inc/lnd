@@ -3419,18 +3419,8 @@ func closeZkChannel(ctx *cli.Context) error {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
-	// TODO: set force bool flag
-	// TODO: Allow for mutual close
-	var force bool
-	if !ctx.IsSet("force") {
-		return fmt.Errorf("set 'force' flag to do a force closure. Mutual closure not supported in this version")
-	} else {
-		force = ctx.Bool("force")
-	}
-
 	req := &lnrpc.CloseZkChannelRequest{
 		ZkChannelName: zkChannelName,
-		Force:         force,
 	}
 
 	lnid, err := client.CloseZkChannel(ctxb, req)
@@ -3482,17 +3472,8 @@ func merchClose(ctx *cli.Context) error {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
-	// TODO?: Allow for mutual close
-	var force bool
-	if !ctx.IsSet("force") {
-		return fmt.Errorf("set 'force' flag to do a force closure. Mutual closure not supported in this version")
-	} else {
-		force = ctx.Bool("force")
-	}
-
 	req := &lnrpc.MerchCloseRequest{
 		EscrowTxid: escrowTxid,
-		Force:      force,
 	}
 
 	lnid, err := client.MerchClose(ctxb, req)

@@ -3627,9 +3627,7 @@ message ZkPayResponse {
 
 message CloseZkChannelRequest {
     /// A unique name for the zkchannel
-    string zk_channel_name = 2 [json_name = "zkchannel_name"];
-    /// To force close a channel
-    bool force = 3 [json_name = "force"];
+    string zk_channel_name = 1 [json_name = "zkchannel_name"];
 }
 message CloseZkChannelResponse {
 }
@@ -3637,8 +3635,6 @@ message CloseZkChannelResponse {
 message MerchCloseRequest {
     /// The escrowtxid of the channel to be closed
     string escrow_txid = 1 [json_name = "escrow_txid"];
-    /// To force close a channel
-    bool force = 3 [json_name = "force"];
 }
 message MerchCloseResponse {
 }

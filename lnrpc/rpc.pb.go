@@ -11537,9 +11537,7 @@ var xxx_messageInfo_ZkPayResponse proto.InternalMessageInfo
 
 type CloseZkChannelRequest struct {
 	/// A unique name for the zkchannel
-	ZkChannelName string `protobuf:"bytes,2,opt,name=zk_channel_name,json=zkchannel_name,proto3" json:"zk_channel_name,omitempty"`
-	/// To force close a channel
-	Force                bool     `protobuf:"varint,3,opt,name=force,proto3" json:"force,omitempty"`
+	ZkChannelName        string   `protobuf:"bytes,1,opt,name=zk_channel_name,json=zkchannel_name,proto3" json:"zk_channel_name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -11577,13 +11575,6 @@ func (m *CloseZkChannelRequest) GetZkChannelName() string {
 	return ""
 }
 
-func (m *CloseZkChannelRequest) GetForce() bool {
-	if m != nil {
-		return m.Force
-	}
-	return false
-}
-
 type CloseZkChannelResponse struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -11617,9 +11608,7 @@ var xxx_messageInfo_CloseZkChannelResponse proto.InternalMessageInfo
 
 type MerchCloseRequest struct {
 	/// The escrowtxid of the channel to be closed
-	EscrowTxid string `protobuf:"bytes,1,opt,name=escrow_txid,proto3" json:"escrow_txid,omitempty"`
-	/// To force close a channel
-	Force                bool     `protobuf:"varint,3,opt,name=force,proto3" json:"force,omitempty"`
+	EscrowTxid           string   `protobuf:"bytes,1,opt,name=escrow_txid,proto3" json:"escrow_txid,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -11655,13 +11644,6 @@ func (m *MerchCloseRequest) GetEscrowTxid() string {
 		return m.EscrowTxid
 	}
 	return ""
-}
-
-func (m *MerchCloseRequest) GetForce() bool {
-	if m != nil {
-		return m.Force
-	}
-	return false
 }
 
 type MerchCloseResponse struct {

@@ -1473,9 +1473,7 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 }
 
 // MerchClose broadcasts a close transaction for a given escrow txid
-func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, EscrowTxid string, Force bool) {
-
-	// TODO: If --force is not set, initiate a mutual close
+func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, EscrowTxid string) {
 
 	// open the zkchanneldb to create signedMerchCloseTx
 	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
