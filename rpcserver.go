@@ -6429,11 +6429,49 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 		return nil, fmt.Errorf("unable to parse pubkey: %v", err)
 	}
 
-	inputSats := int64(50 * 100000000)
-	custUtxoTxid_LE := "21779e66bdf89e943ae5b16ae63240a41c5e6ab937dde7b5811c64f13729bb03"
+	// check that we have enough funds to open channel
+	// if so, extract the utxos and the secret keys
+	//inputSats := int64(50 * 100000000)
+	//custUtxoTxid_LE := "21779e66bdf89e943ae5b16ae63240a41c5e6ab937dde7b5811c64f13729bb03"
 	custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
+	fmt.Println("Using this SK: ", custInputSk)
 
-	r.server.zkChannelName = in.ZkChannelName
+	confirmedBal, err := r.server.cc.wallet.ConfirmedBalance(1)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("Confirmed Balance: ", confirmedBal)
+
+	minConfs := int32(6)
+	maxConfs := int32(math.MaxInt32)
+	utxos, err := r.server.cc.wallet.ListUnspentWitness(minConfs, maxConfs)
+	if err != nil {
+		return nil, err
+	}
+
+	// fmt.Println("utxos found: ", utxos)
+	custUtxoTxid_LE := ""
+	inputSats := int64(0)
+	selectedUtxo := false
+	for _, utxo := range utxos {
+		utxoValue := int64(utxo.Value)
+		if utxoValue > in.CustBalance {
+			custUtxoTxid_LE = utxo.OutPoint.Hash.String()
+			index := utxo.OutPoint.Index
+			inputSats = utxoValue
+			fmt.Println("Value => ", utxoValue)
+			fmt.Println("Txid => ", custUtxoTxid_LE)
+			fmt.Println("Index => ", index)
+			selectedUtxo = true
+			break
+		}
+	}
+
+	if !selectedUtxo {
+		return nil, fmt.Errorf("Insufficient funds to open zkchannel.")
+	}
+
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
 	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, custInputSk, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
