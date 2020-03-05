@@ -6433,8 +6433,8 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 	// if so, extract the utxos and the secret keys
 	//inputSats := int64(50 * 100000000)
 	//custUtxoTxid_LE := "21779e66bdf89e943ae5b16ae63240a41c5e6ab937dde7b5811c64f13729bb03"
-	custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
-	fmt.Println("Using this SK: ", custInputSk)
+	// custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
+	// fmt.Println("Using this SK: ", custInputSk)
 
 	confirmedBal, err := r.server.cc.wallet.ConfirmedBalance(1)
 	if err != nil {
@@ -6474,6 +6474,14 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 	if !selectedUtxo {
 		return nil, fmt.Errorf("Insufficient funds to open zkchannel.")
 	}
+
+	custInputSkRaw, err := r.server.cc.wallet.FetchOutputPrivKey(pkScript)
+	if err != nil {
+		return nil, err
+	}
+	custInputSk := fmt.Sprintf("\"%v\"", custInputSkRaw)
+
+	fmt.Println("Using this SK: ", custInputSk)
 
 	// ZkChannelName is defined here so that it can be retrieved when handling
 	// responses from the merchant. Note, this doesn't handle multiple channels

@@ -100,6 +100,24 @@ func (b *BtcWallet) fetchOutputAddr(script []byte) (waddrmgr.ManagedAddress, err
 	return nil, lnwallet.ErrNotMine
 }
 
+// FetchOutputPrivKey returns the private key for an output script.
+// This function is specific for zkLND
+func (b *BtcWallet) FetchOutputPrivKey(outputScript []byte) (string, error) {
+
+	walletAddr, err := b.fetchOutputAddr(outputScript)
+	if err != nil {
+		return "", err
+	}
+
+	pka := walletAddr.(waddrmgr.ManagedPubKeyAddress)
+	privKey, err := pka.PrivKey()
+	if err != nil {
+		return "", err
+	}
+
+	return privKey.D.Text(16), nil
+}
+
 // deriveFromKeyLoc attempts to derive a private key using a fully specified
 // KeyLocator.
 func deriveFromKeyLoc(scopedMgr *waddrmgr.ScopedKeyManager,

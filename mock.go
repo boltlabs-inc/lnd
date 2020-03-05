@@ -339,6 +339,11 @@ func (*mockWalletController) Stop() error {
 	return nil
 }
 
+// This is a hack for zkLND
+func (*mockWalletController) FetchOutputPrivKey(outputScript []byte) (string, error) {
+	return "", nil
+}
+
 type mockSecretKeyRing struct {
 	rootKey *btcec.PrivateKey
 }

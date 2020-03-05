@@ -260,6 +260,10 @@ type WalletController interface {
 	// which could be e.g. btcd, bitcoind, neutrino, or another consensus
 	// service.
 	BackEnd() string
+
+	// FetchOutputPrivKey returns the private key for an output script.
+	// This function is specific for zkLND
+	FetchOutputPrivKey(outputScript []byte) (string, error)
 }
 
 // BlockChainIO is a dedicated source which will be used to obtain queries
