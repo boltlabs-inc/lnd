@@ -6472,6 +6472,11 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 		return nil, fmt.Errorf("Insufficient funds to open zkchannel.")
 	}
 
+	// ZkChannelName is defined here so that it can be retrieved when handling
+	// responses from the merchant. Note, this doesn't handle multiple channels
+	// being opened in parallel.
+	r.server.zkChannelName = in.ZkChannelName
+
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
 	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, custInputSk, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
