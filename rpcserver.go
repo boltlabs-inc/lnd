@@ -24,6 +24,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcutil/bech32"
 	"github.com/btcsuite/btcutil/psbt"
 	"github.com/btcsuite/btcwallet/wallet/txauthor"
 	"github.com/davecgh/go-spew/spew"
@@ -6464,8 +6465,8 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 			pkScript = utxo.PkScript
 			fmt.Println("Value => ", utxoValue)
 			fmt.Println("Txid => ", custUtxoTxid_LE)
-			fmt.Println("Index => ", index)
-			fmt.Println("pkScript => ", pkScript)
+			fmt.Println("Utxo Index => ", index)
+			fmt.Printf("Utxo pkScript => %x\n", pkScript)
 			selectedUtxo = true
 			break
 		}
@@ -6487,7 +6488,18 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 		return nil, err
 	}
 	changeAddr := changeAddrRaw.String()
-	fmt.Println("Using this changeAddr: ", changeAddr)
+	// fmt.Println("Using this changeAddr: ", changeAddr)
+
+	HRP, data, err := bech32.Decode(changeAddr)
+	_ = HRP
+	// fmt.Println("HRP: ", HRP)
+
+	changePkHash, err := bech32.ConvertBits(data[1:], 5, 8, false)
+	// fmt.Printf("\npkHash: %#v\n", pkHash)
+
+	prefix, err := hex.DecodeString("0014")
+	changeOutput := append(prefix, changePkHash...)
+	fmt.Printf("changeOutput: %x\n", changeOutput)
 
 	// ZkChannelName is defined here so that it can be retrieved when handling
 	// responses from the merchant. Note, this doesn't handle multiple channels
