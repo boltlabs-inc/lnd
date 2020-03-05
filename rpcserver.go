@@ -6454,15 +6454,18 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 	custUtxoTxid_LE := ""
 	inputSats := int64(0)
 	selectedUtxo := false
+	var pkScript []byte
 	for _, utxo := range utxos {
 		utxoValue := int64(utxo.Value)
 		if utxoValue > in.CustBalance {
 			custUtxoTxid_LE = utxo.OutPoint.Hash.String()
 			index := utxo.OutPoint.Index
 			inputSats = utxoValue
+			pkScript = utxo.PkScript
 			fmt.Println("Value => ", utxoValue)
 			fmt.Println("Txid => ", custUtxoTxid_LE)
 			fmt.Println("Index => ", index)
+			fmt.Println("pkScript => ", pkScript)
 			selectedUtxo = true
 			break
 		}
