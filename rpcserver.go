@@ -6480,8 +6480,14 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 		return nil, err
 	}
 	custInputSk := fmt.Sprintf("\"%v\"", custInputSkRaw)
+	// fmt.Println("Using this SK: ", custInputSk)
 
-	fmt.Println("Using this SK: ", custInputSk)
+	changeAddrRaw, err := r.server.cc.wallet.NewAddress(lnwallet.WitnessPubKey, true)
+	if err != nil {
+		return nil, err
+	}
+	changeAddr := changeAddrRaw.String()
+	fmt.Println("Using this changeAddr: ", changeAddr)
 
 	// ZkChannelName is defined here so that it can be retrieved when handling
 	// responses from the merchant. Note, this doesn't handle multiple channels
