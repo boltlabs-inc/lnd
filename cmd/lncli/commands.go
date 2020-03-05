@@ -3489,7 +3489,7 @@ var zkChannelBalanceCommand = cli.Command{
 	Name:     "zkchannelbalance",
 	Category: "ZkChannels",
 	Usage: "Returns the total available channel balance" +
-		"all open zkchannels.",
+		" over all open zkchannels.",
 	Action: actionDecorator(zkChannelBalance),
 }
 
@@ -3528,7 +3528,7 @@ func totalReceived(ctx *cli.Context) error {
 	isMerchant := lnd.DetermineIfMerch()
 
 	if !isMerchant {
-		return fmt.Errorf("You are a operating as a customer and are not receiving payments," +
+		return fmt.Errorf("You are a operating as a customer and are not receiving payments, " +
 			"use 'zkchannelbalance' to view your balance instead.")
 	}
 
