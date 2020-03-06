@@ -29,11 +29,11 @@ type zkChannelManager struct {
 }
 
 func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, changeScriptPK string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
-	// inputSats := int64(50 * 100000000)
-	// custUtxoTxid_LE := "21779e66bdf89e943ae5b16ae63240a41c5e6ab937dde7b5811c64f13729bb03"
-	// custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
 
-	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust")
+	skC := "1a1971e1379beec67178509e25b6772c66cb67bb04d70df2b4bcdb8c08a01827"
+	payoutSk := "4157697b6428532758a9d0f9a73ce58befe3fd665797427d1c5bb3d33f6a132e"
+
+	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust", skC, payoutSk)
 	if err != nil {
 		log.Fatal(err)
 	}
