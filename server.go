@@ -964,17 +964,19 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 		Clock:                         clock.NewDefaultClock(),
 	}, chanDB)
 
-	s.breachArbiter = newBreachArbiter(&BreachConfig{
-		CloseLink:          closeLink,
-		DB:                 chanDB,
-		Estimator:          s.cc.feeEstimator,
-		GenSweepScript:     newSweepPkScriptGen(cc.wallet),
-		Notifier:           cc.chainNotifier,
-		PublishTransaction: cc.wallet.PublishTransaction,
-		ContractBreaches:   contractBreaches,
-		Signer:             cc.wallet.Cfg.Signer,
-		Store:              newRetributionStore(chanDB),
-	})
+	// s.breachArbiter = newBreachArbiter(&BreachConfig{
+	// 	CloseLink:          closeLink,
+	// 	DB:                 chanDB,
+	// 	Estimator:          s.cc.feeEstimator,
+	// 	GenSweepScript:     newSweepPkScriptGen(cc.wallet),
+	// 	Notifier:           cc.chainNotifier,
+	// 	PublishTransaction: cc.wallet.PublishTransaction,
+	// 	ContractBreaches:   contractBreaches,
+	// 	Signer:             cc.wallet.Cfg.Signer,
+	// 	Store:              newRetributionStore(chanDB),
+	// })
+
+	s.breachArbiter = nil
 
 	srvrLog.Infof("Starting up zkBreachArbiter")
 	s.zkBreachArbiter = newZkBreachArbiter(&ZkBreachConfig{
@@ -1348,10 +1350,10 @@ func (s *server) Start() error {
 			startErr = err
 			return
 		}
-		if err := s.breachArbiter.Start(); err != nil {
-			startErr = err
-			return
-		}
+		// if err := s.breachArbiter.Start(); err != nil {
+		// 	startErr = err
+		// 	return
+		// }
 		if err := s.zkBreachArbiter.Start(); err != nil {
 			startErr = err
 			return
@@ -1481,7 +1483,7 @@ func (s *server) Stop() error {
 		s.htlcSwitch.Stop()
 		s.sphinx.Stop()
 		s.utxoNursery.Stop()
-		s.breachArbiter.Stop()
+		// s.breachArbiter.Stop()
 		s.zkBreachArbiter.Stop()
 		s.authGossiper.Stop()
 		s.chainArb.Stop()
@@ -3545,7 +3547,7 @@ func newSweepPkScriptGen(
 // OpenZkChannel sends the request to establish a zkchannel with a merchant.
 //
 // ########### ln-mpc start ###########
-func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, custInputSk string, pubKey *btcec.PublicKey, merchPubKey string, zkChannelName string, custBalance int64, merchBalance int64) error {
+func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, changeScriptPK string, pubKey *btcec.PublicKey, merchPubKey string, zkChannelName string, custBalance int64, merchBalance int64) error {
 	pubBytes := pubKey.SerializeCompressed()
 	pubStr := string(pubBytes)
 
@@ -3561,7 +3563,7 @@ func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, custInpu
 	}
 
 	// peer.server.zkchannelMgr.zkChannelName = zkChannelName
-	peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, custInputSk, merchPubKey, zkChannelName, custBalance, merchBalance, peer)
+	peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, changeScriptPK, merchPubKey, zkChannelName, custBalance, merchBalance, peer)
 
 	return nil
 }

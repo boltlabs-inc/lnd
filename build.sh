@@ -1,6 +1,8 @@
 cd libzkchannels
 git pull
 . ./env
+# make update
+# make deps
 make mpcgotest
 cargo build --release --manifest-path ./Cargo.toml --features mpc-bitcoin
 export CGO_LDFLAGS="-L$(pwd)/target/release"

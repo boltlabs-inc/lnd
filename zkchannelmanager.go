@@ -28,7 +28,7 @@ type zkChannelManager struct {
 	wg            sync.WaitGroup
 }
 
-func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxid_LE string, custInputSk string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
+func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, changeScriptPK string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
 	// inputSats := int64(50 * 100000000)
 	// custUtxoTxid_LE := "21779e66bdf89e943ae5b16ae63240a41c5e6ab937dde7b5811c64f13729bb03"
 	// custInputSk := fmt.Sprintf("\"%v\"", "5511111111111111111111111111111100000000000000000000000000000000")
@@ -39,18 +39,18 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxid_LE stri
 	}
 
 	zkchLog.Debug("Generated channelToken and custState")
-	zkchLog.Debugf("%#v\n", channelToken)
+	zkchLog.Debugf("%#v", channelToken)
 
 	custPk := fmt.Sprintf("%v", custState.PkC)
 	revLock := fmt.Sprintf("%v", custState.RevLock)
 
 	merchPk := fmt.Sprintf("%v", merchPubKey)
-	// changeSk := "4157697b6428532758a9d0f9a73ce58befe3fd665797427d1c5bb3d33f6a132e"
-	changePk := "037bed6ab680a171ef2ab564af25eff15c0659313df0bbfb96414da7c7d1e65882"
 
-	zkchLog.Debug("Variables going into FormEscrowTx :=> ", custUtxoTxid_LE, 0, inputSats, custBal, custInputSk, custPk, merchPk, changePk)
+	changePkIsHash := true
 
-	signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxid_LE, uint32(0), inputSats, custBal, custInputSk, custPk, merchPk, changePk)
+	zkchLog.Debug("Variables going into FormEscrowTx :=> ", custUtxoTxid_LE, index, inputSats, custBal, custInputSk, custPk, merchPk, changeScriptPK, changePkIsHash)
+
+	signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxid_LE, index, inputSats, custBal, custInputSk, custPk, merchPk, changeScriptPK, changePkIsHash)
 	if err != nil {
 		log.Fatal(err)
 	}

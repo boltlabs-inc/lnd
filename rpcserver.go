@@ -6456,11 +6456,12 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 	inputSats := int64(0)
 	selectedUtxo := false
 	var pkScript []byte
+	var index uint32
 	for _, utxo := range utxos {
 		utxoValue := int64(utxo.Value)
-		if utxoValue > in.CustBalance {
+		if utxoValue > in.CustBalance && utxo.AddressType == lnwallet.NestedWitnessPubKey {
 			custUtxoTxid_LE = utxo.OutPoint.Hash.String()
-			index := utxo.OutPoint.Index
+			index = utxo.OutPoint.Index
 			inputSats = utxoValue
 			pkScript = utxo.PkScript
 			fmt.Println("Value => ", utxoValue)
@@ -6488,18 +6489,12 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 		return nil, err
 	}
 	changeAddr := changeAddrRaw.String()
-	// fmt.Println("Using this changeAddr: ", changeAddr)
-
-	HRP, data, err := bech32.Decode(changeAddr)
-	_ = HRP
-	// fmt.Println("HRP: ", HRP)
-
+	_, data, err := bech32.Decode(changeAddr)
 	changePkHash, err := bech32.ConvertBits(data[1:], 5, 8, false)
-	// fmt.Printf("\npkHash: %#v\n", pkHash)
 
-	prefix, err := hex.DecodeString("0014")
-	changeOutput := append(prefix, changePkHash...)
-	fmt.Printf("changeOutput: %x\n", changeOutput)
+	changePkHashStr := hex.EncodeToString(changePkHash)
+	changeScriptPK := "0014" + changePkHashStr
+	fmt.Printf("changeScriptPK: %v\n", changeScriptPK)
 
 	// ZkChannelName is defined here so that it can be retrieved when handling
 	// responses from the merchant. Note, this doesn't handle multiple channels
@@ -6508,7 +6503,7 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
-	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, custInputSk, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
+	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, index, custInputSk, changeScriptPK, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
 		return nil, fmt.Errorf("Could not send payment "+
 			"to peer: %v", err)
 	}
