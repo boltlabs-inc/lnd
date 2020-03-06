@@ -264,6 +264,10 @@ type WalletController interface {
 	// FetchOutputPrivKey returns the private key for an output script.
 	// This function is specific for zkLND
 	FetchOutputPrivKey(outputScript []byte) (string, error)
+
+	// NewPrivKey returns a new private key.
+	// This function is specific for zkLND
+	NewPrivKey() (string, error)
 }
 
 // BlockChainIO is a dedicated source which will be used to obtain queries

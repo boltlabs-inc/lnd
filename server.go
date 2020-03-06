@@ -3547,7 +3547,7 @@ func newSweepPkScriptGen(
 // OpenZkChannel sends the request to establish a zkchannel with a merchant.
 //
 // ########### ln-mpc start ###########
-func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, changeScriptPK string, pubKey *btcec.PublicKey, merchPubKey string, zkChannelName string, custBalance int64, merchBalance int64) error {
+func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changeScriptPK string, pubKey *btcec.PublicKey, merchPubKey string, zkChannelName string, custBalance int64, merchBalance int64) error {
 	pubBytes := pubKey.SerializeCompressed()
 	pubStr := string(pubBytes)
 
@@ -3563,7 +3563,7 @@ func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index ui
 	}
 
 	// peer.server.zkchannelMgr.zkChannelName = zkChannelName
-	peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, changeScriptPK, merchPubKey, zkChannelName, custBalance, merchBalance, peer)
+	peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changeScriptPK, merchPubKey, zkChannelName, custBalance, merchBalance, peer)
 
 	return nil
 }

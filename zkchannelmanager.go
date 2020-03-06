@@ -28,12 +28,9 @@ type zkChannelManager struct {
 	wg            sync.WaitGroup
 }
 
-func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, changeScriptPK string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
+func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changeScriptPK string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
 
-	skC := "1a1971e1379beec67178509e25b6772c66cb67bb04d70df2b4bcdb8c08a01827"
-	payoutSk := "4157697b6428532758a9d0f9a73ce58befe3fd665797427d1c5bb3d33f6a132e"
-
-	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust", skC, payoutSk)
+	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust", custStateSk, custPayoutSk)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -114,24 +111,6 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxid_LE stri
 	}
 
 	p.SendMessage(false, &zkEstablishOpen)
-
-	// TEMPORARY CODE
-
-	// Broadcast escrow tx on chain
-	serializedTx, err := hex.DecodeString(signedEscrowTx)
-	if err != nil {
-		zkchLog.Error(err)
-	}
-
-	var msgTx wire.MsgTx
-	err = msgTx.Deserialize(bytes.NewReader(serializedTx))
-	if err != nil {
-		zkchLog.Error(err)
-	}
-
-	pkScript := msgTx.TxOut[0].PkScript
-
-	zkchLog.Debugf("\n\npkScript: %#x\n\n", pkScript)
 }
 
 func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p lnpeer.Peer) {
@@ -391,8 +370,8 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	pkScript := make([]byte, hex.DecodedLen(len(pkScriptHex)))
 	_, err = hex.Decode(pkScript, pkScriptHex)
 
-	zkchLog.Debugf("\n\nmultisigScript: %#x", multisigScript)
-	zkchLog.Debugf("pkScript: %#x\n\n", pkScript)
+	zkchLog.Debugf("multisigScript: %#x\n", multisigScript)
+	zkchLog.Debugf("pkScript: %#x\n", pkScript)
 
 	// Update merchState in zkMerchDB
 	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
@@ -568,7 +547,7 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 
 	// Wait for on chain confirmations of escrow transaction
 
-	zkchLog.Debugf("\nwaitForFundingWithTimeout\npkScript: %#x\n\n", pkScript)
+	zkchLog.Debugf("waitForFundingWithTimeout\npkScript: %#x\n", pkScript)
 
 	confChannel, err := z.waitForFundingWithTimeout(notifier, escrowTxid, pkScript)
 	if err != nil {
@@ -576,7 +555,7 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 			"confirmation: %v", err)
 	}
 
-	zkchLog.Debugf("\n\n%#v\n", confChannel)
+	zkchLog.Debugf("%#v\n", confChannel)
 
 }
 
@@ -612,18 +591,14 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 		zkchLog.Error(err)
 	}
 
+	zkchLog.Debugf("Broadcasting signedEscrowTx: %#v\n", signedEscrowTx)
+
 	err = wallet.PublishTransaction(&msgTx)
 	if err != nil {
 		zkchLog.Error(err)
 	}
 
 	pkScript := msgTx.TxOut[0].PkScript
-
-	// // DUMMY txid and pkScripts for testing
-	// escrowTxid = "9cb0224d47c796a1e044e70de9c629d8533add27b91587cbe2da04f14ade37a6"
-	// pkscript_hex := []byte("a9140663129d4a9b686f829e125d9f850d7617c91bd987")
-	// pkScript = make([]byte, hex.DecodedLen(len(pkscript_hex)))
-	// _, err = hex.Decode(pkScript, pkscript_hex)
 
 	// Wait for confirmations
 	confChannel, err := z.waitForFundingWithTimeout(notifier, escrowTxid, pkScript)
@@ -632,7 +607,7 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 			"confirmation: %v", err)
 	}
 
-	zkchLog.Debugf("\n\n%#v\n", confChannel)
+	zkchLog.Debugf("%#v\n", confChannel)
 
 	// TEMPORARY DUMMY MESSAGE
 	fundingLockedBytes := []byte("Funding Locked")

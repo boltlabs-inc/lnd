@@ -6467,7 +6467,7 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 			fmt.Println("Value => ", utxoValue)
 			fmt.Println("Txid => ", custUtxoTxid_LE)
 			fmt.Println("Utxo Index => ", index)
-			fmt.Printf("Utxo pkScript => %x\n", pkScript)
+			fmt.Printf("Utxo pkScript => %#x\n", pkScript)
 			selectedUtxo = true
 			break
 		}
@@ -6496,6 +6496,15 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 	changeScriptPK := "0014" + changePkHashStr
 	fmt.Printf("changeScriptPK: %v\n", changeScriptPK)
 
+	custStateSk, err := r.server.cc.wallet.NewPrivKey()
+	if err != nil {
+		return nil, err
+	}
+	custPayoutSk, err := r.server.cc.wallet.NewPrivKey()
+	if err != nil {
+		return nil, err
+	}
+
 	// ZkChannelName is defined here so that it can be retrieved when handling
 	// responses from the merchant. Note, this doesn't handle multiple channels
 	// being opened in parallel.
@@ -6503,7 +6512,7 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
-	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, index, custInputSk, changeScriptPK, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
+	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changeScriptPK, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
 		return nil, fmt.Errorf("Could not send payment "+
 			"to peer: %v", err)
 	}
