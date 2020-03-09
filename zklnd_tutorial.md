@@ -358,43 +358,26 @@ Finally, to the exciting part - sending unlinkable payments! Let’s send a paym
 
 ### Closing channels
 
-Let’s try closing a channel. There are two ways to close a channel, from the customer's
+Let’s try closing a channel. There are two ways to close a channel, depending on whether it is being initiated by the customer, Alice, or the merchant, Bob. Note that if you close the channel from Alice's node, you would have to create another channel to try closing it from Bob's node.
 
-    alice$ lncli-alice listchannels
+For Alice to close the channel:
+
+    alice$ lncli-alice closezkchannel --channel_name=<CHANNEL_NAME>
     {
-        "channels": [
-            {
-                "active": true,
-                "remote_pubkey": "0343bc80b914aebf8e50eb0b8e445fc79b9e6e8e5e018fa8c5f85c7d429c117b38",
-           ---->"channel_point": "3511ae8a52c97d957eaf65f828504e68d0991f0276adff94c6ba91c7f6cd4275:0",
-                "chan_id": "1337006139441152",
-                "capacity": "1005000",
-                "local_balance": "990000",
-                "remote_balance": "10000",
-                "unsettled_balance": "0",
-                "total_satoshis_sent": "10000",
-                "total_satoshis_received": "0",
-                "num_updates": "2"
-            }
-        ]
+
     }
 
-The Channel point consists of two numbers separated by a colon, which uniquely identifies the channel. The first number is `funding_txid` and the second number is `output_index`.
+We now need to mine three blocks so that the channel is considered closed:
 
-    # Close the Alice<-->Bob channel from Alice's side.
-    alice$ lncli-alice closechannel --funding_txid=<funding_txid> --output_index=<output_index>
+    btcctl --simnet --rpcuser=kek --rpcpass=kek generate 3
 
-    # Mine a block including the channel close transaction to close the channel:
-    btcctl --simnet --rpcuser=kek --rpcpass=kek generate 1
+Alternatively, for the Bob, the merchant to close the channel:
 
-    # Check that Bob's on-chain balance was credited by his settled amount in the
-    # channel. Recall that Bob previously had no on-chain Bitcoin:
-    bob$ lncli-bob walletbalance
+    bob$ lncli-bob merchclose --escrowtxid=<CHANNEL_NAME>
     {
-        "total_balance": "20001",
-        "confirmed_balance": "20001",
-        "unconfirmed_balance": "0"
+
     }
 
+Again, we would need to mine three blocks so that the channel is considered closed:
 
-### Questions
+    btcctl --simnet --rpcuser=kek --rpcpass=kek generate 3
