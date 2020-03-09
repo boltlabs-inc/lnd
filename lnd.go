@@ -810,12 +810,12 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 
 	// With all the relevant chains initialized, we can finally start the
 	// server itself.
-	if err := server.Start(); err != nil {
+	if err := server.Start(cfg.LNMode); err != nil {
 		err := fmt.Errorf("unable to start server: %v", err)
 		ltndLog.Error(err)
 		return err
 	}
-	defer server.Stop()
+	defer server.Stop(cfg.LNMode)
 
 	// Now that the server has started, if the autopilot mode is currently
 	// active, then we'll start the autopilot agent immediately. It will be

@@ -334,7 +334,7 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 	nodeKeyDesc *keychain.KeyDescriptor,
 	chansToRestore walletunlocker.ChannelsToRecover,
 	chanPredicate chanacceptor.ChannelAcceptor,
-	torController *tor.Controller) (*server, error) {
+	torController *tor.Controller, LNMode bool) (*server, error) {
 
 	var (
 		err           error
@@ -964,33 +964,36 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 		Clock:                         clock.NewDefaultClock(),
 	}, chanDB)
 
-	// s.breachArbiter = newBreachArbiter(&BreachConfig{
-	// 	CloseLink:          closeLink,
-	// 	DB:                 chanDB,
-	// 	Estimator:          s.cc.feeEstimator,
-	// 	GenSweepScript:     newSweepPkScriptGen(cc.wallet),
-	// 	Notifier:           cc.chainNotifier,
-	// 	PublishTransaction: cc.wallet.PublishTransaction,
-	// 	ContractBreaches:   contractBreaches,
-	// 	Signer:             cc.wallet.Cfg.Signer,
-	// 	Store:              newRetributionStore(chanDB),
-	// })
+	if LNMode {
+		s.breachArbiter = newBreachArbiter(&BreachConfig{
+			CloseLink:          closeLink,
+			DB:                 chanDB,
+			Estimator:          s.cc.feeEstimator,
+			GenSweepScript:     newSweepPkScriptGen(cc.wallet),
+			Notifier:           cc.chainNotifier,
+			PublishTransaction: cc.wallet.PublishTransaction,
+			ContractBreaches:   contractBreaches,
+			Signer:             cc.wallet.Cfg.Signer,
+			Store:              newRetributionStore(chanDB),
+		})
 
-	s.breachArbiter = nil
+		s.zkBreachArbiter = nil
+	} else {
+		s.breachArbiter = nil
 
-	srvrLog.Infof("Starting up zkBreachArbiter")
-	s.zkBreachArbiter = newZkBreachArbiter(&ZkBreachConfig{
-		CloseLink:          closeLink,
-		DB:                 chanDB,
-		Estimator:          s.cc.feeEstimator,
-		GenSweepScript:     newSweepPkScriptGen(cc.wallet),
-		Notifier:           cc.chainNotifier,
-		PublishTransaction: cc.wallet.PublishTransaction,
-		ContractBreaches:   contractBreaches,
-		Signer:             cc.wallet.Cfg.Signer,
-		Store:              newZkRetributionStore(chanDB),
-	})
-
+		srvrLog.Infof("Starting up zkBreachArbiter")
+		s.zkBreachArbiter = newZkBreachArbiter(&ZkBreachConfig{
+			CloseLink:          closeLink,
+			DB:                 chanDB,
+			Estimator:          s.cc.feeEstimator,
+			GenSweepScript:     newSweepPkScriptGen(cc.wallet),
+			Notifier:           cc.chainNotifier,
+			PublishTransaction: cc.wallet.PublishTransaction,
+			ContractBreaches:   contractBreaches,
+			Signer:             cc.wallet.Cfg.Signer,
+			Store:              newZkRetributionStore(chanDB),
+		})
+	}
 	// Select the configuration and furnding parameters for Bitcoin or
 	// Litecoin, depending on the primary registered chain.
 	primaryChain := cfg.registeredChains.PrimaryChain()
@@ -1276,7 +1279,7 @@ func (s *server) Started() bool {
 // Start starts the main daemon server, all requested listeners, and any helper
 // goroutines.
 // NOTE: This function is safe for concurrent access.
-func (s *server) Start() error {
+func (s *server) Start(LNMode bool) error {
 	var startErr error
 	s.start.Do(func() {
 		if s.torController != nil {
@@ -1350,13 +1353,16 @@ func (s *server) Start() error {
 			startErr = err
 			return
 		}
-		// if err := s.breachArbiter.Start(); err != nil {
-		// 	startErr = err
-		// 	return
-		// }
-		if err := s.zkBreachArbiter.Start(); err != nil {
-			startErr = err
-			return
+		if LNMode {
+			if err := s.breachArbiter.Start(); err != nil {
+				startErr = err
+				return
+			}
+		} else {
+			if err := s.zkBreachArbiter.Start(); err != nil {
+				startErr = err
+				return
+			}
 		}
 		if err := s.authGossiper.Start(); err != nil {
 			startErr = err
@@ -1470,7 +1476,7 @@ func (s *server) Start() error {
 // any active goroutines, or helper objects to exit, then blocks until they've
 // all successfully exited. Additionally, any/all listeners are closed.
 // NOTE: This function is safe for concurrent access.
-func (s *server) Stop() error {
+func (s *server) Stop(LNMode bool) error {
 	s.stop.Do(func() {
 		atomic.StoreInt32(&s.stopping, 1)
 
@@ -1483,8 +1489,11 @@ func (s *server) Stop() error {
 		s.htlcSwitch.Stop()
 		s.sphinx.Stop()
 		s.utxoNursery.Stop()
-		// s.breachArbiter.Stop()
-		s.zkBreachArbiter.Stop()
+		if LNMode {
+			s.breachArbiter.Stop()
+		} else {
+			s.zkBreachArbiter.Stop()
+		}
 		s.authGossiper.Stop()
 		s.chainArb.Stop()
 		s.sweeper.Stop()
