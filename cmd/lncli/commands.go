@@ -3275,12 +3275,12 @@ func openZkChannel(ctx *cli.Context) error {
 	var custBalance int64
 	custBalance = ctx.Int64("cust_balance")
 
-	if !ctx.IsSet("merch_balance") {
-		return fmt.Errorf("must specify amount of satoshis to send to the merchant")
-	}
 	var merchBalance int64
-	merchBalance = ctx.Int64("merch_balance")
-
+	if !ctx.IsSet("merch_balance") {
+		merchBalance = 0
+	} else {
+		merchBalance = ctx.Int64("merch_balance")
+	}
 	req := &lnrpc.OpenZkChannelRequest{
 		PubKey:        pubKey,
 		MerchPubKey:   merchPubKey,
