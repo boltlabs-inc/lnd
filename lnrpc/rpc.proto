@@ -3643,8 +3643,12 @@ message MerchCloseResponse {
 message ZkChannelInfo {
     /// The channel name
     string zk_channel_name = 1 [json_name = "channel_name"];
-    /// Number of satoshis in the balance
-    int64 local_balance = 2 [json_name = "local_balance"];
+    /// The channel escrow txid
+    string escrow_txid = 2 [json_name = "escrow_txid"];
+    /// Number of satoshis in the local balance
+    int64 local_balance = 3 [json_name = "local_balance"];
+    /// Number of satoshis in the remote balance
+    int64 remote_balance = 4 [json_name = "remote_balance"];
 }
 
 message ZkChannelBalanceRequest {

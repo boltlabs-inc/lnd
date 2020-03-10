@@ -3628,9 +3628,9 @@ func (s *server) MerchClose(EscrowTxid string) error {
 
 // ZkChannelBalance sends the request to server to close the connection with peer
 // identified by public key.
-func (s *server) ZkChannelBalance(zkChannelName string) int64 {
-	zkbalance, _ := ZkChannelBalance(zkChannelName)
-	return zkbalance
+func (s *server) ZkChannelBalance(zkChannelName string) (string, int64, int64) {
+	escrowTxid, custBalance, merchBalance, _ := ZkChannelBalance(zkChannelName)
+	return escrowTxid, custBalance, merchBalance
 }
 
 // TotalReceived sends the request to server to close the connection with peer

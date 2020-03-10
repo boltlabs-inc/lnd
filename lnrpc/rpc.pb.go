@@ -11680,8 +11680,12 @@ var xxx_messageInfo_MerchCloseResponse proto.InternalMessageInfo
 type ZkChannelInfo struct {
 	/// The channel name
 	ZkChannelName string `protobuf:"bytes,1,opt,name=zk_channel_name,json=channel_name,proto3" json:"zk_channel_name,omitempty"`
-	/// Number of satoshis in the balance
-	LocalBalance         int64    `protobuf:"varint,2,opt,name=local_balance,proto3" json:"local_balance,omitempty"`
+	/// The channel escrow txid
+	EscrowTxid string `protobuf:"bytes,2,opt,name=escrow_txid,proto3" json:"escrow_txid,omitempty"`
+	/// Number of satoshis in the local balance
+	LocalBalance int64 `protobuf:"varint,3,opt,name=local_balance,proto3" json:"local_balance,omitempty"`
+	/// Number of satoshis in the remote balance
+	RemoteBalance        int64    `protobuf:"varint,4,opt,name=remote_balance,proto3" json:"remote_balance,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -11719,9 +11723,23 @@ func (m *ZkChannelInfo) GetZkChannelName() string {
 	return ""
 }
 
+func (m *ZkChannelInfo) GetEscrowTxid() string {
+	if m != nil {
+		return m.EscrowTxid
+	}
+	return ""
+}
+
 func (m *ZkChannelInfo) GetLocalBalance() int64 {
 	if m != nil {
 		return m.LocalBalance
+	}
+	return 0
+}
+
+func (m *ZkChannelInfo) GetRemoteBalance() int64 {
+	if m != nil {
+		return m.RemoteBalance
 	}
 	return 0
 }

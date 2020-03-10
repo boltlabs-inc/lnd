@@ -1503,9 +1503,7 @@ func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier
 }
 
 // ZkChannelBalance returns the balance on the customer's zkchannel
-func ZkChannelBalance(zkChannelName string) (int64, error) {
-
-	var zkbalance int64
+func ZkChannelBalance(zkChannelName string) (string, int64, int64, error) {
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
@@ -1520,11 +1518,16 @@ func ZkChannelBalance(zkChannelName string) (int64, error) {
 		log.Fatal(err)
 	}
 
-	zkbalance = custState.CustBalance
+	localBalance := custState.CustBalance
+	remoteBalance := custState.MerchBalance
+
+	var escrowTxid string
+	escrowTxidBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "escrowTxidKey")
+	err = json.Unmarshal(escrowTxidBytes, &escrowTxid)
 
 	zkCustDB.Close()
 
-	return zkbalance, nil
+	return escrowTxid, localBalance, remoteBalance, nil
 }
 
 // TotalReceived returns the balance on the customer's zkchannel
