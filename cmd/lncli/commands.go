@@ -3267,7 +3267,7 @@ func openZkChannel(ctx *cli.Context) error {
 		return fmt.Errorf("there is already a payment channel with that name")
 	}
 
-	fmt.Println("\n\nConnecting to merchant with bitcoin PubKey:", merchPubKey)
+	fmt.Println("\nConnecting to merchant with bitcoin PubKey:", merchPubKey)
 
 	if !ctx.IsSet("cust_balance") {
 		return fmt.Errorf("must specify amount of satoshis for customer balance")

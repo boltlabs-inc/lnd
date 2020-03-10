@@ -334,6 +334,7 @@ Check that Alice<–>Bob zkchannel was created:
         "zk_channel": [
             {
                 "channel_name": <CHANNEL_NAME>,
+                "escrow_txid": <ESCROW_TCIX>
                 "local_balance": "50000",
                 "remote_balance": "0"
             }
