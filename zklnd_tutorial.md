@@ -29,7 +29,7 @@ The schema will be the following.
 
 #### zkLND
 
-`zklnd` is the main component that we will interact with. `zklnd` is an extension of `lnd` (Lightning Network Daemon) that uses zero-knowledge proofs to allow a customer to make unlinkable payments. `zklnd` handles channel opening/closing, sending payments, and managing all the state that is separate from the underlying Bitcoin network itself.
+`zklnd` is the main component that we will interact with. `zklnd` is an extension of `lnd` (Lightning Network Daemon) that explores use of secure multi-party computation and zero-knowledge proof techniques to allow a customer to make unlinkable payments. `zklnd` handles channel opening/closing, sending payments, and managing all the state that is separate from the underlying Bitcoin network itself.
 
 Running a `zklnd` node means that it is listening for payments, watching the blockchain, etc. By default it is awaiting user input.
 
