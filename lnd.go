@@ -227,10 +227,12 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 					merchName = "Merchant"
 				}
 
+				dbUrl := "redis://127.0.0.1/"
+
 				channelState, err := libzkchannels.ChannelSetup("channel", false)
 				zkchLog.Debugf("libzkchannels.ChannelSetup done")
 
-				channelState, merchState, err := libzkchannels.InitMerchant(channelState, "merch")
+				channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")
 				zkchLog.Debugf("libzkchannels.InitMerchant done")
 
 				// zkDB add merchState & channelState
