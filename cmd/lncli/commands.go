@@ -3234,9 +3234,9 @@ func openZkChannel(ctx *cli.Context) error {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
-	isCustomer := lnd.DetermineIfCust()
+	isMerch := lnd.DetermineIfMerch()
 
-	if !isCustomer {
+	if isMerch {
 		return fmt.Errorf("You are a operating as a merchant, only customers can make payments")
 	}
 
@@ -3329,9 +3329,9 @@ var zkPayCommand = cli.Command{
 
 func zkPay(ctx *cli.Context) error {
 
-	isCustomer := lnd.DetermineIfCust()
+	isMerch := lnd.DetermineIfMerch()
 
-	if !isCustomer {
+	if isMerch {
 		return fmt.Errorf("You are a operating as a merchant, only customers can make payments")
 	}
 
