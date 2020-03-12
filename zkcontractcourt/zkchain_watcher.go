@@ -196,9 +196,9 @@ type ChainEventSubscription struct {
 	Cancel func()
 }
 
-// ckChainWatcherConfig encapsulates all the necessary functions and interfaces
+// zkChainWatcherConfig encapsulates all the necessary functions and interfaces
 // needed to watch and act on on-chain events for a particular channel.
-type ckChainWatcherConfig struct {
+type zkChainWatcherConfig struct {
 	// chanState is a snapshot of the persistent state of the channel that
 	// we're watching. In the event of an on-chain event, we'll query the
 	// database to ensure that we act using the most up to date state.
@@ -229,19 +229,19 @@ type ckChainWatcherConfig struct {
 	extractStateNumHint func(*wire.MsgTx, [lnwallet.StateHintSize]byte) uint64
 }
 
-// ckChainWatcher is a system that's assigned to every active channel. The duty
+// zkChainWatcher is a system that's assigned to every active channel. The duty
 // of this system is to watch the chain for spends of the channels chan point.
 // If a spend is detected then with chain watcher will notify all subscribers
 // that the channel has been closed, and also give them the materials necessary
 // to sweep the funds of the channel on chain eventually.
-type ckChainWatcher struct {
+type zkChainWatcher struct {
 	started int32 // To be used atomically.
 	stopped int32 // To be used atomically.
 
 	quit chan struct{}
 	wg   sync.WaitGroup
 
-	cfg ckChainWatcherConfig
+	cfg zkChainWatcherConfig
 
 	// stateHintObfuscator is a 48-bit state hint that's used to obfuscate
 	// the current state number on the commitment transactions.
@@ -259,10 +259,10 @@ type ckChainWatcher struct {
 	clientSubscriptions map[uint64]*ChainEventSubscription
 }
 
-// newZkChainWatcher returns a new instance of a ckChainWatcher for a channel given
+// newZkChainWatcher returns a new instance of a zkChainWatcher for a channel given
 // the chan point to watch, and also a notifier instance that will allow us to
 // detect on chain events.
-func newZkChainWatcher(cfg ckChainWatcherConfig) (*ckChainWatcher, error) {
+func newZkChainWatcher(cfg zkChainWatcherConfig) (*zkChainWatcher, error) {
 
 	// ZKTODO: Here we should check if the RL on cust-close corresponds to a revoked
 	// state?
@@ -286,7 +286,7 @@ func newZkChainWatcher(cfg ckChainWatcherConfig) (*ckChainWatcher, error) {
 		)
 	}
 
-	return &ckChainWatcher{
+	return &zkChainWatcher{
 		cfg:                 cfg,
 		stateHintObfuscator: stateHint,
 		quit:                make(chan struct{}),
@@ -294,9 +294,9 @@ func newZkChainWatcher(cfg ckChainWatcherConfig) (*ckChainWatcher, error) {
 	}, nil
 }
 
-// Start starts all goroutines that the ckChainWatcher needs to perform its
+// Start starts all goroutines that the zkChainWatcher needs to perform its
 // duties.
-func (c *ckChainWatcher) Start() error {
+func (c *zkChainWatcher) Start() error {
 	if !atomic.CompareAndSwapInt32(&c.started, 0, 1) {
 		return nil
 	}
@@ -346,7 +346,7 @@ func (c *ckChainWatcher) Start() error {
 }
 
 // Stop signals the close observer to gracefully exit.
-func (c *ckChainWatcher) Stop() error {
+func (c *zkChainWatcher) Stop() error {
 	if !atomic.CompareAndSwapInt32(&c.stopped, 0, 1) {
 		return nil
 	}
@@ -362,7 +362,7 @@ func (c *ckChainWatcher) Stop() error {
 // events for the channel watched by this chain watcher. Once clients no longer
 // require the subscription, they should call the Cancel() method to allow the
 // watcher to regain those committed resources.
-func (c *ckChainWatcher) SubscribeChannelEvents() *ChainEventSubscription {
+func (c *zkChainWatcher) SubscribeChannelEvents() *ChainEventSubscription {
 
 	c.Lock()
 	clientID := c.clientID
@@ -467,7 +467,7 @@ func isOurCommitment(localChanCfg, remoteChanCfg channeldb.ChannelConfig,
 // close observer will assembled the proper materials required to claim the
 // funds of the channel on-chain (if required), then dispatch these as
 // notifications to all subscribers.
-func (c *ckChainWatcher) closeObserver(spendNtfn *chainntnfs.SpendEvent) {
+func (c *zkChainWatcher) closeObserver(spendNtfn *chainntnfs.SpendEvent) {
 	defer c.wg.Done()
 
 	log.Infof("Close observer for ChannelPoint(%v) active",
@@ -717,7 +717,7 @@ func (c *ckChainWatcher) closeObserver(spendNtfn *chainntnfs.SpendEvent) {
 		// we'll exit immediately.
 		return
 
-	// The ckChainWatcher has been signalled to exit, so we'll do so now.
+	// The zkChainWatcher has been signalled to exit, so we'll do so now.
 	case <-c.quit:
 		return
 	}
@@ -727,7 +727,7 @@ func (c *ckChainWatcher) closeObserver(spendNtfn *chainntnfs.SpendEvent) {
 // to a script that the wallet controls. If no outputs pay to us, then we
 // return zero. This is possible as our output may have been trimmed due to
 // being dust.
-func (c *ckChainWatcher) toSelfAmount(tx *wire.MsgTx) btcutil.Amount {
+func (c *zkChainWatcher) toSelfAmount(tx *wire.MsgTx) btcutil.Amount {
 	var selfAmt btcutil.Amount
 	for _, txOut := range tx.TxOut {
 		_, addrs, _, err := txscript.ExtractPkScriptAddrs(
@@ -753,7 +753,7 @@ func (c *ckChainWatcher) toSelfAmount(tx *wire.MsgTx) btcutil.Amount {
 // transaction, then clean up the database state. We'll also dispatch a
 // notification to all subscribers that the channel has been closed in this
 // manner.
-func (c *ckChainWatcher) dispatchCooperativeClose(commitSpend *chainntnfs.SpendDetail) error {
+func (c *zkChainWatcher) dispatchCooperativeClose(commitSpend *chainntnfs.SpendDetail) error {
 	broadcastTx := commitSpend.SpendingTx
 
 	log.Infof("Cooperative closure for ChannelPoint(%v): %v",
@@ -814,7 +814,7 @@ func (c *ckChainWatcher) dispatchCooperativeClose(commitSpend *chainntnfs.SpendD
 }
 
 // dispatchLocalForceClose processes a unilateral close by us being confirmed.
-func (c *ckChainWatcher) dispatchLocalForceClose(
+func (c *zkChainWatcher) dispatchLocalForceClose(
 	commitSpend *chainntnfs.SpendDetail,
 	localCommit channeldb.ChannelCommitment, commitSet CommitSet) error {
 
@@ -903,7 +903,7 @@ func (c *ckChainWatcher) dispatchLocalForceClose(
 // happen in case we have lost state) it should be set to an empty struct, in
 // which case we will attempt to sweep the non-HTLC output using the passed
 // commitPoint.
-func (c *ckChainWatcher) dispatchRemoteForceClose(
+func (c *zkChainWatcher) dispatchRemoteForceClose(
 	commitSpend *chainntnfs.SpendDetail,
 	remoteCommit channeldb.ChannelCommitment,
 	commitSet CommitSet, commitPoint *btcec.PublicKey) error {
@@ -946,7 +946,7 @@ func (c *ckChainWatcher) dispatchRemoteForceClose(
 // broadcast a prior revoked commitment state. This method well prepare all the
 // materials required to bring the cheater to justice, then notify all
 // registered subscribers of this event.
-func (c *ckChainWatcher) dispatchContractBreach(spendEvent *chainntnfs.SpendDetail,
+func (c *zkChainWatcher) dispatchContractBreach(spendEvent *chainntnfs.SpendDetail,
 	remoteCommit *channeldb.ChannelCommitment,
 	broadcastStateNum uint64) error {
 
@@ -1065,7 +1065,7 @@ func (c *ckChainWatcher) dispatchContractBreach(spendEvent *chainntnfs.SpendDeta
 // waitForCommitmentPoint waits for the commitment point to be inserted into
 // the local database. We'll use this method in the DLP case, to wait for the
 // remote party to send us their point, as we can't proceed until we have that.
-func (c *ckChainWatcher) waitForCommitmentPoint() *btcec.PublicKey {
+func (c *zkChainWatcher) waitForCommitmentPoint() *btcec.PublicKey {
 	// If we are lucky, the remote peer sent us the correct commitment
 	// point during channel sync, such that we can sweep our funds. If we
 	// cannot find the commit point, there's not much we can do other than

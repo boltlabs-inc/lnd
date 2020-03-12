@@ -3,6 +3,7 @@ git pull
 . ./env
 # make update
 # make deps
+# export RUST_BACKTRACE=full
 make mpcgotest
 cargo build --release --manifest-path ./Cargo.toml --features mpc-bitcoin
 export CGO_LDFLAGS="-L$(pwd)/target/release"
