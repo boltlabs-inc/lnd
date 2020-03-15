@@ -6513,8 +6513,8 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
 	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changeScriptPK, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
-		return nil, fmt.Errorf("Could not send payment "+
-			"to peer: %v", err)
+		return nil, fmt.Errorf("Could not open channel "+
+			"with peer: %v", err)
 	}
 
 	return &lnrpc.OpenZkChannelResponse{}, nil

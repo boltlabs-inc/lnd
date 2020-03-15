@@ -1497,8 +1497,8 @@ func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier
 			"confirmation: %v", err)
 	}
 
-	zkchLog.Debugf("\n\n%#v\n", confChannel)
-	zkchLog.Infof("\n\nMerch close transaction has 3 confirmations\n\n")
+	zkchLog.Debugf("\n%#v\n", confChannel)
+	zkchLog.Infof("\nMerch close transaction has 3 confirmations\n")
 
 }
 
