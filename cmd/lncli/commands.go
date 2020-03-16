@@ -3562,6 +3562,8 @@ func zkInfo(ctx *cli.Context) error {
 	}
 
 	ctxb := context.Background()
+
+	// TODO: use custom zk getClient command
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
