@@ -25,14 +25,14 @@ In the example diagram below, the initial balances of the channel are the Custom
 Note that in this initial version 1 of zkChannels we are not considering transaction fees. However, the overall flow of transactions and scripts outlined here would remain the same.
 
 ###### Figure 1: Initial Cust-Close and Merch-Close Transactions
-![image1](figures/Escrow.png)
+<img src="figures/Escrow.png" width=600 align=center>
 
 ### Close Transactions
 
 When the Customer and Merchant have received their respective close transactions, the escrow transaction is broadcasted. First, we will cover the case where the customer initiates channel closure directly from the escrow transaction, labelled C1a. Green shading represents transcations which have been broadcast to the blockchain.
 
 ###### Figure 2: Cust-Close Tx (C1a) from Escrow
-![image2](figures/CustCloseEscrow.png)
+<img src="figures/CustCloseEscrow.png" width=600 align=center>
 
 Cust-Close Tx has three outputs. The first output holds the Customer's balance and is locked with the following script:
 
@@ -66,7 +66,7 @@ The third output contains data in an `OP_RETURN` script.
 Now, we will cover what happens when the Merchant initiates channel closure.
 
  ###### Figure 3: Cust-Close Tx (C1b) from Merch-Close Tx
- ![image2](figures/CustCloseMerch.png)
+<img src="figures/CustCloseMerch.png" width=600 align=center>
 
 Conceptually, what the Merch-Close Tx allows the Merchant to do is to force the Customer to broadcast their latest close transaction.
 
@@ -94,7 +94,7 @@ If no action is taken, the Merchant will be able to spend from this transaction 
 A payment on a zkChannel involves two steps, the Customer obtaining the Merchant's signatures on new Cust-Close Txs (C2a and C2b) reflecting the new balance, and the Customer revoking the previous Cust-Close Txs (C1a and C1b). Obtaining the new Merchant's signatures happens during the multiparty computation (MPC) pay protocol. This guarantees to the Merchant that the payment is valid, without revealing any identifying information linking the payment to the zkChannel.
 
 ###### Figure 4: Payments - Revoking old close transactions
-![image2](figures/Payment.png)
+<img src="figures/Payment.png" width=600 align=center>
 
 In this example, the Customer made a payment of 0.5 btc to the Merchant. The Merchant will have the `revocation secret` for the previous Cust-Close Txs (the same secret is used for both), allowing them to claim the full balance, should the Customer broadcast a revoked close transaction.
 
