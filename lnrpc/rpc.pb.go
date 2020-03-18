@@ -6,10 +6,11 @@ package lnrpc
 import (
 	context "context"
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -11229,7 +11230,7 @@ func (m *Failure) GetChannelUpdate() *ChannelUpdate {
 	if m != nil {
 		return m.ChannelUpdate
 	}
-	return ""
+	return nil
 }
 
 func (m *Failure) GetHtlcMsat() uint64 {
@@ -11446,6 +11447,113 @@ func (m *ChannelUpdate) GetExtraOpaqueData() []byte {
 	return nil
 }
 
+type OpenZkChannelRequest struct {
+	/// The pubkey of the node to pay
+	PubKey string `protobuf:"bytes,1,opt,name=pub_key,proto3" json:"pub_key,omitempty"`
+	/// The merchant's bitcoin pubkey
+	MerchPubKey string `protobuf:"bytes,2,opt,name=merch_pub_key,json=merch_pubkey,proto3" json:"merch_pub_key,omitempty"`
+	/// A unique name for the zkchannel
+	ZkChannelName string `protobuf:"bytes,3,opt,name=zk_channel_name,json=zkchannel_name,proto3" json:"zk_channel_name,omitempty"`
+	/// Customer balance
+	CustBalance int64 `protobuf:"varint,4,opt,name=cust_balance,proto3" json:"cust_balance,omitempty"`
+	/// Merchant balance
+	MerchBalance         int64    `protobuf:"varint,5,opt,name=merch_balance,proto3" json:"merch_balance,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *OpenZkChannelRequest) Reset()         { *m = OpenZkChannelRequest{} }
+func (m *OpenZkChannelRequest) String() string { return proto.CompactTextString(m) }
+func (*OpenZkChannelRequest) ProtoMessage()    {}
+func (*OpenZkChannelRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{148}
+}
+
+func (m *OpenZkChannelRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_OpenZkChannelRequest.Unmarshal(m, b)
+}
+func (m *OpenZkChannelRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_OpenZkChannelRequest.Marshal(b, m, deterministic)
+}
+func (m *OpenZkChannelRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OpenZkChannelRequest.Merge(m, src)
+}
+func (m *OpenZkChannelRequest) XXX_Size() int {
+	return xxx_messageInfo_OpenZkChannelRequest.Size(m)
+}
+func (m *OpenZkChannelRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_OpenZkChannelRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_OpenZkChannelRequest proto.InternalMessageInfo
+
+func (m *OpenZkChannelRequest) GetPubKey() string {
+	if m != nil {
+		return m.PubKey
+	}
+	return ""
+}
+
+func (m *OpenZkChannelRequest) GetMerchPubKey() string {
+	if m != nil {
+		return m.MerchPubKey
+	}
+	return ""
+}
+
+func (m *OpenZkChannelRequest) GetZkChannelName() string {
+	if m != nil {
+		return m.ZkChannelName
+	}
+	return ""
+}
+
+func (m *OpenZkChannelRequest) GetCustBalance() int64 {
+	if m != nil {
+		return m.CustBalance
+	}
+	return 0
+}
+
+func (m *OpenZkChannelRequest) GetMerchBalance() int64 {
+	if m != nil {
+		return m.MerchBalance
+	}
+	return 0
+}
+
+type OpenZkChannelResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *OpenZkChannelResponse) Reset()         { *m = OpenZkChannelResponse{} }
+func (m *OpenZkChannelResponse) String() string { return proto.CompactTextString(m) }
+func (*OpenZkChannelResponse) ProtoMessage()    {}
+func (*OpenZkChannelResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{149}
+}
+
+func (m *OpenZkChannelResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_OpenZkChannelResponse.Unmarshal(m, b)
+}
+func (m *OpenZkChannelResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_OpenZkChannelResponse.Marshal(b, m, deterministic)
+}
+func (m *OpenZkChannelResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OpenZkChannelResponse.Merge(m, src)
+}
+func (m *OpenZkChannelResponse) XXX_Size() int {
+	return xxx_messageInfo_OpenZkChannelResponse.Size(m)
+}
+func (m *OpenZkChannelResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_OpenZkChannelResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_OpenZkChannelResponse proto.InternalMessageInfo
+
 type ZkPayRequest struct {
 	/// The pubkey of the node to pay
 	PubKey string `protobuf:"bytes,1,opt,name=pub_key,proto3" json:"pub_key,omitempty"`
@@ -11462,7 +11570,7 @@ func (m *ZkPayRequest) Reset()         { *m = ZkPayRequest{} }
 func (m *ZkPayRequest) String() string { return proto.CompactTextString(m) }
 func (*ZkPayRequest) ProtoMessage()    {}
 func (*ZkPayRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{148}
+	return fileDescriptor_77a6da22d6a3feb1, []int{150}
 }
 
 func (m *ZkPayRequest) XXX_Unmarshal(b []byte) error {
@@ -11514,7 +11622,7 @@ func (m *ZkPayResponse) Reset()         { *m = ZkPayResponse{} }
 func (m *ZkPayResponse) String() string { return proto.CompactTextString(m) }
 func (*ZkPayResponse) ProtoMessage()    {}
 func (*ZkPayResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{149}
+	return fileDescriptor_77a6da22d6a3feb1, []int{151}
 }
 
 func (m *ZkPayResponse) XXX_Unmarshal(b []byte) error {
@@ -11547,7 +11655,7 @@ func (m *CloseZkChannelRequest) Reset()         { *m = CloseZkChannelRequest{} }
 func (m *CloseZkChannelRequest) String() string { return proto.CompactTextString(m) }
 func (*CloseZkChannelRequest) ProtoMessage()    {}
 func (*CloseZkChannelRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{150}
+	return fileDescriptor_77a6da22d6a3feb1, []int{152}
 }
 
 func (m *CloseZkChannelRequest) XXX_Unmarshal(b []byte) error {
@@ -11585,7 +11693,7 @@ func (m *CloseZkChannelResponse) Reset()         { *m = CloseZkChannelResponse{}
 func (m *CloseZkChannelResponse) String() string { return proto.CompactTextString(m) }
 func (*CloseZkChannelResponse) ProtoMessage()    {}
 func (*CloseZkChannelResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{151}
+	return fileDescriptor_77a6da22d6a3feb1, []int{153}
 }
 
 func (m *CloseZkChannelResponse) XXX_Unmarshal(b []byte) error {
@@ -11618,7 +11726,7 @@ func (m *MerchCloseRequest) Reset()         { *m = MerchCloseRequest{} }
 func (m *MerchCloseRequest) String() string { return proto.CompactTextString(m) }
 func (*MerchCloseRequest) ProtoMessage()    {}
 func (*MerchCloseRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{152}
+	return fileDescriptor_77a6da22d6a3feb1, []int{154}
 }
 
 func (m *MerchCloseRequest) XXX_Unmarshal(b []byte) error {
@@ -11656,7 +11764,7 @@ func (m *MerchCloseResponse) Reset()         { *m = MerchCloseResponse{} }
 func (m *MerchCloseResponse) String() string { return proto.CompactTextString(m) }
 func (*MerchCloseResponse) ProtoMessage()    {}
 func (*MerchCloseResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{153}
+	return fileDescriptor_77a6da22d6a3feb1, []int{155}
 }
 
 func (m *MerchCloseResponse) XXX_Unmarshal(b []byte) error {
@@ -11695,7 +11803,7 @@ func (m *ZkChannelInfo) Reset()         { *m = ZkChannelInfo{} }
 func (m *ZkChannelInfo) String() string { return proto.CompactTextString(m) }
 func (*ZkChannelInfo) ProtoMessage()    {}
 func (*ZkChannelInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{154}
+	return fileDescriptor_77a6da22d6a3feb1, []int{156}
 }
 
 func (m *ZkChannelInfo) XXX_Unmarshal(b []byte) error {
@@ -11754,7 +11862,7 @@ func (m *ZkChannelBalanceRequest) Reset()         { *m = ZkChannelBalanceRequest
 func (m *ZkChannelBalanceRequest) String() string { return proto.CompactTextString(m) }
 func (*ZkChannelBalanceRequest) ProtoMessage()    {}
 func (*ZkChannelBalanceRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{155}
+	return fileDescriptor_77a6da22d6a3feb1, []int{157}
 }
 
 func (m *ZkChannelBalanceRequest) XXX_Unmarshal(b []byte) error {
@@ -11787,7 +11895,7 @@ func (m *ZkChannelBalanceResponse) Reset()         { *m = ZkChannelBalanceRespon
 func (m *ZkChannelBalanceResponse) String() string { return proto.CompactTextString(m) }
 func (*ZkChannelBalanceResponse) ProtoMessage()    {}
 func (*ZkChannelBalanceResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{156}
+	return fileDescriptor_77a6da22d6a3feb1, []int{158}
 }
 
 func (m *ZkChannelBalanceResponse) XXX_Unmarshal(b []byte) error {
@@ -11825,7 +11933,7 @@ func (m *TotalReceivedRequest) Reset()         { *m = TotalReceivedRequest{} }
 func (m *TotalReceivedRequest) String() string { return proto.CompactTextString(m) }
 func (*TotalReceivedRequest) ProtoMessage()    {}
 func (*TotalReceivedRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{157}
+	return fileDescriptor_77a6da22d6a3feb1, []int{159}
 }
 
 func (m *TotalReceivedRequest) XXX_Unmarshal(b []byte) error {
@@ -11858,7 +11966,7 @@ func (m *TotalReceivedResponse) Reset()         { *m = TotalReceivedResponse{} }
 func (m *TotalReceivedResponse) String() string { return proto.CompactTextString(m) }
 func (*TotalReceivedResponse) ProtoMessage()    {}
 func (*TotalReceivedResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{158}
+	return fileDescriptor_77a6da22d6a3feb1, []int{160}
 }
 
 func (m *TotalReceivedResponse) XXX_Unmarshal(b []byte) error {
@@ -11896,7 +12004,7 @@ func (m *ZkInfoRequest) Reset()         { *m = ZkInfoRequest{} }
 func (m *ZkInfoRequest) String() string { return proto.CompactTextString(m) }
 func (*ZkInfoRequest) ProtoMessage()    {}
 func (*ZkInfoRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{159}
+	return fileDescriptor_77a6da22d6a3feb1, []int{161}
 }
 
 func (m *ZkInfoRequest) XXX_Unmarshal(b []byte) error {
@@ -11929,7 +12037,7 @@ func (m *ZkInfoResponse) Reset()         { *m = ZkInfoResponse{} }
 func (m *ZkInfoResponse) String() string { return proto.CompactTextString(m) }
 func (*ZkInfoResponse) ProtoMessage()    {}
 func (*ZkInfoResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{160}
+	return fileDescriptor_77a6da22d6a3feb1, []int{162}
 }
 
 func (m *ZkInfoResponse) XXX_Unmarshal(b []byte) error {
@@ -12140,6 +12248,21 @@ func init() {
 	proto.RegisterType((*BakeMacaroonResponse)(nil), "lnrpc.BakeMacaroonResponse")
 	proto.RegisterType((*Failure)(nil), "lnrpc.Failure")
 	proto.RegisterType((*ChannelUpdate)(nil), "lnrpc.ChannelUpdate")
+	proto.RegisterType((*OpenZkChannelRequest)(nil), "lnrpc.OpenZkChannelRequest")
+	proto.RegisterType((*OpenZkChannelResponse)(nil), "lnrpc.OpenZkChannelResponse")
+	proto.RegisterType((*ZkPayRequest)(nil), "lnrpc.ZkPayRequest")
+	proto.RegisterType((*ZkPayResponse)(nil), "lnrpc.ZkPayResponse")
+	proto.RegisterType((*CloseZkChannelRequest)(nil), "lnrpc.CloseZkChannelRequest")
+	proto.RegisterType((*CloseZkChannelResponse)(nil), "lnrpc.CloseZkChannelResponse")
+	proto.RegisterType((*MerchCloseRequest)(nil), "lnrpc.MerchCloseRequest")
+	proto.RegisterType((*MerchCloseResponse)(nil), "lnrpc.MerchCloseResponse")
+	proto.RegisterType((*ZkChannelInfo)(nil), "lnrpc.ZkChannelInfo")
+	proto.RegisterType((*ZkChannelBalanceRequest)(nil), "lnrpc.ZkChannelBalanceRequest")
+	proto.RegisterType((*ZkChannelBalanceResponse)(nil), "lnrpc.ZkChannelBalanceResponse")
+	proto.RegisterType((*TotalReceivedRequest)(nil), "lnrpc.TotalReceivedRequest")
+	proto.RegisterType((*TotalReceivedResponse)(nil), "lnrpc.TotalReceivedResponse")
+	proto.RegisterType((*ZkInfoRequest)(nil), "lnrpc.ZkInfoRequest")
+	proto.RegisterType((*ZkInfoResponse)(nil), "lnrpc.ZkInfoResponse")
 }
 
 func init() { proto.RegisterFile("rpc.proto", fileDescriptor_77a6da22d6a3feb1) }
