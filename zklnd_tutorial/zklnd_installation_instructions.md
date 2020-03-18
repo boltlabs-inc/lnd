@@ -78,50 +78,49 @@ In order to work with [`zkLND`](https://github.com/boltlabs-inc/lnd), the follow
 
 With the preliminary steps completed, to install `lnd`, `lncli`, and all related dependencies run the following commands:
 
- go get -d github.com/boltlabs-inc/lnd
- cd $GOPATH/src/github.com/boltlabs-inc/lnd
- make && make install
+    go get -d github.com/boltlabs-inc/lnd
+    cd $GOPATH/src/github.com/boltlabs-inc/lnd
+    make && make install
 
 
 **NOTE**: Our instructions still use the `$GOPATH` directory from prior versions of Go, but with Go 1.12, it’s now possible for `lnd` to live _anywhere_ on your file system.
 
 For Windows WSL users, make will need to be referenced directly via /usr/bin/make/, or alternatively by wrapping quotation marks around make, like so:
 
- /usr/bin/make && /usr/bin/make install
-
- "make" && "make" install
+   /usr/bin/make && /usr/bin/make install
+   "make" && "make" install
 
 
 On FreeBSD, use gmake instead of make.
 
 Alternatively, if one doesn’t wish to use `make`, then the `go` commands can be used directly:
 
- GO111MODULE=on go install -v ./...
+    GO111MODULE=on go install -v ./...
 
 
 ### Updating
 
 To update your version of `lnd` to the latest version run the following commands:
 
- cd $GOPATH/src/github.com/boltlabs-inc/lnd
- git pull
- make clean && make && make install
+   cd $GOPATH/src/github.com/boltlabs-inc/lnd
+   git pull
+   make clean && make && make install
 
 
 On FreeBSD, use gmake instead of make.
 
 Alternatively, if one doesn’t wish to use `make`, then the `go` commands can be used directly:
 
- cd $GOPATH/src/github.com/boltlabs-inc/lnd
- git pull
- GO111MODULE=on go install -v ./...
+    cd $GOPATH/src/github.com/boltlabs-inc/lnd
+    git pull
+    GO111MODULE=on go install -v ./...
 
 
 ### Tests
 
 To check that `lnd` was installed properly run the following command:
 
- make check
+    make check
 
 
 This command requires `bitcoind` (almost any version should do) to be available in the system’s `$PATH` variable. Otherwise some of the tests will fail.
@@ -159,15 +158,15 @@ Note that the above rust dependencies will be compiled and installed as a result
 
 Please keep in mind we are currently working with nightly Rust for now which gives access to the nightly compiler and experimental features.
 
-	rustup install nightly
+    rustup install nightly
 
 To run a quick test of the nightly toolchain, run the following command:
 
-	rustup run nightly rustc --version
+    rustup run nightly rustc --version
 
 Optionally, to make this the default globally, run the following command:
 
-	rustup default nightly
+    rustup default nightly
 
 We will switch to the stable release channel once libzkchannels (and dependencies) are ready for production use.
 
@@ -189,7 +188,7 @@ To be able to build libzkchannels, we require that you install the EMP-toolkit a
 
 In addition, you'll need to start up the Redis database as follows:
 
-	./setup_redis.sh
+    ./setup_redis.sh
 
 To build libzkchannels for MPC/  and execute basic examples, run `make`
 
