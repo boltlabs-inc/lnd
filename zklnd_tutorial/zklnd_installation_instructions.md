@@ -2,7 +2,7 @@
 
 ## Introduction
 
-`zkLND` is an extension of `lnd`, which is uses the `libzkchannels` library to run the zkChannels protocol.
+`zkLND` is an extension of `lnd`, which is uses the `libzkchannels` library to run the zkChannels protocol. For more information about the protocol, you can read the high level [overview](zklnd_overview.md).
 
 This installation guide is divided into two parts: The first part is based on the [`lnd` installation guide](https://dev.lightning.community/guides/installation/), but has been edited specifically for the `zkLND` forked version of `lnd`. The second part covers the installation of the `libzkchannels` library.
 
