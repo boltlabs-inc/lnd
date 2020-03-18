@@ -51,7 +51,7 @@ In order to work with [`zkLND`](https://github.com/boltlabs-inc/lnd), the follow
 
  On Mac OS X:
 
-     brew install [email protected]
+     brew install go@1.13
 
 
  On FreeBSD:
