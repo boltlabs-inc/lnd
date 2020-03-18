@@ -154,47 +154,31 @@ This section will guide you through the installation of [libzkchannels](https://
 
 Note that the above rust dependencies will be compiled and installed as a result of running the `make` command.
 
-### Rust Nightly Setup
+### Install Rust
 
-Please keep in mind we are currently working with nightly Rust for now which gives access to the nightly compiler and experimental features.
+To install Rust, we recommend using [rustup](https://www.rustup.rs/). You can install `rustup` on macOS or Linux as follows:
 
-    rustup install nightly
-
-To run a quick test of the nightly toolchain, run the following command:
-
-    rustup run nightly rustc --version
-
-Optionally, to make this the default globally, run the following command:
-
-    rustup default nightly
-
-We will switch to the stable release channel once libzkchannels (and dependencies) are ready for production use.
+  ```bash
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  ```
 
 ### Build & Install
 
-To be able to build libzkchannels, we require that you install the EMP-toolkit and other dependencies. Make sure you are in your `lnd` directory and run the following commands:
+To be able to build libzkchannels, you will need to install the EMP-toolkit among other dependencies. Make sure you are in your `lnd` directory and run the following commands:
 
     git clone https://github.com/boltlabs-inc/libzkchannels
     cd libzkchannels
-  	. ./env
-  	make deps
-  	./test_emp.sh
-    cargo build --release --manifest-path ./Cargo.toml
-    export CGO_LDFLAGS="-L$(pwd)/target/release"
-    export LD_LIBRARY_PATH="$(pwd)/target/release"
+    ./build.sh ..
     cd ..
+    . ./make/libzkchannels.mk    
     go get github.com/boltlabs-inc/libzkchannels
     go test -v github.com/boltlabs-inc/libzkchannels
 
-In addition, you'll need to start up the Redis database as follows:
-
-    ./setup_redis.sh
-
-To build libzkchannels for MPC/  and execute basic examples, run `make`
+To build libzkchannels and execute basic examples, run `make`
 
 ### Tests
 
-To run libzkchannels unit tests, run `make test` and with MPC, run `make mpctest`
+To run all libzkchannels unit tests, run `make test` and for MPC tests specifically, run `make mpctest`
 
 ### Benchmarks
 
