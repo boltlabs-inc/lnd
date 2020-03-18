@@ -175,17 +175,17 @@ We will switch to the stable release channel once libzkchannels (and dependencie
 
 To be able to build libzkchannels, we require that you install the EMP-toolkit and other dependencies. Make sure you are in your `lnd` directory and run the following commands:
 
-  git clone https://github.com/boltlabs-inc/libzkchannels
-  cd libzkchannels
-	. ./env
-	make deps
-	./test_emp.sh
-  cargo build --release --manifest-path ./Cargo.toml
-  export CGO_LDFLAGS="-L$(pwd)/target/release"
-  export LD_LIBRARY_PATH="$(pwd)/target/release"
-  cd ..
-  go get github.com/boltlabs-inc/libzkchannels
-  go test -v github.com/boltlabs-inc/libzkchannels
+    git clone https://github.com/boltlabs-inc/libzkchannels
+    cd libzkchannels
+  	. ./env
+  	make deps
+  	./test_emp.sh
+    cargo build --release --manifest-path ./Cargo.toml
+    export CGO_LDFLAGS="-L$(pwd)/target/release"
+    export LD_LIBRARY_PATH="$(pwd)/target/release"
+    cd ..
+    go get github.com/boltlabs-inc/libzkchannels
+    go test -v github.com/boltlabs-inc/libzkchannels
 
 In addition, you'll need to start up the Redis database as follows:
 
