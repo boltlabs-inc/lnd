@@ -2,7 +2,9 @@
 
 This tutorial is based on the [LND Tutorial](https://dev.lightning.community/tutorial/01-lncli) and has been edited to describe the usage of zkLND.
 
-Before starting this tutorial, it might be helpful to read the [overview](zklnd_overview.md) of the transactions and Bitcoin scripts used in zkChannels.
+This tutorial assumes you have `zkLND` with `libzkchannels` installed. If not, please refer to the [zkLND installation guide](zklnd_installation_instructions.md).
+
+You may also find it helpful to understand the transactions and Bitcoin scripts used in zkChannels by reading the high level [overview](zklnd_overview.md).
 
 For more information about zkChannels, read the [zkchannels blog post](TODO).
 

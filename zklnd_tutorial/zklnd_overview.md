@@ -1,6 +1,6 @@
 # Bitcoin zkChannels Overview
 
-After reading this overview, you can try creating your own zkChannels using the [zkLND tutorial!](zklnd_tutorial.md)
+After reading this overview, you can try creating your own zkChannels by following the [zkLND installation guide](zklnd_installation_instructions.md) and following the [zkLND tutorial!](zklnd_tutorial.md)
 
 ## Introduction
 This overview aims to provide a description of the transaction paths and Bitcoin scripts used in the zkChannels protocol. zkChannels, originally named the BOLT protocol, was inspired by the Lightning Network (LN) and therefore features many of the same characteristics, namely, multisig outputs, revocable outputs with relative timelocks, with penalty transactions.

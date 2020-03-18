@@ -5,7 +5,7 @@ git pull
 # make deps
 # export RUST_BACKTRACE=full
 make mpcgotest
-cargo build --release --manifest-path ./Cargo.toml --features mpc-bitcoin
+cargo build --release --manifest-path ./Cargo.toml
 export CGO_LDFLAGS="-L$(pwd)/target/release"
 export LD_LIBRARY_PATH="$(pwd)/target/release"
 cd ..
