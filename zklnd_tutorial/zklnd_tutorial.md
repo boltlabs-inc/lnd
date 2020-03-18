@@ -202,8 +202,7 @@ To make sure this was applied to all of your current terminal windows, rerun you
 
     alice$ source ~/.bashrc
     bob$ source ~/.bashrc
-    charlie$ source ~/.bashrc
-
+    
 For simplicity, the rest of the tutorial will assume that this step was complete.
 
 #### lncli options
