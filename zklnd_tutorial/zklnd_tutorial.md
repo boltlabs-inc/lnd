@@ -57,7 +57,7 @@ Developing on `zklnd` can be quite complex since there are many more moving piec
 
 Let’s start by running btcd, if you don’t have it up already. Open up a new terminal window, ensure you have your `$GOPATH` set, and run:
 
-    btcd --txindex --simnet --rpcuser=kek --rpcpass=kek
+    btcd --txindex --simnet --rpcuser=kek --rpcpass=kek  --minrelaytxfee=0
 
 (Note: this tutorial requires opening quite a few terminal windows. It may be convenient to use multiplexers such as tmux or screen if you’re familiar with them.)
 
