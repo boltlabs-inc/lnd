@@ -4,18 +4,13 @@
 
 `zkLND` is an extension of `lnd`, which is uses the `libzkchannels` library to run the zkChannels protocol. For more information about the protocol, you can read the high level [overview](zklnd_overview.md).
 
-This installation guide is divided into two parts: The first part is based on the [`lnd` installation guide](https://dev.lightning.community/guides/installation/), but has been edited specifically for the `zkLND` forked version of `lnd`. The second part covers the installation of the `libzkchannels` library.
+This installation guide is divided into two parts: The first part covers the installation of the `libzkchannels` library which will be done within the `zkLND` directory. The second part, based on the [`lnd` installation guide](https://dev.lightning.community/guides/installation/), but has been edited specifically for the `zkLND` version of `lnd`.
 
 Once these two parts have been completed, you will be ready to begin the [zkLND tutorial](zklnd_tutorial.md).
 
+## Preliminaries
 
-## Installing zkLND
-
-While our extension is named `zkLND` the software uses the same name as the original `lnd` software. As such, the program is still named `lnd` and uses the same `lnd` command used when starting up the `zkLND` node. Likewise, the command for interacting with the `zkLND` node is `lncli`.
-
-This section will walk through the installation of `zkLND`, a modified version of `lnd` designed to work with the libzkchannels library necessary for running `zkLND`.
-
-### Preliminaries
+### Installing Go
 
 In order to work with [`zkLND`](https://github.com/boltlabs-inc/lnd), the following build dependencies are required:
 
@@ -73,13 +68,79 @@ In order to work with [`zkLND`](https://github.com/boltlabs-inc/lnd), the follow
 
  Usage of Go modules (with Go 1.12) means that you no longer need to clone `lnd` into your `$GOPATH` for development purposes. Instead, your `lnd` repo can now live anywhere!
 
+ ### Installing Rust
 
-### Installing lnd
+ To install Rust, we recommend using [rustup](https://www.rustup.rs/). You can install `rustup` on macOS or Linux as follows:
 
-With the preliminary steps completed, to install `lnd`, `lncli`, and all related dependencies run the following commands:
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   ```
 
-    go get -d github.com/boltlabs-inc/lnd
-    cd $GOPATH/src/github.com/boltlabs-inc/lnd
+## Installing libzkchannels
+
+This section will guide you through the installation of [libzkchannels](https://github.com/boltlabs-inc/libzkchannels).
+
+### Major Dependencies
+
+* secp256k1
+* ff
+* pairing
+* serde, serde_json
+* sha2, ripemd160, hmac, hex
+* wagyu-bitcoin and wagyu-zcash
+* redis
+
+Note that the above rust dependencies will be compiled and installed as a result of running the `make` command.
+
+
+### Build & Install
+
+Currently, the libzkchannels is located in the `lnd` directory. So first we will clone `zkLND`, then install `libzkchannels` within it.
+
+    git clone https://github.com/boltlabs-inc/lnd
+    cd lnd
+
+To be able to build `libzkchannels`, you will need to install the EMP-toolkit among other dependencies. Make sure you are in your `lnd` directory and run the following commands:
+
+    git clone https://github.com/boltlabs-inc/libzkchannels
+    cd libzkchannels
+    ./build.sh ..
+    cd ..
+    . ./make/libzkchannels.mk
+    go get github.com/boltlabs-inc/libzkchannels
+    go test -v github.com/boltlabs-inc/libzkchannels
+
+To build libzkchannels and execute basic examples, run `make`
+
+### Tests
+
+To run all libzkchannels unit tests, run `make test` and for MPC tests specifically, run `make mpctest`
+
+### Benchmarks
+
+To run libzkchannels benchmarks, run `make bench`
+
+### Usage
+
+To use the libzkchannels library, add the `libzkchannels` crate to your dependency file in `Cargo.toml` as follows:
+
+```toml
+[dependencies]
+zkchannels = "0.4.0"
+```
+
+Then add an extern declaration at the root of your crate as follows:
+```rust
+extern crate zkchannels;
+```
+
+
+## Installing zkLND
+
+While our extension is named `zkLND` the software uses the same name as the original `lnd` software. As such, the program is still named `lnd` and uses the same `lnd` command used when starting up the `zkLND` node. Likewise, the command for interacting with the `zkLND` node is `lncli`.
+
+To install `lnd`, `lncli`, and all related dependencies run the following commands from your `lnd` (`zkLND` fork) directory:
+
     make && make install
 
 
@@ -122,7 +183,6 @@ To check that `lnd` was installed properly run the following command:
 
     make check
 
-
 This command requires `bitcoind` (almost any version should do) to be available in the system’s `$PATH` variable. Otherwise some of the tests will fail.
 
 
@@ -137,63 +197,3 @@ To install btcd, run the following command:
 Alternatively, you can install [`btcd` directly from its repo](https://github.com/btcsuite/btcd).
 
 Note that for our initial release of `zkLND` assumes users are running a btcd node on simnet (rather than the public mainnet or testnet). Therefore, when starting up btcd, it will be necessary to pass in `--bitcoin.simnet`. This is covered in more detail in the tutorial.
-
-## Installing libzkchannels
-
-This section will guide you through the installation of [libzkchannels](https://github.com/boltlabs-inc/libzkchannels).
-
-### Major Dependencies
-
-* secp256k1
-* ff
-* pairing
-* serde, serde_json
-* sha2, ripemd160, hmac, hex
-* wagyu-bitcoin and wagyu-zcash
-* redis
-
-Note that the above rust dependencies will be compiled and installed as a result of running the `make` command.
-
-### Install Rust
-
-To install Rust, we recommend using [rustup](https://www.rustup.rs/). You can install `rustup` on macOS or Linux as follows:
-
-  ```bash
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-  ```
-
-### Build & Install
-
-To be able to build libzkchannels, you will need to install the EMP-toolkit among other dependencies. Make sure you are in your `lnd` directory and run the following commands:
-
-    git clone https://github.com/boltlabs-inc/libzkchannels
-    cd libzkchannels
-    ./build.sh ..
-    cd ..
-    . ./make/libzkchannels.mk    
-    go get github.com/boltlabs-inc/libzkchannels
-    go test -v github.com/boltlabs-inc/libzkchannels
-
-To build libzkchannels and execute basic examples, run `make`
-
-### Tests
-
-To run all libzkchannels unit tests, run `make test` and for MPC tests specifically, run `make mpctest`
-
-### Benchmarks
-
-To run libzkchannels benchmarks, run `make bench`
-
-### Usage
-
-To use the libzkchannels library, add the `libzkchannels` crate to your dependency file in `Cargo.toml` as follows:
-
-```toml
-[dependencies]
-zkchannels = "0.4.0"
-```
-
-Then add an extern declaration at the root of your crate as follows:
-```rust
-extern crate zkchannels;
-```
