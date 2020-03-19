@@ -104,6 +104,7 @@ To be able to build `libzkchannels`, you will need to install the EMP-toolkit am
 
     git clone https://github.com/boltlabs-inc/libzkchannels
     cd libzkchannels
+    ./deps/install_packages.sh
     ./build.sh ..
     cd ..
     . ./make/libzkchannels.mk
