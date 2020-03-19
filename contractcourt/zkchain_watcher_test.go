@@ -1,12 +1,12 @@
 package contractcourt
 
-import (
-	"testing"
-	"time"
+// import (
+// 	"testing"
+// 	"time"
 
-	"github.com/lightningnetwork/lnd/chainntnfs"
-	"github.com/lightningnetwork/lnd/lnwallet"
-)
+// 	"github.com/lightningnetwork/lnd/chainntnfs"
+// 	"github.com/lightningnetwork/lnd/lnwallet"
+// )
 
 // type mockNotifier struct {
 // 	spendChan chan *chainntnfs.SpendDetail
@@ -47,74 +47,74 @@ import (
 // 	}, nil
 // }
 
-// TestChainWatcherRemoteUnilateralClose tests that the chain watcher is able
-// to properly detect a normal unilateral close by the remote node using their
-// lowest commitment.
-func TestZkChainWatcherRemoteUnilateralClose(t *testing.T) {
-	t.Parallel()
+// // TestChainWatcherRemoteUnilateralClose tests that the chain watcher is able
+// // to properly detect a normal unilateral close by the remote node using their
+// // lowest commitment.
+// func TestZkChainWatcherRemoteUnilateralClose(t *testing.T) {
+// 	t.Parallel()
 
-	// First, we'll create two channels which already have established a
-	// commitment contract between themselves.
-	aliceChannel, bobChannel, cleanUp, err := lnwallet.CreateTestChannels(true)
-	if err != nil {
-		t.Fatalf("unable to create test channels: %v", err)
-	}
-	defer cleanUp()
+// 	// First, we'll create two channels which already have established a
+// 	// commitment contract between themselves.
+// 	aliceChannel, bobChannel, cleanUp, err := lnwallet.CreateTestChannels(true)
+// 	if err != nil {
+// 		t.Fatalf("unable to create test channels: %v", err)
+// 	}
+// 	defer cleanUp()
 
-	// t.Logf("aliceChannel.State(): %#v", aliceChannel.State())
+// 	// t.Logf("aliceChannel.State(): %#v", aliceChannel.State())
 
-	chanState := aliceChannel.State()
-	t.Logf("*chanState.ChanType: %#v", chanState.ChanType)
+// 	chanState := aliceChannel.State()
+// 	t.Logf("*chanState.ChanType: %#v", chanState.ChanType)
 
-	// With the channels created, we'll now create a chain watcher instance
-	// which will be watching for any closes of Alice's channel.
-	aliceNotifier := &mockNotifier{
-		spendChan: make(chan *chainntnfs.SpendDetail),
-	}
-	aliceChainWatcher, err := newZkChainWatcher(zkChainWatcherConfig{
-		chanState: aliceChannel.State(),
-		notifier:  aliceNotifier,
-		// signer:              aliceChannel.Signer,
-		extractStateNumHint: lnwallet.GetStateNumHint,
-	})
-	if err != nil {
-		t.Fatalf("unable to create chain watcher: %v", err)
-	}
-	err = aliceChainWatcher.Start()
-	if err != nil {
-		t.Fatalf("unable to start chain watcher: %v", err)
-	}
-	defer aliceChainWatcher.Stop()
+// 	// With the channels created, we'll now create a chain watcher instance
+// 	// which will be watching for any closes of Alice's channel.
+// 	aliceNotifier := &mockNotifier{
+// 		spendChan: make(chan *chainntnfs.SpendDetail),
+// 	}
+// 	aliceChainWatcher, err := newZkChainWatcher(zkChainWatcherConfig{
+// 		chanState: aliceChannel.State(),
+// 		notifier:  aliceNotifier,
+// 		// signer:              aliceChannel.Signer,
+// 		extractStateNumHint: lnwallet.GetStateNumHint,
+// 	})
+// 	if err != nil {
+// 		t.Fatalf("unable to create chain watcher: %v", err)
+// 	}
+// 	err = aliceChainWatcher.Start()
+// 	if err != nil {
+// 		t.Fatalf("unable to start chain watcher: %v", err)
+// 	}
+// 	defer aliceChainWatcher.Stop()
 
-	// We'll request a new channel event subscription from Alice's chain
-	// watcher.
-	chanEvents := aliceChainWatcher.SubscribeChannelEvents()
+// 	// We'll request a new channel event subscription from Alice's chain
+// 	// watcher.
+// 	chanEvents := aliceChainWatcher.SubscribeChannelEvents()
 
-	// If we simulate an immediate broadcast of the current commitment by
-	// Bob, then the chain watcher should detect this case.
-	bobCommit := bobChannel.State().LocalCommitment.CommitTx
-	bobTxHash := bobCommit.TxHash()
-	bobSpend := &chainntnfs.SpendDetail{
-		SpenderTxHash: &bobTxHash,
-		SpendingTx:    bobCommit,
-	}
-	aliceNotifier.spendChan <- bobSpend
+// 	// If we simulate an immediate broadcast of the current commitment by
+// 	// Bob, then the chain watcher should detect this case.
+// 	bobCommit := bobChannel.State().LocalCommitment.CommitTx
+// 	bobTxHash := bobCommit.TxHash()
+// 	bobSpend := &chainntnfs.SpendDetail{
+// 		SpenderTxHash: &bobTxHash,
+// 		SpendingTx:    bobCommit,
+// 	}
+// 	aliceNotifier.spendChan <- bobSpend
 
-	// We should get a new spend event over the remote unilateral close
-	// event channel.
-	var uniClose *RemoteUnilateralCloseInfo
-	select {
-	case uniClose = <-chanEvents.RemoteUnilateralClosure:
-	case <-time.After(time.Second * 15):
-		t.Fatalf("didn't receive unilateral close event")
-	}
+// 	// We should get a new spend event over the remote unilateral close
+// 	// event channel.
+// 	var uniClose *RemoteUnilateralCloseInfo
+// 	select {
+// 	case uniClose = <-chanEvents.RemoteUnilateralClosure:
+// 	case <-time.After(time.Second * 15):
+// 		t.Fatalf("didn't receive unilateral close event")
+// 	}
 
-	// The unilateral close should have properly located Alice's output in
-	// the commitment transaction.
-	if uniClose.CommitResolution == nil {
-		t.Fatalf("unable to find alice's commit resolution")
-	}
-}
+// 	// The unilateral close should have properly located Alice's output in
+// 	// the commitment transaction.
+// 	if uniClose.CommitResolution == nil {
+// 		t.Fatalf("unable to find alice's commit resolution")
+// 	}
+// }
 
 // func addFakeHTLC(t *testing.T, htlcAmount lnwire.MilliSatoshi, id uint64,
 // 	aliceChannel, bobChannel *lnwallet.LightningChannel) {
