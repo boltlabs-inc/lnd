@@ -1154,11 +1154,12 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 		zkchLog.Info("MPC pay protocol failed")
 	}
 
-	// TODO?: SEND MESSAGE FOR IsOK. e.g.
-	// ZkPayMPCResult := lnwire.ZkPayMPCResult{
-	// 	isOk: isOkBytes,
-	// }
-	// p.SendMessage(false, &ZkPayMPCResult)
+	isOkBytes, _ := json.Marshal(isOk)
+
+	ZkPayMPCResult := lnwire.ZkPayMPCResult{
+		IsOk: isOkBytes,
+	}
+	p.SendMessage(false, &ZkPayMPCResult)
 
 	// Add variables to zkchannelsdb
 	zkCustDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName)
@@ -1202,8 +1203,14 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	zkchLog.Debug("channelState MerchDisputePk => ", *channelState.MerchDisputePk)
 	zkchLog.Debug("channelState MerchStatePkM => ", *merchState.PkM)
 
-	maskedTxInputs, merchState, err := libzkchannels.PayUpdateMerchant(channelState, stateNonce, payTokenMaskCom, revLockCom, amount, merchState)
+	isOk, merchState, err := libzkchannels.PayUpdateMerchant(channelState, stateNonce, payTokenMaskCom, revLockCom, amount, merchState)
 
+	// TODO: Handle this case properly
+	if isOk {
+		zkchLog.Debug("MPC unsuccessful")
+	}
+
+	// TODO: Move this until after previous state has been revoked
 	totalReceived += amount
 
 	// Update merchState in zkMerchDB
@@ -1212,17 +1219,57 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	merchStateBytes, _ = json.Marshal(merchState)
 	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
 
+	stateNonceBytes, _ := json.Marshal(stateNonce)
+	zkchanneldb.AddMerchField(zkMerchDB, stateNonceBytes, "stateNonceKey")
+
 	totalReceivedBytes, _ = json.Marshal(totalReceived)
 	zkchanneldb.AddMerchField(zkMerchDB, totalReceivedBytes, "totalReceivedKey")
 
 	zkMerchDB.Close()
 
-	maskedTxInputsBytes, _ := json.Marshal(maskedTxInputs)
+	zkchLog.Debug("db closed")
 
-	zkPayMaskedTxInputs := lnwire.ZkPayMaskedTxInputs{
-		MaskedTxInputs: maskedTxInputsBytes,
+}
+
+func (z *zkChannelManager) processZkPayMPCResult(msg *lnwire.ZkPayMPCResult, p lnpeer.Peer) {
+
+	var isOk bool
+	_ = json.Unmarshal(msg.IsOk, &isOk)
+
+	zkchLog.Debug("Just received ZkPayMPCResult. isOk: ", isOk)
+
+	if isOk {
+
+		// open the zkchanneldb to load merchState
+		zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var merchState libzkchannels.MerchState
+		merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
+		err = json.Unmarshal(merchStateBytes, &merchState)
+
+		var stateNonce string
+		stateNonceBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "stateNonceKey")
+		err = json.Unmarshal(stateNonceBytes, &stateNonce)
+
+		zkMerchDB.Close()
+
+		maskedTxInputs, err := libzkchannels.PayConfirmMPCResult(isOk, stateNonce, merchState)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		maskedTxInputsBytes, _ := json.Marshal(maskedTxInputs)
+		zkPayMaskedTxInputs := lnwire.ZkPayMaskedTxInputs{
+			MaskedTxInputs: maskedTxInputsBytes,
+		}
+
+		p.SendMessage(false, &zkPayMaskedTxInputs)
 	}
-	p.SendMessage(false, &zkPayMaskedTxInputs)
+
+	// TODO: Handle the case where MPC was unsuccessful, reinitiate UpdateMerchant?
 }
 
 func (z *zkChannelManager) processZkPayMaskedTxInputs(msg *lnwire.ZkPayMaskedTxInputs, p lnpeer.Peer, zkChannelName string) {
@@ -1233,7 +1280,7 @@ func (z *zkChannelManager) processZkPayMaskedTxInputs(msg *lnwire.ZkPayMaskedTxI
 		log.Fatal(err)
 	}
 
-	zkchLog.Debug("Just received ZkPayMaskedTxInputs: ", maskedTxInputs)
+	zkchLog.Debugf("Just received ZkPayMaskedTxInputs: %#v\n", maskedTxInputs)
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
