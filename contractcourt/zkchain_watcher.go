@@ -397,23 +397,29 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 		// If there are less than 2 outputs, it is a merchCloseTx
 		case numOutputs < 2:
 
-
-	
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
-	
+
 			// fmt.Printf("commitTxBroadcast: %#v", commitTxBroadcast)
 			fmt.Printf("pkScript: %#v\n", pkScript)
-	
+
 			_ = c.zkDispatchRemoteForceClose()
 
 		case numOutputs > 2:
 
 			pkScript := commitTxBroadcast.TxOut[2].PkScript
 			fmt.Printf("pkScript (CustPK and RL): %#v\n", pkScript)
+			fmt.Printf("len pkScript: %#v\n", len(pkScript))
+
+			RevLock := pkScript[2:34]
+			CustPK := pkScript[34:67]
+			fmt.Printf("RevLock: %#v\n", RevLock)
+			fmt.Printf("CustPK: %#v\n", CustPK)
+			fmt.Printf("len RevLock: %#v\n", len(RevLock))
+			fmt.Printf("len CustPK: %#v\n", len(CustPK))
+
 			_ = c.zkDispatchRemoteForceClose()
 
 		}
-
 
 		// Now that a spend has been detected, we've done our job, so
 		// we'll exit immediately.
