@@ -46,6 +46,12 @@ import (
 // 	*channeldb.ChannelCloseSummary
 // }
 
+// ZkRemoteUnilateralCloseInfo wraps the normal UnilateralCloseSummary to couple
+// the CommitSet at the time of channel closure.
+type ZkRemoteUnilateralCloseInfo struct {
+	string
+}
+
 // // RemoteUnilateralCloseInfo wraps the normal UnilateralCloseSummary to couple
 // // the CommitSet at the time of channel closure.
 // type RemoteUnilateralCloseInfo struct {
@@ -99,41 +105,48 @@ import (
 // 	return htlcSets
 // }
 
-// // ChainEventSubscription is a struct that houses a subscription to be notified
-// // for any on-chain events related to a channel. There are three types of
-// // possible on-chain events: a cooperative channel closure, a unilateral
-// // channel closure, and a channel breach. The fourth type: a force close is
-// // locally initiated, so we don't provide any event stream for said event.
-// type ChainEventSubscription struct {
-// 	// ChanPoint is that channel that chain events will be dispatched for.
-// 	ChanPoint wire.OutPoint
+// ZkChainEventSubscription is a struct that houses a subscription to be notified
+// for any on-chain events related to a channel. There are three types of
+// possible on-chain events: a cooperative channel closure, a unilateral
+// channel closure, and a channel breach. The fourth type: a force close is
+// locally initiated, so we don't provide any event stream for said event.
+type ZkChainEventSubscription struct {
+	// ChanPoint is that channel that chain events will be dispatched for.
+	ChanPoint wire.OutPoint
 
-// 	// RemoteUnilateralClosure is a channel that will be sent upon in the
-// 	// event that the remote party's commitment transaction is confirmed.
-// 	RemoteUnilateralClosure chan *RemoteUnilateralCloseInfo
+	// RemoteUnilateralClosure is a channel that will be sent upon in the
+	// event that the remote party's commitment transaction is confirmed.
+	RemoteUnilateralClosure chan *RemoteUnilateralCloseInfo
 
-// 	// LocalUnilateralClosure is a channel that will be sent upon in the
-// 	// event that our commitment transaction is confirmed.
-// 	LocalUnilateralClosure chan *LocalUnilateralCloseInfo
+	// ZkRemoteUnilateralClosure is a channel that will be sent upon in the
+	// event that the remote party's commitment transaction is confirmed.
+	ZkRemoteUnilateralClosure chan *ZkRemoteUnilateralCloseInfo
 
-// 	// CooperativeClosure is a signal that will be sent upon once a
-// 	// cooperative channel closure has been detected confirmed.
-// 	CooperativeClosure chan *CooperativeCloseInfo
+	// LocalUnilateralClosure is a channel that will be sent upon in the
+	// event that our commitment transaction is confirmed.
+	LocalUnilateralClosure chan *LocalUnilateralCloseInfo
 
-// 	// ContractBreach is a channel that will be sent upon if we detect a
-// 	// contract breach. The struct sent across the channel contains all the
-// 	// material required to bring the cheating channel peer to justice.
-// 	ContractBreach chan *lnwallet.BreachRetribution
+	// CooperativeClosure is a signal that will be sent upon once a
+	// cooperative channel closure has been detected confirmed.
+	CooperativeClosure chan *CooperativeCloseInfo
 
-// 	// Cancel cancels the subscription to the event stream for a particular
-// 	// channel. This method should be called once the caller no longer needs to
-// 	// be notified of any on-chain events for a particular channel.
-// 	Cancel func()
-// }
+	// ContractBreach is a channel that will be sent upon if we detect a
+	// contract breach. The struct sent across the channel contains all the
+	// material required to bring the cheating channel peer to justice.
+	ContractBreach chan *lnwallet.BreachRetribution
+
+	// Cancel cancels the subscription to the event stream for a particular
+	// channel. This method should be called once the caller no longer needs to
+	// be notified of any on-chain events for a particular channel.
+	Cancel func()
+}
 
 // zkChainWatcherConfig encapsulates all the necessary functions and interfaces
 // needed to watch and act on on-chain events for a particular channel.
 type zkChainWatcherConfig struct {
+	// zkFundingInfo contains funding outpoint, pkscript and, confirmation blockheight
+	zkFundingInfo
+
 	// chanState is a snapshot of the persistent state of the channel that
 	// we're watching. In the event of an on-chain event, we'll query the
 	// database to ensure that we act using the most up to date state.
@@ -164,6 +177,12 @@ type zkChainWatcherConfig struct {
 	extractStateNumHint func(*wire.MsgTx, [lnwallet.StateHintSize]byte) uint64
 }
 
+type zkFundingInfo struct {
+	fundingOut      wire.OutPoint
+	pkScript        []byte
+	broadcastHeight uint32
+}
+
 // zkChainWatcher is a system that's assigned to every active channel. The duty
 // of this system is to watch the chain for spends of the channels chan point.
 // If a spend is detected then with chain watcher will notify all subscribers
@@ -191,7 +210,7 @@ type zkChainWatcher struct {
 
 	// clientSubscriptions is a map that keeps track of all the active
 	// client subscriptions for events related to this channel.
-	clientSubscriptions map[uint64]*ChainEventSubscription
+	clientSubscriptions map[uint64]*ZkChainEventSubscription
 }
 
 // newZkChainWatcher returns a new instance of a zkChainWatcher for a channel given
@@ -199,74 +218,26 @@ type zkChainWatcher struct {
 // detect on chain events.
 func newZkChainWatcher(cfg zkChainWatcherConfig) (*zkChainWatcher, error) {
 
-	// ZKTODO: Here we should check if the RL on cust-close corresponds to a revoked
-	// state?
-	// Could potentially have a pointer to RL map instead of stateHint
-
-	// In order to be able to detect the nature of a potential channel
-	// closure we'll need to reconstruct the state hint bytes used to
-	// obfuscate the commitment state number encoded in the lock time and
-	// sequence fields.
-	var stateHint [lnwallet.StateHintSize]byte
-	chanState := cfg.chanState
-	if chanState.IsInitiator {
-		stateHint = lnwallet.DeriveStateHintObfuscator(
-			chanState.LocalChanCfg.PaymentBasePoint.PubKey,
-			chanState.RemoteChanCfg.PaymentBasePoint.PubKey,
-		)
-	} else {
-		stateHint = lnwallet.DeriveStateHintObfuscator(
-			chanState.RemoteChanCfg.PaymentBasePoint.PubKey,
-			chanState.LocalChanCfg.PaymentBasePoint.PubKey,
-		)
-	}
-
 	return &zkChainWatcher{
 		cfg:                 cfg,
-		stateHintObfuscator: stateHint,
 		quit:                make(chan struct{}),
-		clientSubscriptions: make(map[uint64]*ChainEventSubscription),
+		clientSubscriptions: make(map[uint64]*ZkChainEventSubscription),
 	}, nil
 }
 
 // Start starts all goroutines that the zkChainWatcher needs to perform its
 // duties.
 func (c *zkChainWatcher) Start() error {
+
+	// zkch TODO: What does this do?
 	if !atomic.CompareAndSwapInt32(&c.started, 0, 1) {
 		return nil
 	}
 
-	chanState := c.cfg.chanState
-	log.Debugf("Starting chain watcher for ChannelPoint(%v)",
-		chanState.FundingOutpoint)
-
-	// First, we'll register for a notification to be dispatched if the
-	// funding output is spent.
-	fundingOut := &chanState.FundingOutpoint
-
-	// As a height hint, we'll try to use the opening height, but if the
-	// channel isn't yet open, then we'll use the height it was broadcast
-	// at.
-	heightHint := c.cfg.chanState.ShortChanID().BlockHeight
-	if heightHint == 0 {
-		heightHint = chanState.FundingBroadcastHeight
-	}
-
-	localKey := chanState.LocalChanCfg.MultiSigKey.PubKey.SerializeCompressed()
-	remoteKey := chanState.RemoteChanCfg.MultiSigKey.PubKey.SerializeCompressed()
-	multiSigScript, err := input.GenMultiSigScript(
-		localKey, remoteKey,
-	)
-	if err != nil {
-		return err
-	}
-	pkScript, err := input.WitnessScriptHash(multiSigScript)
-	if err != nil {
-		return err
-	}
-
 	spendNtfn, err := c.cfg.notifier.RegisterSpendNtfn(
-		fundingOut, pkScript, heightHint,
+		&c.cfg.zkFundingInfo.fundingOut,
+		c.cfg.zkFundingInfo.pkScript,
+		c.cfg.zkFundingInfo.broadcastHeight,
 	)
 	if err != nil {
 		return err
@@ -275,7 +246,7 @@ func (c *zkChainWatcher) Start() error {
 	// With the spend notification obtained, we'll now dispatch the
 	// closeObserver which will properly react to any changes.
 	c.wg.Add(1)
-	go c.closeObserver(spendNtfn)
+	go c.zkCloseObserver(spendNtfn)
 
 	return nil
 }
@@ -297,22 +268,20 @@ func (c *zkChainWatcher) Stop() error {
 // events for the channel watched by this chain watcher. Once clients no longer
 // require the subscription, they should call the Cancel() method to allow the
 // watcher to regain those committed resources.
-func (c *zkChainWatcher) SubscribeChannelEvents() *ChainEventSubscription {
+func (c *zkChainWatcher) SubscribeChannelEvents() *ZkChainEventSubscription {
 
 	c.Lock()
 	clientID := c.clientID
 	c.clientID++
 	c.Unlock()
 
-	log.Debugf("New ChainEventSubscription(id=%v) for ChannelPoint(%v)",
-		clientID, c.cfg.chanState.FundingOutpoint)
-
-	sub := &ChainEventSubscription{
-		ChanPoint:               c.cfg.chanState.FundingOutpoint,
-		RemoteUnilateralClosure: make(chan *RemoteUnilateralCloseInfo, 1),
-		LocalUnilateralClosure:  make(chan *LocalUnilateralCloseInfo, 1),
-		CooperativeClosure:      make(chan *CooperativeCloseInfo, 1),
-		ContractBreach:          make(chan *lnwallet.BreachRetribution, 1),
+	sub := &ZkChainEventSubscription{
+		ChanPoint:                 c.cfg.zkFundingInfo.fundingOut,
+		RemoteUnilateralClosure:   make(chan *RemoteUnilateralCloseInfo, 1),
+		ZkRemoteUnilateralClosure: make(chan *ZkRemoteUnilateralCloseInfo, 1),
+		LocalUnilateralClosure:    make(chan *LocalUnilateralCloseInfo, 1),
+		CooperativeClosure:        make(chan *CooperativeCloseInfo, 1),
+		ContractBreach:            make(chan *lnwallet.BreachRetribution, 1),
 		Cancel: func() {
 			c.Lock()
 			delete(c.clientSubscriptions, clientID)
@@ -397,25 +366,19 @@ func (c *zkChainWatcher) SubscribeChannelEvents() *ChainEventSubscription {
 // 	return false, nil
 // }
 
-// closeObserver is a dedicated goroutine that will watch for any closes of the
+// zkCloseObserver is a dedicated goroutine that will watch for any closes of the
 // channel that it's watching on chain. In the event of an on-chain event, the
 // close observer will assembled the proper materials required to claim the
 // funds of the channel on-chain (if required), then dispatch these as
 // notifications to all subscribers.
-func (c *zkChainWatcher) closeObserver(spendNtfn *chainntnfs.SpendEvent) {
+func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 	defer c.wg.Done()
-
-	log.Infof("Close observer for ChannelPoint(%v) active",
-		c.cfg.chanState.FundingOutpoint)
 
 	select {
 	// We've detected a spend of the channel onchain! Depending on the type
 	// of spend, we'll act accordingly , so we'll examine the spending
 	// transaction to determine what we should do.
-	//
-	// TODO(Roasbeef): need to be able to ensure this only triggers
-	// on confirmation, to ensure if multiple txns are broadcast, we
-	// act on the one that's timestamped
+
 	case commitSpend, ok := <-spendNtfn.Spend:
 		// If the channel was closed, then this means that the notifier
 		// exited, so we will as well.
@@ -423,230 +386,34 @@ func (c *zkChainWatcher) closeObserver(spendNtfn *chainntnfs.SpendEvent) {
 			return
 		}
 
-		// Otherwise, the remote party might have broadcast a prior
-		// revoked state...!!!
 		commitTxBroadcast := commitSpend.SpendingTx
 
-		localCommit, remoteCommit, err := c.cfg.chanState.LatestCommitments()
-		if err != nil {
-			log.Errorf("Unable to fetch channel state for "+
-				"chan_point=%v", c.cfg.chanState.FundingOutpoint)
-			return
-		}
-
-		// Fetch the current known commit height for the remote party,
-		// and their pending commitment chain tip if it exist.
-		remoteStateNum := remoteCommit.CommitHeight
-		remoteChainTip, err := c.cfg.chanState.RemoteCommitChainTip()
-		if err != nil && err != channeldb.ErrNoPendingCommit {
-			log.Errorf("unable to obtain chain tip for "+
-				"ChannelPoint(%v): %v",
-				c.cfg.chanState.FundingOutpoint, err)
-			return
-		}
-
-		// Now that we have all the possible valid commitments, we'll
-		// make the CommitSet the ChannelArbitrator will need it in
-		// order to carry out its duty.
-		commitSet := CommitSet{
-			HtlcSets: make(map[HtlcSetKey][]channeldb.HTLC),
-		}
-		commitSet.HtlcSets[LocalHtlcSet] = localCommit.Htlcs
-		commitSet.HtlcSets[RemoteHtlcSet] = remoteCommit.Htlcs
-		if remoteChainTip != nil {
-			htlcs := remoteChainTip.Commitment.Htlcs
-			commitSet.HtlcSets[RemotePendingHtlcSet] = htlcs
-		}
-
-		// We'll not retrieve the latest sate of the revocation store
-		// so we can populate the information within the channel state
-		// object that we have.
-		//
-		// TODO(roasbeef): mutation is bad mkay
-		_, err = c.cfg.chanState.RemoteRevocationStore()
-		if err != nil {
-			log.Errorf("Unable to fetch revocation state for "+
-				"chan_point=%v", c.cfg.chanState.FundingOutpoint)
-			return
-		}
-
-		// Decode the state hint encoded within the commitment
-		// transaction to determine if this is a revoked state or not.
-		obfuscator := c.stateHintObfuscator
-		broadcastStateNum := c.cfg.extractStateNumHint(
-			commitTxBroadcast, obfuscator,
-		)
-
-		// Based on the output scripts within this commitment, we'll
-		// determine if this is our commitment transaction or not (a
-		// self force close).
-		isOurCommit, err := isOurCommitment(
-			c.cfg.chanState.LocalChanCfg,
-			c.cfg.chanState.RemoteChanCfg, commitSpend,
-			broadcastStateNum, c.cfg.chanState.RevocationProducer,
-			c.cfg.chanState.ChanType,
-		)
-		if err != nil {
-			log.Errorf("unable to determine self commit for "+
-				"chan_point=%v: %v",
-				c.cfg.chanState.FundingOutpoint, err)
-			return
-		}
-
-		// If this is our commitment transaction, then we can exit here
-		// as we don't have any further processing we need to do (we
-		// can't cheat ourselves :p).
-		if isOurCommit {
-			commitSet.ConfCommitKey = &LocalHtlcSet
-
-			if err := c.dispatchLocalForceClose(
-				commitSpend, *localCommit, commitSet,
-			); err != nil {
-				log.Errorf("unable to handle local"+
-					"close for chan_point=%v: %v",
-					c.cfg.chanState.FundingOutpoint, err)
-			}
-			return
-		}
-
-		// Next, we'll check to see if this is a cooperative channel
-		// closure or not. This is characterized by having an input
-		// sequence number that's finalized.  This won't happen with
-		// regular commitment transactions due to the state hint
-		// encoding scheme.
-		if commitTxBroadcast.TxIn[0].Sequence == wire.MaxTxInSequenceNum {
-			// TODO(roasbeef): rare but possible, need itest case
-			// for
-			err := c.dispatchCooperativeClose(commitSpend)
-			if err != nil {
-				log.Errorf("unable to handle co op close: %v", err)
-			}
-			return
-		}
-
-		log.Warnf("Unprompted commitment broadcast for "+
-			"ChannelPoint(%v) ", c.cfg.chanState.FundingOutpoint)
-
-		// If this channel has been recovered, then we'll modify our
-		// behavior as it isn't possible for us to close out the
-		// channel off-chain ourselves. It can only be the remote party
-		// force closing, or a cooperative closure we signed off on
-		// before losing data getting confirmed in the chain.
-		isRecoveredChan := c.cfg.chanState.HasChanStatus(
-			channeldb.ChanStatusRestored,
-		)
+		numOutputs := len(commitTxBroadcast.TxOut)
+		fmt.Printf("numOutputs: %#v\n", numOutputs)
 
 		switch {
-		// If state number spending transaction matches the current
-		// latest state, then they've initiated a unilateral close. So
-		// we'll trigger the unilateral close signal so subscribers can
-		// clean up the state as necessary.
-		case broadcastStateNum == remoteStateNum && !isRecoveredChan:
-			commitSet.ConfCommitKey = &RemoteHtlcSet
 
-			err := c.dispatchRemoteForceClose(
-				commitSpend, *remoteCommit, commitSet,
-				c.cfg.chanState.RemoteCurrentRevocation,
-			)
-			if err != nil {
-				log.Errorf("unable to handle remote "+
-					"close for chan_point=%v: %v",
-					c.cfg.chanState.FundingOutpoint, err)
-			}
+		// TODO: Check this is a good way to identify merchCloseTx.
+		// If there are less than 2 outputs, it is a merchCloseTx
+		case numOutputs < 2:
 
-		// We'll also handle the case of the remote party broadcasting
-		// their commitment transaction which is one height above ours.
-		// This case can arise when we initiate a state transition, but
-		// the remote party has a fail crash _after_ accepting the new
-		// state, but _before_ sending their signature to us.
-		case broadcastStateNum == remoteStateNum+1 &&
-			remoteChainTip != nil && !isRecoveredChan:
 
-			commitSet.ConfCommitKey = &RemotePendingHtlcSet
+	
+			pkScript := commitTxBroadcast.TxOut[0].PkScript
+	
+			// fmt.Printf("commitTxBroadcast: %#v", commitTxBroadcast)
+			fmt.Printf("pkScript: %#v\n", pkScript)
+	
+			_ = c.zkDispatchRemoteForceClose()
 
-			err := c.dispatchRemoteForceClose(
-				commitSpend, *remoteCommit, commitSet,
-				c.cfg.chanState.RemoteNextRevocation,
-			)
-			if err != nil {
-				log.Errorf("unable to handle remote "+
-					"close for chan_point=%v: %v",
-					c.cfg.chanState.FundingOutpoint, err)
-			}
+		case numOutputs > 2:
 
-		// If the remote party has broadcasted a state beyond our best
-		// known state for them, and they don't have a pending
-		// commitment (we write them to disk before sending out), then
-		// this means that we've lost data. In this case, we'll enter
-		// the DLP protocol. Otherwise, if we've recovered our channel
-		// state from scratch, then we don't know what the precise
-		// current state is, so we assume either the remote party
-		// forced closed or we've been breached. In the latter case,
-		// our tower will take care of us.
-		case broadcastStateNum > remoteStateNum || isRecoveredChan:
-			log.Warnf("Remote node broadcast state #%v, "+
-				"which is more than 1 beyond best known "+
-				"state #%v!!! Attempting recovery...",
-				broadcastStateNum, remoteStateNum)
+			pkScript := commitTxBroadcast.TxOut[2].PkScript
+			fmt.Printf("pkScript (CustPK and RL): %#v\n", pkScript)
+			_ = c.zkDispatchRemoteForceClose()
 
-			// If this isn't a tweakless commitment, then we'll
-			// need to wait for the remote party's latest unrevoked
-			// commitment point to be presented to us as we need
-			// this to sweep. Otherwise, we can dispatch the remote
-			// close and sweep immediately using a fake commitPoint
-			// as it isn't actually needed for recovery anymore.
-			commitPoint := c.cfg.chanState.RemoteCurrentRevocation
-			tweaklessCommit := c.cfg.chanState.ChanType.IsTweakless()
-			if !tweaklessCommit {
-				commitPoint = c.waitForCommitmentPoint()
-				if commitPoint == nil {
-					return
-				}
-
-				log.Infof("Recovered commit point(%x) for "+
-					"channel(%v)! Now attempting to use it to "+
-					"sweep our funds...",
-					commitPoint.SerializeCompressed(),
-					c.cfg.chanState.FundingOutpoint)
-
-			} else {
-				log.Infof("ChannelPoint(%v) is tweakless, " +
-					"moving to sweep directly on chain")
-			}
-
-			// Since we don't have the commitment stored for this
-			// state, we'll just pass an empty commitment within
-			// the commitment set. Note that this means we won't be
-			// able to recover any HTLC funds.
-			//
-			// TODO(halseth): can we try to recover some HTLCs?
-			commitSet.ConfCommitKey = &RemoteHtlcSet
-			err = c.dispatchRemoteForceClose(
-				commitSpend, channeldb.ChannelCommitment{},
-				commitSet, commitPoint,
-			)
-			if err != nil {
-				log.Errorf("unable to handle remote "+
-					"close for chan_point=%v: %v",
-					c.cfg.chanState.FundingOutpoint, err)
-			}
-
-		// If the state number broadcast is lower than the remote
-		// node's current un-revoked height, then THEY'RE ATTEMPTING TO
-		// VIOLATE THE CONTRACT LAID OUT WITHIN THE PAYMENT CHANNEL.
-		// Therefore we close the signal indicating a revoked broadcast
-		// to allow subscribers to swiftly dispatch justice!!!
-		case broadcastStateNum < remoteStateNum:
-			err := c.dispatchContractBreach(
-				commitSpend, remoteCommit,
-				broadcastStateNum,
-			)
-			if err != nil {
-				log.Errorf("unable to handle channel "+
-					"breach for chan_point=%v: %v",
-					c.cfg.chanState.FundingOutpoint, err)
-			}
 		}
+
 
 		// Now that a spend has been detected, we've done our job, so
 		// we'll exit immediately.
@@ -825,7 +592,7 @@ func (c *zkChainWatcher) dispatchLocalForceClose(
 	return nil
 }
 
-// dispatchRemoteForceClose processes a detected unilateral channel closure by
+// zkDispatchRemoteForceClose processes a detected unilateral channel closure by
 // the remote party. This function will prepare a UnilateralCloseSummary which
 // will then be sent to any subscribers allowing them to resolve all our funds
 // in the channel on chain. Once this close summary is prepared, all registered
@@ -838,33 +605,24 @@ func (c *zkChainWatcher) dispatchLocalForceClose(
 // happen in case we have lost state) it should be set to an empty struct, in
 // which case we will attempt to sweep the non-HTLC output using the passed
 // commitPoint.
-func (c *zkChainWatcher) dispatchRemoteForceClose(
-	commitSpend *chainntnfs.SpendDetail,
-	remoteCommit channeldb.ChannelCommitment,
-	commitSet CommitSet, commitPoint *btcec.PublicKey) error {
-
-	log.Infof("Unilateral close of ChannelPoint(%v) "+
-		"detected", c.cfg.chanState.FundingOutpoint)
+func (c *zkChainWatcher) zkDispatchRemoteForceClose() error {
 
 	// First, we'll create a closure summary that contains all the
 	// materials required to let each subscriber sweep the funds in the
 	// channel on-chain.
-	uniClose, err := lnwallet.NewUnilateralCloseSummary(
-		c.cfg.chanState, c.cfg.signer, commitSpend,
-		remoteCommit, commitPoint,
-	)
-	if err != nil {
-		return err
-	}
+	// uniClose, err := lnwallet.NewUnilateralCloseSummary(
+	// 	c.cfg.chanState, c.cfg.signer, commitSpend,
+	// 	remoteCommit, commitPoint,
+	// )
+	// if err != nil {
+	// 	return err
+	// }
 
-	// With the event processed, we'll now notify all subscribers of the
-	// event.
 	c.Lock()
 	for _, sub := range c.clientSubscriptions {
 		select {
-		case sub.RemoteUnilateralClosure <- &RemoteUnilateralCloseInfo{
-			UnilateralCloseSummary: uniClose,
-			CommitSet:              commitSet,
+		case sub.ZkRemoteUnilateralClosure <- &ZkRemoteUnilateralCloseInfo{
+			"TODO: Replace this field with close info",
 		}:
 		case <-c.quit:
 			c.Unlock()
