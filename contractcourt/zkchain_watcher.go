@@ -63,7 +63,7 @@ type ZkCustCloseInfo struct {
 	custCloseTxid chainhash.Hash
 	pkScript      []byte
 	revLock       []byte
-	custPk        []byte
+	custClosePk   []byte
 }
 
 // // RemoteUnilateralCloseInfo wraps the normal UnilateralCloseSummary to couple
@@ -434,11 +434,17 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 			opreturnScript := commitTxBroadcast.TxOut[2].PkScript
 			revLock := opreturnScript[2:34]
-			custPk := opreturnScript[34:67]
+			custClosePk := opreturnScript[34:67]
 			fmt.Printf("revLock: %x\n", revLock)
-			fmt.Printf("custPk: %x\n", custPk)
+			fmt.Printf("custClosePk: %x\n", custClosePk)
 
-			_ = c.zkDispatchCustClose(escrowTxid, custCloseTxid, pkScript, revLock, custPk)
+			err := c.zkDispatchCustClose(escrowTxid, custCloseTxid, pkScript, revLock, custClosePk)
+
+			if err != nil {
+				log.Errorf("unable to handle remote "+
+					"close for channel=%v",
+					escrowTxid, err)
+			}
 
 		}
 
@@ -644,10 +650,10 @@ func (c *zkChainWatcher) zkDispatchMerchClose(escrowTxid chainhash.Hash,
 
 // zkDispatchCustClose processes a detected force close by the Customer.
 // It will return the escrowTxid, custCloseTxid, the custClose pkScript,
-// the revLock, and custPk.
+// the revLock, and custClosePk.
 func (c *zkChainWatcher) zkDispatchCustClose(escrowTxid chainhash.Hash,
 	custCloseTxid chainhash.Hash, pkScript []byte, revLock []byte,
-	custPk []byte) error {
+	custClosePk []byte) error {
 
 	c.Lock()
 	for _, sub := range c.clientSubscriptions {
@@ -657,7 +663,7 @@ func (c *zkChainWatcher) zkDispatchCustClose(escrowTxid chainhash.Hash,
 			custCloseTxid: custCloseTxid,
 			pkScript:      pkScript,
 			revLock:       revLock,
-			custPk:        custPk,
+			custClosePk:   custClosePk,
 		}:
 		case <-c.quit:
 			c.Unlock()
