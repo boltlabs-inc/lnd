@@ -8,6 +8,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
@@ -46,10 +47,23 @@ import (
 // 	*channeldb.ChannelCloseSummary
 // }
 
-// ZkRemoteUnilateralCloseInfo wraps the normal UnilateralCloseSummary to couple
-// the CommitSet at the time of channel closure.
-type ZkRemoteUnilateralCloseInfo struct {
-	string
+// ZkMerchCloseInfo provides the information needed for the customer to retrieve
+// the relevant CloseMerch transaction for that channel.
+type ZkMerchCloseInfo struct {
+	escrowTxid     chainhash.Hash
+	merchCloseTxid chainhash.Hash
+	pkScript       []byte
+}
+
+// ZkCustCloseInfo provides the revocation lock, needed to check if a custCloseTx
+// corresponds to a revoked state, as well as other information needed to create
+// a dispute transaction.
+type ZkCustCloseInfo struct {
+	escrowTxid    chainhash.Hash
+	custCloseTxid chainhash.Hash
+	pkScript      []byte
+	revLock       []byte
+	custPk        []byte
 }
 
 // // RemoteUnilateralCloseInfo wraps the normal UnilateralCloseSummary to couple
@@ -118,9 +132,13 @@ type ZkChainEventSubscription struct {
 	// event that the remote party's commitment transaction is confirmed.
 	RemoteUnilateralClosure chan *RemoteUnilateralCloseInfo
 
-	// ZkRemoteUnilateralClosure is a channel that will be sent upon in the
-	// event that the remote party's commitment transaction is confirmed.
-	ZkRemoteUnilateralClosure chan *ZkRemoteUnilateralCloseInfo
+	// ZkMerchClosure is a channel that will be sent upon in the
+	// event that the Merchant's close transaction is confirmed.
+	ZkMerchClosure chan *ZkMerchCloseInfo
+
+	// ZkCustClosure is a channel that will be sent upon in the
+	// event that the Customer's close transaction is confirmed.
+	ZkCustClosure chan *ZkCustCloseInfo
 
 	// LocalUnilateralClosure is a channel that will be sent upon in the
 	// event that our commitment transaction is confirmed.
@@ -276,12 +294,13 @@ func (c *zkChainWatcher) SubscribeChannelEvents() *ZkChainEventSubscription {
 	c.Unlock()
 
 	sub := &ZkChainEventSubscription{
-		ChanPoint:                 c.cfg.zkFundingInfo.fundingOut,
-		RemoteUnilateralClosure:   make(chan *RemoteUnilateralCloseInfo, 1),
-		ZkRemoteUnilateralClosure: make(chan *ZkRemoteUnilateralCloseInfo, 1),
-		LocalUnilateralClosure:    make(chan *LocalUnilateralCloseInfo, 1),
-		CooperativeClosure:        make(chan *CooperativeCloseInfo, 1),
-		ContractBreach:            make(chan *lnwallet.BreachRetribution, 1),
+		ChanPoint:               c.cfg.zkFundingInfo.fundingOut,
+		RemoteUnilateralClosure: make(chan *RemoteUnilateralCloseInfo, 1),
+		ZkMerchClosure:          make(chan *ZkMerchCloseInfo, 1),
+		ZkCustClosure:           make(chan *ZkCustCloseInfo, 1),
+		LocalUnilateralClosure:  make(chan *LocalUnilateralCloseInfo, 1),
+		CooperativeClosure:      make(chan *CooperativeCloseInfo, 1),
+		ContractBreach:          make(chan *lnwallet.BreachRetribution, 1),
 		Cancel: func() {
 			c.Lock()
 			delete(c.clientSubscriptions, clientID)
@@ -386,38 +405,40 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			return
 		}
 
+		escrowTxid := commitSpend.SpentOutPoint.Hash
 		commitTxBroadcast := commitSpend.SpendingTx
 
 		numOutputs := len(commitTxBroadcast.TxOut)
-		fmt.Printf("numOutputs: %#v\n", numOutputs)
 
 		switch {
 
-		// TODO: Check this is a good way to identify merchCloseTx.
-		// If there are less than 2 outputs, it is a merchCloseTx
+		// A closure initiated by the merchant (merchCloseTx) has one output,
+		//
 		case numOutputs < 2:
 
+			merchCloseTxid := *commitSpend.SpenderTxHash
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
 
-			// fmt.Printf("commitTxBroadcast: %#v", commitTxBroadcast)
-			fmt.Printf("pkScript: %#v\n", pkScript)
+			err := c.zkDispatchMerchClose(escrowTxid, merchCloseTxid, pkScript)
 
-			_ = c.zkDispatchRemoteForceClose()
+			if err != nil {
+				log.Errorf("unable to handle remote "+
+					"close for channel=%v",
+					escrowTxid, err)
+			}
 
 		case numOutputs > 2:
 
-			pkScript := commitTxBroadcast.TxOut[2].PkScript
-			fmt.Printf("pkScript (CustPK and RL): %#v\n", pkScript)
-			fmt.Printf("len pkScript: %#v\n", len(pkScript))
+			custCloseTxid := *commitSpend.SpenderTxHash
+			pkScript := commitTxBroadcast.TxOut[0].PkScript
 
-			RevLock := pkScript[2:34]
-			CustPK := pkScript[34:67]
-			fmt.Printf("RevLock: %#v\n", RevLock)
-			fmt.Printf("CustPK: %#v\n", CustPK)
-			fmt.Printf("len RevLock: %#v\n", len(RevLock))
-			fmt.Printf("len CustPK: %#v\n", len(CustPK))
+			opreturnScript := commitTxBroadcast.TxOut[2].PkScript
+			revLock := opreturnScript[2:34]
+			custPk := opreturnScript[34:67]
+			fmt.Printf("revLock: %x\n", revLock)
+			fmt.Printf("custPk: %x\n", custPk)
 
-			_ = c.zkDispatchRemoteForceClose()
+			_ = c.zkDispatchCustClose(escrowTxid, custCloseTxid, pkScript, revLock, custPk)
 
 		}
 
@@ -598,37 +619,45 @@ func (c *zkChainWatcher) dispatchLocalForceClose(
 	return nil
 }
 
-// zkDispatchRemoteForceClose processes a detected unilateral channel closure by
-// the remote party. This function will prepare a UnilateralCloseSummary which
-// will then be sent to any subscribers allowing them to resolve all our funds
-// in the channel on chain. Once this close summary is prepared, all registered
-// subscribers will receive a notification of this event. The commitPoint
-// argument should be set to the per_commitment_point corresponding to the
-// spending commitment.
-//
-// NOTE: The remoteCommit argument should be set to the stored commitment for
-// this particular state. If we don't have the commitment stored (should only
-// happen in case we have lost state) it should be set to an empty struct, in
-// which case we will attempt to sweep the non-HTLC output using the passed
-// commitPoint.
-func (c *zkChainWatcher) zkDispatchRemoteForceClose() error {
-
-	// First, we'll create a closure summary that contains all the
-	// materials required to let each subscriber sweep the funds in the
-	// channel on-chain.
-	// uniClose, err := lnwallet.NewUnilateralCloseSummary(
-	// 	c.cfg.chanState, c.cfg.signer, commitSpend,
-	// 	remoteCommit, commitPoint,
-	// )
-	// if err != nil {
-	// 	return err
-	// }
+// zkDispatchMerchClose processes a detected force close by the Merchant.
+// It will return the escrowTxid, merchCloseTxid, and the merchClose pkScript.
+func (c *zkChainWatcher) zkDispatchMerchClose(escrowTxid chainhash.Hash,
+	merchCloseTxid chainhash.Hash, pkScript []byte) error {
 
 	c.Lock()
 	for _, sub := range c.clientSubscriptions {
 		select {
-		case sub.ZkRemoteUnilateralClosure <- &ZkRemoteUnilateralCloseInfo{
-			"TODO: Replace this field with close info",
+		case sub.ZkMerchClosure <- &ZkMerchCloseInfo{
+			escrowTxid:     escrowTxid,
+			merchCloseTxid: merchCloseTxid,
+			pkScript:       pkScript,
+		}:
+		case <-c.quit:
+			c.Unlock()
+			return fmt.Errorf("exiting")
+		}
+	}
+	c.Unlock()
+
+	return nil
+}
+
+// zkDispatchCustClose processes a detected force close by the Customer.
+// It will return the escrowTxid, custCloseTxid, the custClose pkScript,
+// the revLock, and custPk.
+func (c *zkChainWatcher) zkDispatchCustClose(escrowTxid chainhash.Hash,
+	custCloseTxid chainhash.Hash, pkScript []byte, revLock []byte,
+	custPk []byte) error {
+
+	c.Lock()
+	for _, sub := range c.clientSubscriptions {
+		select {
+		case sub.ZkCustClosure <- &ZkCustCloseInfo{
+			escrowTxid:    escrowTxid,
+			custCloseTxid: custCloseTxid,
+			pkScript:      pkScript,
+			revLock:       revLock,
+			custPk:        custPk,
 		}:
 		case <-c.quit:
 			c.Unlock()
