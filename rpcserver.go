@@ -6587,7 +6587,7 @@ func (r *rpcServer) MerchClose(ctx context.Context,
 	}
 
 	if err := r.server.MerchClose(in.EscrowTxid); err != nil {
-		return nil, fmt.Errorf("could not close channel: ", err)
+		return nil, fmt.Errorf("could not close channel: %v", err)
 	}
 
 	return &lnrpc.MerchCloseResponse{}, nil

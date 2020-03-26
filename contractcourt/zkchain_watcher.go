@@ -1,6 +1,8 @@
 package contractcourt
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -16,7 +18,9 @@ import (
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/input"
+	"github.com/lightningnetwork/lnd/libzkchannels"
 	"github.com/lightningnetwork/lnd/lnwallet"
+	"github.com/lightningnetwork/lnd/zkchanneldb"
 )
 
 // const (
@@ -62,8 +66,8 @@ type ZkCustCloseInfo struct {
 	escrowTxid    chainhash.Hash
 	custCloseTxid chainhash.Hash
 	pkScript      []byte
-	revLock       []byte
-	custClosePk   []byte
+	revLock       string
+	custClosePk   string
 }
 
 // // RemoteUnilateralCloseInfo wraps the normal UnilateralCloseSummary to couple
@@ -427,19 +431,61 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					escrowTxid, err)
 			}
 
+		// if the closeTx has more than 2 outputs, it is a custCloseTx. Now we
+		// check to see if custCloseTx corresponds to a revoked state by
+		// checking if we have seen the revocation lock before.
 		case numOutputs > 2:
 
 			custCloseTxid := *commitSpend.SpenderTxHash
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
 
 			opreturnScript := commitTxBroadcast.TxOut[2].PkScript
-			revLock := opreturnScript[2:34]
-			custClosePk := opreturnScript[34:67]
-			fmt.Printf("revLock: %x\n", revLock)
-			fmt.Printf("custClosePk: %x\n", custClosePk)
+			revLockBytes := opreturnScript[2:34]
+			revLock := hex.EncodeToString(revLockBytes)
 
-			err := c.zkDispatchCustClose(escrowTxid, custCloseTxid, pkScript, revLock, custClosePk)
+			custClosePkBytes := opreturnScript[34:67]
+			custClosePk := hex.EncodeToString(custClosePkBytes)
+			fmt.Printf("revLock: %s\n", revLock)
+			fmt.Printf("custClosePk: %s\n", custClosePk)
 
+			// open the zkchanneldb to load merchState and channelState
+			zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
+			var merchState libzkchannels.MerchState
+			merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
+			err = json.Unmarshal(merchStateBytes, &merchState)
+
+			zkMerchDB.Close()
+
+			isOldRevLock, FoundRevSecret, err := libzkchannels.MerchantCheckRevLock(revLock, merchState)
+			_ = FoundRevSecret
+			fmt.Printf("isOldRevLock: %#v\n", isOldRevLock)
+			fmt.Printf("FoundRevSecret: %#v\n", FoundRevSecret)
+
+			if isOldRevLock {
+
+				// The Revocation Lock in the custCloseTx corresponds to an old
+				// state.
+				// close on a previous state, possibly a double spend.
+				err := c.zkDispatchCustBreach(escrowTxid, custCloseTxid, pkScript, revLock, custClosePk)
+
+				if err != nil {
+					log.Errorf("unable to handle remote breach"+
+						" custClose for channel=%v",
+						escrowTxid, err)
+				}
+			} else {
+
+				err := c.zkDispatchCustClose(escrowTxid, custCloseTxid, pkScript, revLock, custClosePk)
+				// custClose is not the latest state. The customer has attempted to
+				// close on a previous state, possibly a double spend.
+
+				if err != nil {
+					log.Errorf("unable to handle remote "+
+						"custClose for channel=%v",
+						escrowTxid, err)
+				}
+			}
 			if err != nil {
 				log.Errorf("unable to handle remote "+
 					"close for channel=%v",
@@ -652,8 +698,8 @@ func (c *zkChainWatcher) zkDispatchMerchClose(escrowTxid chainhash.Hash,
 // It will return the escrowTxid, custCloseTxid, the custClose pkScript,
 // the revLock, and custClosePk.
 func (c *zkChainWatcher) zkDispatchCustClose(escrowTxid chainhash.Hash,
-	custCloseTxid chainhash.Hash, pkScript []byte, revLock []byte,
-	custClosePk []byte) error {
+	custCloseTxid chainhash.Hash, pkScript []byte, revLock string,
+	custClosePk string) error {
 
 	c.Lock()
 	for _, sub := range c.clientSubscriptions {
