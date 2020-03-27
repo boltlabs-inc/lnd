@@ -59,14 +59,22 @@ type ZkMerchCloseInfo struct {
 	pkScript       []byte
 }
 
-// ZkCustCloseInfo provides the revocation lock, needed to check if a custCloseTx
-// corresponds to a revoked state, as well as other information needed to create
-// a dispute transaction.
+// ZkCustCloseInfo provides details about the customer close tx.
 type ZkCustCloseInfo struct {
 	escrowTxid    chainhash.Hash
 	custCloseTxid chainhash.Hash
 	pkScript      []byte
 	revLock       string
+	custClosePk   string
+}
+
+// ZkCustBreachInfo provides information needed to create a dispute transaction.
+type ZkCustBreachInfo struct {
+	escrowTxid    chainhash.Hash
+	custCloseTxid chainhash.Hash
+	pkScript      []byte
+	revLock       string
+	revSecret     string
 	custClosePk   string
 }
 
@@ -144,6 +152,10 @@ type ZkChainEventSubscription struct {
 	// event that the Customer's close transaction is confirmed.
 	ZkCustClosure chan *ZkCustCloseInfo
 
+	// ZkCustBreach is a channel that will be sent upon in the
+	// event that the Customer's close transaction is confirmed.
+	ZkCustBreach chan *ZkCustBreachInfo
+
 	// LocalUnilateralClosure is a channel that will be sent upon in the
 	// event that our commitment transaction is confirmed.
 	LocalUnilateralClosure chan *LocalUnilateralCloseInfo
@@ -168,6 +180,9 @@ type ZkChainEventSubscription struct {
 type zkChainWatcherConfig struct {
 	// zkFundingInfo contains funding outpoint, pkscript and, confirmation blockheight
 	zkFundingInfo
+
+	// isMerch is true if this node is the merchant's
+	isMerch bool
 
 	// chanState is a snapshot of the persistent state of the channel that
 	// we're watching. In the event of an on-chain event, we'll query the
@@ -302,6 +317,7 @@ func (c *zkChainWatcher) SubscribeChannelEvents() *ZkChainEventSubscription {
 		RemoteUnilateralClosure: make(chan *RemoteUnilateralCloseInfo, 1),
 		ZkMerchClosure:          make(chan *ZkMerchCloseInfo, 1),
 		ZkCustClosure:           make(chan *ZkCustCloseInfo, 1),
+		ZkCustBreach:            make(chan *ZkCustBreachInfo, 1),
 		LocalUnilateralClosure:  make(chan *LocalUnilateralCloseInfo, 1),
 		CooperativeClosure:      make(chan *CooperativeCloseInfo, 1),
 		ContractBreach:          make(chan *lnwallet.BreachRetribution, 1),
@@ -397,6 +413,9 @@ func (c *zkChainWatcher) SubscribeChannelEvents() *ZkChainEventSubscription {
 func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 	defer c.wg.Done()
 
+	// determine if this node is a merchant
+	isMerch := c.cfg.isMerch
+
 	select {
 	// We've detected a spend of the channel onchain! Depending on the type
 	// of spend, we'll act accordingly , so we'll examine the spending
@@ -411,19 +430,18 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 		escrowTxid := commitSpend.SpentOutPoint.Hash
 		commitTxBroadcast := commitSpend.SpendingTx
+		closeTxid := *commitSpend.SpenderTxHash
 
 		numOutputs := len(commitTxBroadcast.TxOut)
 
 		switch {
 
-		// A closure initiated by the merchant (merchCloseTx) has one output,
-		//
+		// merchCloseTx has one output.
 		case numOutputs < 2:
 
-			merchCloseTxid := *commitSpend.SpenderTxHash
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
 
-			err := c.zkDispatchMerchClose(escrowTxid, merchCloseTxid, pkScript)
+			err := c.zkDispatchMerchClose(escrowTxid, closeTxid, pkScript)
 
 			if err != nil {
 				log.Errorf("unable to handle remote "+
@@ -431,13 +449,10 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					escrowTxid, err)
 			}
 
-		// if the closeTx has more than 2 outputs, it is a custCloseTx. Now we
-		// check to see if custCloseTx corresponds to a revoked state by
-		// checking if we have seen the revocation lock before.
+		// custCloseTx has 3 outputs.
 		case numOutputs > 2:
 
-			custCloseTxid := *commitSpend.SpenderTxHash
-			pkScript := commitTxBroadcast.TxOut[0].PkScript
+			disputePkScript := commitTxBroadcast.TxOut[0].PkScript
 
 			opreturnScript := commitTxBroadcast.TxOut[2].PkScript
 			revLockBytes := opreturnScript[2:34]
@@ -445,38 +460,12 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 			custClosePkBytes := opreturnScript[34:67]
 			custClosePk := hex.EncodeToString(custClosePkBytes)
-			fmt.Printf("revLock: %s\n", revLock)
-			fmt.Printf("custClosePk: %s\n", custClosePk)
 
-			// open the zkchanneldb to load merchState and channelState
-			zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+			// If the user is a customer and they broadcastes custClose,
+			// there is nothing more to do.
+			if !isMerch {
 
-			var merchState libzkchannels.MerchState
-			merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
-			err = json.Unmarshal(merchStateBytes, &merchState)
-
-			zkMerchDB.Close()
-
-			isOldRevLock, FoundRevSecret, err := libzkchannels.MerchantCheckRevLock(revLock, merchState)
-			_ = FoundRevSecret
-			fmt.Printf("isOldRevLock: %#v\n", isOldRevLock)
-			fmt.Printf("FoundRevSecret: %#v\n", FoundRevSecret)
-
-			if isOldRevLock {
-
-				// The Revocation Lock in the custCloseTx corresponds to an old
-				// state.
-				// close on a previous state, possibly a double spend.
-				err := c.zkDispatchCustBreach(escrowTxid, custCloseTxid, pkScript, revLock, custClosePk)
-
-				if err != nil {
-					log.Errorf("unable to handle remote breach"+
-						" custClose for channel=%v",
-						escrowTxid, err)
-				}
-			} else {
-
-				err := c.zkDispatchCustClose(escrowTxid, custCloseTxid, pkScript, revLock, custClosePk)
+				err := c.zkDispatchCustClose(escrowTxid, closeTxid, disputePkScript, revLock, custClosePk)
 				// custClose is not the latest state. The customer has attempted to
 				// close on a previous state, possibly a double spend.
 
@@ -486,12 +475,55 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 						escrowTxid, err)
 				}
 			}
-			if err != nil {
-				log.Errorf("unable to handle remote "+
-					"close for channel=%v",
-					escrowTxid, err)
-			}
+			// if the closeTx has more than 2 outputs, it is a custCloseTx. Now we
+			// check to see if custCloseTx corresponds to a revoked state by
+			// checking if we have seen the revocation lock before.
+			if isMerch {
 
+				// open the zkchanneldb to load merchState and channelState
+				zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+				var merchState libzkchannels.MerchState
+				merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
+				err = json.Unmarshal(merchStateBytes, &merchState)
+				zkMerchDB.Close()
+
+				isOldRevLock, revSecret, err := libzkchannels.MerchantCheckRevLock(revLock, merchState)
+
+				// The Revocation Lock in the custCloseTx corresponds to an old
+				// state. We must send the relevant transaction information
+				// to the breachArbiter to broadcast the dispute/justice tx.
+				if isOldRevLock {
+
+					err := c.zkDispatchCustBreach(escrowTxid, closeTxid, disputePkScript, revLock, revSecret, custClosePk)
+
+					if err != nil {
+						log.Errorf("unable to handle remote breach"+
+							" custClose for channel=%v",
+							escrowTxid, err)
+					}
+					// The Revocation Lock has not been seen before, therefore it
+					// corresponds to the customer's latest state. We should
+					// store the Revocation Lock to prevent a customer making
+					// a payment with it.
+				} else {
+
+					// custClose is not the latest state. The customer has attempted to
+					// close on a previous state, possibly a double spend.
+					err := c.zkDispatchCustClose(escrowTxid, closeTxid, disputePkScript, revLock, custClosePk)
+
+					if err != nil {
+						log.Errorf("unable to handle remote "+
+							"custClose for channel=%v",
+							escrowTxid, err)
+					}
+				}
+				if err != nil {
+					log.Errorf("unable to handle remote "+
+						"close for channel=%v",
+						escrowTxid, err)
+				}
+
+			}
 		}
 
 		// Now that a spend has been detected, we've done our job, so
@@ -709,6 +741,35 @@ func (c *zkChainWatcher) zkDispatchCustClose(escrowTxid chainhash.Hash,
 			custCloseTxid: custCloseTxid,
 			pkScript:      pkScript,
 			revLock:       revLock,
+			custClosePk:   custClosePk,
+		}:
+		case <-c.quit:
+			c.Unlock()
+			return fmt.Errorf("exiting")
+		}
+	}
+	c.Unlock()
+
+	return nil
+}
+
+// zkDispatchCustBreach processes a detected force close by the customer
+// with a revoked state.
+// It will return the escrowTxid, custCloseTxid, the custClose pkScript,
+// the revLock, and custClosePk.
+func (c *zkChainWatcher) zkDispatchCustBreach(escrowTxid chainhash.Hash,
+	custCloseTxid chainhash.Hash, pkScript []byte, revLock string,
+	revSecret string, custClosePk string) error {
+
+	c.Lock()
+	for _, sub := range c.clientSubscriptions {
+		select {
+		case sub.ZkCustBreach <- &ZkCustBreachInfo{
+			escrowTxid:    escrowTxid,
+			custCloseTxid: custCloseTxid,
+			pkScript:      pkScript,
+			revLock:       revLock,
+			revSecret:     revSecret,
 			custClosePk:   custClosePk,
 		}:
 		case <-c.quit:

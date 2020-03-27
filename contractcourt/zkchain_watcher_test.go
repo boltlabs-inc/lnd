@@ -9,7 +9,6 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/lightningnetwork/lnd/chainntnfs"
-	"github.com/lightningnetwork/lnd/lnwallet"
 )
 
 // zkchannel test txs
@@ -68,9 +67,9 @@ func TestZkChainWatcherMerchClose(t *testing.T) {
 	}
 
 	custChainWatcher, err := newZkChainWatcher(zkChainWatcherConfig{
-		zkFundingInfo:       zkFundingInfo,
-		notifier:            custNotifier,
-		extractStateNumHint: lnwallet.GetStateNumHint,
+		isMerch:       true,
+		zkFundingInfo: zkFundingInfo,
+		notifier:      custNotifier,
 	})
 	if err != nil {
 		t.Fatalf("unable to create chain watcher: %v", err)
@@ -163,9 +162,9 @@ func TestZkChainWatcherCustClose(t *testing.T) {
 	}
 
 	custChainWatcher, err := newZkChainWatcher(zkChainWatcherConfig{
-		zkFundingInfo:       zkFundingInfo,
-		notifier:            custNotifier,
-		extractStateNumHint: lnwallet.GetStateNumHint,
+		isMerch:       true,
+		zkFundingInfo: zkFundingInfo,
+		notifier:      custNotifier,
 	})
 	if err != nil {
 		t.Fatalf("unable to create chain watcher: %v", err)
@@ -206,8 +205,8 @@ func TestZkChainWatcherCustClose(t *testing.T) {
 	var uniClose *ZkCustCloseInfo
 	select {
 	case uniClose = <-chanEvents.ZkCustClosure:
-		t.Logf("revLock %x:", uniClose.revLock)
-		t.Logf("custClosePk %x:", uniClose.custClosePk)
+		t.Logf("revLock: %#v\n", uniClose.revLock)
+		t.Logf("custClosePk: %#v\n", uniClose.custClosePk)
 	case <-time.After(time.Second * 5):
 		t.Fatalf("didn't receive unilateral close event")
 	}

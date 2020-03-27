@@ -563,7 +563,7 @@ func (c *chainWatcher) closeObserver(spendNtfn *chainntnfs.SpendEvent) {
 					"close for chan_point=%v: %v",
 					c.cfg.chanState.FundingOutpoint, err)
 			}
-			return
+			return 
 		}
 
 		// Next, we'll check to see if this is a cooperative channel
