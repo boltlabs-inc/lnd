@@ -110,6 +110,7 @@ func TestZkChainWatcherMerchClose(t *testing.T) {
 	var uniClose *ZkMerchCloseInfo
 	select {
 	case uniClose = <-chanEvents.ZkMerchClosure:
+		t.Logf("amount: %#v\n", uniClose.amount)
 	case <-time.After(time.Second * 5):
 		t.Fatalf("didn't receive unilateral close event")
 	}
@@ -207,6 +208,7 @@ func TestZkChainWatcherCustClose(t *testing.T) {
 	case uniClose = <-chanEvents.ZkCustClosure:
 		t.Logf("revLock: %#v\n", uniClose.revLock)
 		t.Logf("custClosePk: %#v\n", uniClose.custClosePk)
+		t.Logf("amount: %#v\n", uniClose.amount)
 	case <-time.After(time.Second * 5):
 		t.Fatalf("didn't receive unilateral close event")
 	}

@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
-	"time"
 
-	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
@@ -57,6 +55,7 @@ type ZkMerchCloseInfo struct {
 	escrowTxid     chainhash.Hash
 	merchCloseTxid chainhash.Hash
 	pkScript       []byte
+	amount         int64
 }
 
 // ZkCustCloseInfo provides details about the customer close tx.
@@ -66,16 +65,18 @@ type ZkCustCloseInfo struct {
 	pkScript      []byte
 	revLock       string
 	custClosePk   string
+	amount        int64
 }
 
 // ZkCustBreachInfo provides information needed to create a dispute transaction.
 type ZkCustBreachInfo struct {
-	escrowTxid    chainhash.Hash
-	custCloseTxid chainhash.Hash
-	pkScript      []byte
-	revLock       string
-	revSecret     string
-	custClosePk   string
+	escrowTxid      chainhash.Hash
+	custCloseTxid   chainhash.Hash
+	DisputePkScript []byte
+	revLock         string
+	revSecret       string
+	custClosePk     string
+	amount          int64
 }
 
 // // RemoteUnilateralCloseInfo wraps the normal UnilateralCloseSummary to couple
@@ -203,6 +204,12 @@ type zkChainWatcherConfig struct {
 	// when this method returns with a non-nil error it will be safe to mark
 	// the channel as pending close in the database.
 	contractBreach func(*lnwallet.BreachRetribution) error
+
+	// contractBreach is a method that will be called by the watcher if it
+	// detects that a contract breach transaction has been confirmed. Only
+	// when this method returns with a non-nil error it will be safe to mark
+	// the channel as pending close in the database.
+	custContractBreach func(*ZkCustBreachInfo) error
 
 	// isOurAddr is a function that returns true if the passed address is
 	// known to us.
@@ -434,6 +441,8 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 		numOutputs := len(commitTxBroadcast.TxOut)
 
+		amount := commitTxBroadcast.TxOut[0].Value
+
 		switch {
 
 		// merchCloseTx has one output.
@@ -441,7 +450,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
 
-			err := c.zkDispatchMerchClose(escrowTxid, closeTxid, pkScript)
+			err := c.zkDispatchMerchClose(escrowTxid, closeTxid, pkScript, amount)
 
 			if err != nil {
 				log.Errorf("unable to handle remote "+
@@ -465,7 +474,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			// there is nothing more to do.
 			if !isMerch {
 
-				err := c.zkDispatchCustClose(escrowTxid, closeTxid, disputePkScript, revLock, custClosePk)
+				err := c.zkDispatchCustClose(escrowTxid, closeTxid, disputePkScript, revLock, custClosePk, amount)
 				// custClose is not the latest state. The customer has attempted to
 				// close on a previous state, possibly a double spend.
 
@@ -494,7 +503,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 				// to the breachArbiter to broadcast the dispute/justice tx.
 				if isOldRevLock {
 
-					err := c.zkDispatchCustBreach(escrowTxid, closeTxid, disputePkScript, revLock, revSecret, custClosePk)
+					err := c.zkDispatchCustBreach(escrowTxid, closeTxid, disputePkScript, revLock, revSecret, custClosePk, amount)
 
 					if err != nil {
 						log.Errorf("unable to handle remote breach"+
@@ -509,7 +518,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 					// custClose is not the latest state. The customer has attempted to
 					// close on a previous state, possibly a double spend.
-					err := c.zkDispatchCustClose(escrowTxid, closeTxid, disputePkScript, revLock, custClosePk)
+					err := c.zkDispatchCustClose(escrowTxid, closeTxid, disputePkScript, revLock, custClosePk, amount)
 
 					if err != nil {
 						log.Errorf("unable to handle remote "+
@@ -706,7 +715,7 @@ func (c *zkChainWatcher) dispatchLocalForceClose(
 // zkDispatchMerchClose processes a detected force close by the Merchant.
 // It will return the escrowTxid, merchCloseTxid, and the merchClose pkScript.
 func (c *zkChainWatcher) zkDispatchMerchClose(escrowTxid chainhash.Hash,
-	merchCloseTxid chainhash.Hash, pkScript []byte) error {
+	merchCloseTxid chainhash.Hash, pkScript []byte, amount int64) error {
 
 	c.Lock()
 	for _, sub := range c.clientSubscriptions {
@@ -715,6 +724,7 @@ func (c *zkChainWatcher) zkDispatchMerchClose(escrowTxid chainhash.Hash,
 			escrowTxid:     escrowTxid,
 			merchCloseTxid: merchCloseTxid,
 			pkScript:       pkScript,
+			amount:         amount,
 		}:
 		case <-c.quit:
 			c.Unlock()
@@ -731,7 +741,7 @@ func (c *zkChainWatcher) zkDispatchMerchClose(escrowTxid chainhash.Hash,
 // the revLock, and custClosePk.
 func (c *zkChainWatcher) zkDispatchCustClose(escrowTxid chainhash.Hash,
 	custCloseTxid chainhash.Hash, pkScript []byte, revLock string,
-	custClosePk string) error {
+	custClosePk string, amount int64) error {
 
 	c.Lock()
 	for _, sub := range c.clientSubscriptions {
@@ -742,6 +752,7 @@ func (c *zkChainWatcher) zkDispatchCustClose(escrowTxid chainhash.Hash,
 			pkScript:      pkScript,
 			revLock:       revLock,
 			custClosePk:   custClosePk,
+			amount:        amount,
 		}:
 		case <-c.quit:
 			c.Unlock()
@@ -758,20 +769,30 @@ func (c *zkChainWatcher) zkDispatchCustClose(escrowTxid chainhash.Hash,
 // It will return the escrowTxid, custCloseTxid, the custClose pkScript,
 // the revLock, and custClosePk.
 func (c *zkChainWatcher) zkDispatchCustBreach(escrowTxid chainhash.Hash,
-	custCloseTxid chainhash.Hash, pkScript []byte, revLock string,
-	revSecret string, custClosePk string) error {
+	custCloseTxid chainhash.Hash, DisputePkScript []byte, revLock string,
+	revSecret string, custClosePk string, amount int64) error {
+
+	custBreachInfo := ZkCustBreachInfo{
+		escrowTxid:      escrowTxid,
+		custCloseTxid:   custCloseTxid,
+		DisputePkScript: DisputePkScript,
+		revLock:         revLock,
+		revSecret:       revSecret,
+		custClosePk:     custClosePk,
+		amount:          amount,
+	}
+
+	// Hand the retribution info over to the breach arbiter.
+	if err := c.cfg.custContractBreach(&custBreachInfo); err != nil {
+		log.Errorf("unable to hand breached contract off to "+
+			"zkBreachArbiter: %v", err)
+		return err
+	}
 
 	c.Lock()
 	for _, sub := range c.clientSubscriptions {
 		select {
-		case sub.ZkCustBreach <- &ZkCustBreachInfo{
-			escrowTxid:    escrowTxid,
-			custCloseTxid: custCloseTxid,
-			pkScript:      pkScript,
-			revLock:       revLock,
-			revSecret:     revSecret,
-			custClosePk:   custClosePk,
-		}:
+		case sub.ZkCustBreach <- &custBreachInfo:
 		case <-c.quit:
 			c.Unlock()
 			return fmt.Errorf("exiting")
@@ -782,159 +803,159 @@ func (c *zkChainWatcher) zkDispatchCustBreach(escrowTxid chainhash.Hash,
 	return nil
 }
 
-// dispatchContractBreach processes a detected contract breached by the remote
-// party. This method is to be called once we detect that the remote party has
-// broadcast a prior revoked commitment state. This method well prepare all the
-// materials required to bring the cheater to justice, then notify all
-// registered subscribers of this event.
-func (c *zkChainWatcher) dispatchContractBreach(spendEvent *chainntnfs.SpendDetail,
-	remoteCommit *channeldb.ChannelCommitment,
-	broadcastStateNum uint64) error {
+// // dispatchContractBreach processes a detected contract breached by the remote
+// // party. This method is to be called once we detect that the remote party has
+// // broadcast a prior revoked commitment state. This method well prepare all the
+// // materials required to bring the cheater to justice, then notify all
+// // registered subscribers of this event.
+// func (c *zkChainWatcher) dispatchContractBreach(spendEvent *chainntnfs.SpendDetail,
+// 	remoteCommit *channeldb.ChannelCommitment,
+// 	broadcastStateNum uint64) error {
 
-	log.Warnf("Remote peer has breached the channel contract for "+
-		"ChannelPoint(%v). Revoked state #%v was broadcast!!!",
-		c.cfg.chanState.FundingOutpoint, broadcastStateNum)
+// 	log.Warnf("Remote peer has breached the channel contract for "+
+// 		"ChannelPoint(%v). Revoked state #%v was broadcast!!!",
+// 		c.cfg.chanState.FundingOutpoint, broadcastStateNum)
 
-	if err := c.cfg.chanState.MarkBorked(); err != nil {
-		return fmt.Errorf("unable to mark channel as borked: %v", err)
-	}
+// 	if err := c.cfg.chanState.MarkBorked(); err != nil {
+// 		return fmt.Errorf("unable to mark channel as borked: %v", err)
+// 	}
 
-	spendHeight := uint32(spendEvent.SpendingHeight)
+// 	spendHeight := uint32(spendEvent.SpendingHeight)
 
-	// Create a new reach retribution struct which contains all the data
-	// needed to swiftly bring the cheating peer to justice.
-	//
-	// TODO(roasbeef): move to same package
-	retribution, err := lnwallet.NewBreachRetribution(
-		c.cfg.chanState, broadcastStateNum, spendHeight,
-	)
-	if err != nil {
-		return fmt.Errorf("unable to create breach retribution: %v", err)
-	}
+// 	// Create a new reach retribution struct which contains all the data
+// 	// needed to swiftly bring the cheating peer to justice.
+// 	//
+// 	// TODO(roasbeef): move to same package
+// 	retribution, err := lnwallet.NewBreachRetribution(
+// 		c.cfg.chanState, broadcastStateNum, spendHeight,
+// 	)
+// 	if err != nil {
+// 		return fmt.Errorf("unable to create breach retribution: %v", err)
+// 	}
 
-	// Nil the curve before printing.
-	if retribution.RemoteOutputSignDesc != nil &&
-		retribution.RemoteOutputSignDesc.DoubleTweak != nil {
-		retribution.RemoteOutputSignDesc.DoubleTweak.Curve = nil
-	}
-	if retribution.RemoteOutputSignDesc != nil &&
-		retribution.RemoteOutputSignDesc.KeyDesc.PubKey != nil {
-		retribution.RemoteOutputSignDesc.KeyDesc.PubKey.Curve = nil
-	}
-	if retribution.LocalOutputSignDesc != nil &&
-		retribution.LocalOutputSignDesc.DoubleTweak != nil {
-		retribution.LocalOutputSignDesc.DoubleTweak.Curve = nil
-	}
-	if retribution.LocalOutputSignDesc != nil &&
-		retribution.LocalOutputSignDesc.KeyDesc.PubKey != nil {
-		retribution.LocalOutputSignDesc.KeyDesc.PubKey.Curve = nil
-	}
+// 	// Nil the curve before printing.
+// 	if retribution.RemoteOutputSignDesc != nil &&
+// 		retribution.RemoteOutputSignDesc.DoubleTweak != nil {
+// 		retribution.RemoteOutputSignDesc.DoubleTweak.Curve = nil
+// 	}
+// 	if retribution.RemoteOutputSignDesc != nil &&
+// 		retribution.RemoteOutputSignDesc.KeyDesc.PubKey != nil {
+// 		retribution.RemoteOutputSignDesc.KeyDesc.PubKey.Curve = nil
+// 	}
+// 	if retribution.LocalOutputSignDesc != nil &&
+// 		retribution.LocalOutputSignDesc.DoubleTweak != nil {
+// 		retribution.LocalOutputSignDesc.DoubleTweak.Curve = nil
+// 	}
+// 	if retribution.LocalOutputSignDesc != nil &&
+// 		retribution.LocalOutputSignDesc.KeyDesc.PubKey != nil {
+// 		retribution.LocalOutputSignDesc.KeyDesc.PubKey.Curve = nil
+// 	}
 
-	log.Debugf("Punishment breach retribution created: %v",
-		newLogClosure(func() string {
-			retribution.KeyRing.CommitPoint.Curve = nil
-			retribution.KeyRing.LocalHtlcKey = nil
-			retribution.KeyRing.RemoteHtlcKey = nil
-			retribution.KeyRing.ToLocalKey = nil
-			retribution.KeyRing.ToRemoteKey = nil
-			retribution.KeyRing.RevocationKey = nil
-			return spew.Sdump(retribution)
-		}))
+// 	log.Debugf("Punishment breach retribution created: %v",
+// 		newLogClosure(func() string {
+// 			retribution.KeyRing.CommitPoint.Curve = nil
+// 			retribution.KeyRing.LocalHtlcKey = nil
+// 			retribution.KeyRing.RemoteHtlcKey = nil
+// 			retribution.KeyRing.ToLocalKey = nil
+// 			retribution.KeyRing.ToRemoteKey = nil
+// 			retribution.KeyRing.RevocationKey = nil
+// 			return spew.Sdump(retribution)
+// 		}))
 
-	// Hand the retribution info over to the breach arbiter.
-	if err := c.cfg.contractBreach(retribution); err != nil {
-		log.Errorf("unable to hand breached contract off to "+
-			"breachArbiter: %v", err)
-		return err
-	}
+// 	// Hand the retribution info over to the breach arbiter.
+// 	if err := c.cfg.contractBreach(retribution); err != nil {
+// 		log.Errorf("unable to hand breached contract off to "+
+// 			"breachArbiter: %v", err)
+// 		return err
+// 	}
 
-	// With the event processed, we'll now notify all subscribers of the
-	// event.
-	c.Lock()
-	for _, sub := range c.clientSubscriptions {
-		select {
-		case sub.ContractBreach <- retribution:
-		case <-c.quit:
-			c.Unlock()
-			return fmt.Errorf("quitting")
-		}
-	}
-	c.Unlock()
+// 	// With the event processed, we'll now notify all subscribers of the
+// 	// event.
+// 	c.Lock()
+// 	for _, sub := range c.clientSubscriptions {
+// 		select {
+// 		case sub.ContractBreach <- retribution:
+// 		case <-c.quit:
+// 			c.Unlock()
+// 			return fmt.Errorf("quitting")
+// 		}
+// 	}
+// 	c.Unlock()
 
-	// At this point, we've successfully received an ack for the breach
-	// close. We now construct and persist  the close summary, marking the
-	// channel as pending force closed.
-	//
-	// TODO(roasbeef): instead mark we got all the monies?
-	// TODO(halseth): move responsibility to breach arbiter?
-	settledBalance := remoteCommit.LocalBalance.ToSatoshis()
-	closeSummary := channeldb.ChannelCloseSummary{
-		ChanPoint:               c.cfg.chanState.FundingOutpoint,
-		ChainHash:               c.cfg.chanState.ChainHash,
-		ClosingTXID:             *spendEvent.SpenderTxHash,
-		CloseHeight:             spendHeight,
-		RemotePub:               c.cfg.chanState.IdentityPub,
-		Capacity:                c.cfg.chanState.Capacity,
-		SettledBalance:          settledBalance,
-		CloseType:               channeldb.BreachClose,
-		IsPending:               true,
-		ShortChanID:             c.cfg.chanState.ShortChanID(),
-		RemoteCurrentRevocation: c.cfg.chanState.RemoteCurrentRevocation,
-		RemoteNextRevocation:    c.cfg.chanState.RemoteNextRevocation,
-		LocalChanConfig:         c.cfg.chanState.LocalChanCfg,
-	}
+// 	// At this point, we've successfully received an ack for the breach
+// 	// close. We now construct and persist  the close summary, marking the
+// 	// channel as pending force closed.
+// 	//
+// 	// TODO(roasbeef): instead mark we got all the monies?
+// 	// TODO(halseth): move responsibility to breach arbiter?
+// 	settledBalance := remoteCommit.LocalBalance.ToSatoshis()
+// 	closeSummary := channeldb.ChannelCloseSummary{
+// 		ChanPoint:               c.cfg.chanState.FundingOutpoint,
+// 		ChainHash:               c.cfg.chanState.ChainHash,
+// 		ClosingTXID:             *spendEvent.SpenderTxHash,
+// 		CloseHeight:             spendHeight,
+// 		RemotePub:               c.cfg.chanState.IdentityPub,
+// 		Capacity:                c.cfg.chanState.Capacity,
+// 		SettledBalance:          settledBalance,
+// 		CloseType:               channeldb.BreachClose,
+// 		IsPending:               true,
+// 		ShortChanID:             c.cfg.chanState.ShortChanID(),
+// 		RemoteCurrentRevocation: c.cfg.chanState.RemoteCurrentRevocation,
+// 		RemoteNextRevocation:    c.cfg.chanState.RemoteNextRevocation,
+// 		LocalChanConfig:         c.cfg.chanState.LocalChanCfg,
+// 	}
 
-	// Attempt to add a channel sync message to the close summary.
-	chanSync, err := c.cfg.chanState.ChanSyncMsg()
-	if err != nil {
-		log.Errorf("ChannelPoint(%v): unable to create channel sync "+
-			"message: %v", c.cfg.chanState.FundingOutpoint, err)
-	} else {
-		closeSummary.LastChanSyncMsg = chanSync
-	}
+// 	// Attempt to add a channel sync message to the close summary.
+// 	chanSync, err := c.cfg.chanState.ChanSyncMsg()
+// 	if err != nil {
+// 		log.Errorf("ChannelPoint(%v): unable to create channel sync "+
+// 			"message: %v", c.cfg.chanState.FundingOutpoint, err)
+// 	} else {
+// 		closeSummary.LastChanSyncMsg = chanSync
+// 	}
 
-	if err := c.cfg.chanState.CloseChannel(&closeSummary); err != nil {
-		return err
-	}
+// 	if err := c.cfg.chanState.CloseChannel(&closeSummary); err != nil {
+// 		return err
+// 	}
 
-	log.Infof("Breached channel=%v marked pending-closed",
-		c.cfg.chanState.FundingOutpoint)
+// 	log.Infof("Breached channel=%v marked pending-closed",
+// 		c.cfg.chanState.FundingOutpoint)
 
-	return nil
-}
+// 	return nil
+// }
 
-// waitForCommitmentPoint waits for the commitment point to be inserted into
-// the local database. We'll use this method in the DLP case, to wait for the
-// remote party to send us their point, as we can't proceed until we have that.
-func (c *zkChainWatcher) waitForCommitmentPoint() *btcec.PublicKey {
-	// If we are lucky, the remote peer sent us the correct commitment
-	// point during channel sync, such that we can sweep our funds. If we
-	// cannot find the commit point, there's not much we can do other than
-	// wait for us to retrieve it. We will attempt to retrieve it from the
-	// peer each time we connect to it.
-	//
-	// TODO(halseth): actively initiate re-connection to the peer?
-	backoff := minCommitPointPollTimeout
-	for {
-		commitPoint, err := c.cfg.chanState.DataLossCommitPoint()
-		if err == nil {
-			return commitPoint
-		}
+// // waitForCommitmentPoint waits for the commitment point to be inserted into
+// // the local database. We'll use this method in the DLP case, to wait for the
+// // remote party to send us their point, as we can't proceed until we have that.
+// func (c *zkChainWatcher) waitForCommitmentPoint() *btcec.PublicKey {
+// 	// If we are lucky, the remote peer sent us the correct commitment
+// 	// point during channel sync, such that we can sweep our funds. If we
+// 	// cannot find the commit point, there's not much we can do other than
+// 	// wait for us to retrieve it. We will attempt to retrieve it from the
+// 	// peer each time we connect to it.
+// 	//
+// 	// TODO(halseth): actively initiate re-connection to the peer?
+// 	backoff := minCommitPointPollTimeout
+// 	for {
+// 		commitPoint, err := c.cfg.chanState.DataLossCommitPoint()
+// 		if err == nil {
+// 			return commitPoint
+// 		}
 
-		log.Errorf("Unable to retrieve commitment point for "+
-			"channel(%v) with lost state: %v. Retrying in %v.",
-			c.cfg.chanState.FundingOutpoint, err, backoff)
+// 		log.Errorf("Unable to retrieve commitment point for "+
+// 			"channel(%v) with lost state: %v. Retrying in %v.",
+// 			c.cfg.chanState.FundingOutpoint, err, backoff)
 
-		select {
-		// Wait before retrying, with an exponential backoff.
-		case <-time.After(backoff):
-			backoff = 2 * backoff
-			if backoff > maxCommitPointPollTimeout {
-				backoff = maxCommitPointPollTimeout
-			}
+// 		select {
+// 		// Wait before retrying, with an exponential backoff.
+// 		case <-time.After(backoff):
+// 			backoff = 2 * backoff
+// 			if backoff > maxCommitPointPollTimeout {
+// 				backoff = maxCommitPointPollTimeout
+// 			}
 
-		case <-c.quit:
-			return nil
-		}
-	}
-}
+// 		case <-c.quit:
+// 			return nil
+// 		}
+// 	}
+// }
