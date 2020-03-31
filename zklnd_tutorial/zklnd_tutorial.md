@@ -6,7 +6,7 @@ This tutorial assumes you have `zkLND` with `libzkchannels` installed. If not, p
 
 You may also find it helpful to understand the transactions and Bitcoin scripts used in zkChannels by reading the high level [overview](zklnd_overview.md).
 
-For more information about zkChannels, read the [zkchannels blog post](TODO).
+For more information about zkChannels, read the TODO: add link [zkchannels blog post](TODO).
 
 ### Introduction
 
@@ -70,10 +70,9 @@ Breaking down the components:
 
 #### Starting zklnd (Alice’s node)
 
-Now, let’s set up the two `zklnd` nodes. To keep things as clean and separate as possible, open up a new terminal window, ensure you have `$GOPATH` set and `$GOPATH/bin` in your `PATH`, and create a new directory under `$GOPATH` called `dev` that will represent our development space. We will create separate folders to store the state for alice and bob, and run all of our `zklnd` nodes on different `localhost` ports instead of using [Docker](/guides/docker/) to make our networking a bit easier.
+Now, let’s set up the two `zklnd` nodes. To keep things as clean and separate as possible, open up a new terminal window, ensure you have `$GOPATH` set and `$GOPATH/bin` in your `PATH`, and create a new directory called `dev` that will represent our development space. We will create separate folders to store the state for alice and bob, and run all of our `zklnd` nodes on different `localhost` ports instead of using [Docker](/guides/docker/) to make our networking a bit easier.
 
     # Create our development space
-    cd $GOPATH
     mkdir dev
     cd dev
 
@@ -82,7 +81,7 @@ Now, let’s set up the two `zklnd` nodes. To keep things as clean and separate 
 
 The directory structure should now look like this:
 
-    $ tree $GOPATH -L 2
+    $ tree . -L 2
 
     ├── bin
     │   └── ...
@@ -98,8 +97,8 @@ The directory structure should now look like this:
 
 Start up the Alice node from within the `alice` directory:
 
-    cd $GOPATH/dev/alice
-    alice$ lnd --rpclisten=localhost:10001 --listen=localhost:10011 --restlisten=localhost:8001 --datadir=data --logdir=log --debuglevel=info --bitcoin.simnet --bitcoin.active --bitcoin.node=btcd --btcd.rpcuser=kek --btcd.rpcpass=kek --no-macaroons
+    cd dev/alice
+    alice$ lnd --rpclisten=localhost:10001 --listen=localhost:10011 --restlisten=localhost:8001 --datadir=data --logdir=log --debuglevel=info --bitcoin.simnet --bitcoin.active --bitcoin.node=btcd --btcd.rpcuser=kek --btcd.rpcpass=kek
 
 The Alice node should now be running and displaying output ending with a line beginning with “Waiting for wallet encryption password.”
 
@@ -120,17 +119,10 @@ Breaking down the components:
 
 Just as we did with Alice, start up the Bob node from within the `bob` directory. Doing so will configure the `datadir` and `logdir` to be in separate locations so that there is never a conflict.
 
-Keep in mind that for each additional terminal window you set, you will need to set `$GOPATH` and include `$GOPATH/bin` in your `PATH`. Consider creating a setup script that includes the following lines:
-
-    export GOPATH=~/gocode # if you exactly followed the install guide
-    export PATH=$PATH:$GOPATH/bin
-
-and run it every time you start a new terminal window working on `zklnd`.
-
 Since Bob is running zklnd as a merchant, we will pass ` --zkmerchant` into `zklnd`:
 
     # In a new terminal window
-    cd $GOPATH/dev/bob
+    cd dev/bob
     bob$ lnd --rpclisten=localhost:10002 --listen=localhost:10012 --restlisten=localhost:8002 --datadir=data --logdir=log --debuglevel=info --bitcoin.simnet --bitcoin.active --bitcoin.node=btcd --btcd.rpcuser=kek --btcd.rpcpass=kek --zkmerchant
 
 ### Configuring lnd.conf
@@ -175,8 +167,9 @@ We will test our rpc connection to the Alice node. Notice that in the following 
 
 Open up a new terminal window, set `$GOPATH` and include `$GOPATH/bin` in your `PATH` as usual. Let’s create Alice’s wallet and set her passphrase:
 
-    cd $GOPATH/dev/alice
+    cd dev/alice
     alice$ lncli --rpcserver=localhost:10001 --macaroonpath=data/chain/bitcoin/simnet/admin.macaroon create
+    # Note that you'll have to enter an 8+ character password and "n" for the mnemonic.
 
 You’ll be asked to input and confirm a wallet password for Alice, which must be longer than 8 characters. You also have the option to add a passphrase to your cipher seed. For now, just skip this step by entering “n” when prompted about whether you have an existing mnemonic, and pressing enter to proceed without the passphrase.
 
@@ -188,8 +181,7 @@ You can now request some basic information as follows:
 
 Open up new terminal windows and do the same for Bob. `alice$` or `bob$` denotes running the command from the Alice or Bob `lncli` window respectively.
 
-    # In a new terminal window, setting $GOPATH, etc.
-    cd $GOPATH/dev/bob
+    cd dev/bob
     bob$ lncli --rpcserver=localhost:10002 --macaroonpath=data/chain/bitcoin/simnet/admin.macaroon create
     # Note that you'll have to enter an 8+ character password and "n" for the mnemonic.
 
@@ -226,7 +218,7 @@ Quit btcd and re-run it, setting Alice as the recipient of all mining rewards:
 
     btcd --simnet --txindex --rpcuser=kek --rpcpass=kek --minrelaytxfee=0 --miningaddr=<ALICE_ADDRESS>
 
-Generate 400 blocks, so that Alice gets the reward. We need at least 100 blocks because coinbase funds can’t be spent until after 100 confirmations, and we need about 300 to activate segwit. In a new window with `$GOPATH` and `$PATH` set:
+Generate 400 blocks, so that Alice gets the reward. We need at least 100 blocks because coinbase funds can’t be spent until after 100 confirmations, and we need about 300 to activate segwit. In a new window set:
 
     alice$ btcctl --simnet --rpcuser=kek --rpcpass=kek generate 400
 
@@ -377,7 +369,7 @@ We now need to mine three blocks so that the channel is considered closed:
 
     btcctl --simnet --rpcuser=kek --rpcpass=kek generate 3
 
-Alternatively, for the Bob, the merchant to close the channel:
+Alternatively, for Bob, the merchant to close the channel:
 
     bob$ lncli-bob merchclose --escrowtxid=<CHANNEL_NAME>
     {
