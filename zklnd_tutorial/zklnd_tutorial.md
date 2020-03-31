@@ -351,7 +351,7 @@ Finally, to the exciting part - sending unlinkable payments! Let’s send a paym
     alice$ lncli-alice zkchannelbalance
 
     # Check that Bob's channel was credited with the payment amount:
-    bob$ lncli-bob total_received
+    bob$ lncli-bob totalreceived
 
 
 ### Closing channels
