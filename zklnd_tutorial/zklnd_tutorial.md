@@ -365,13 +365,13 @@ For Alice to close the channel:
 
     }
 
-We now need to mine three blocks so that the channel is considered closed:
+We now need to mine three blocks so that the channel is considered closed: (TODO: above command doesn't end before below command is done, add this to description)
 
     btcctl --simnet --rpcuser=kek --rpcpass=kek generate 3
 
-Alternatively, for Bob, the merchant to close the channel:
+Alternatively, for Bob, the merchant to close the channel: (TODO: doesn't work + describe where to get escrowtxid)
 
-    bob$ lncli-bob merchclose --escrowtxid=<CHANNEL_NAME>
+    bob$ lncli-bob merchclose --escrowtxid=<ESCROW_TX_ID>
     {
 
     }
