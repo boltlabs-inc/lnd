@@ -147,12 +147,12 @@ To install `lnd`, `lncli`, and all related dependencies run the following comman
 **NOTE**: Our instructions still use the `$GOPATH` directory from prior versions of Go, but with Go 1.12, it’s now possible for `lnd` to live _anywhere_ on your file system.
 
 For Windows WSL users, make will need to be referenced directly via /usr/bin/make/, or alternatively by wrapping quotation marks around make, like so:
-
+   ```bash
    /usr/bin/make && /usr/bin/make install
    "make" && "make" install
+   ```
 
-
-On FreeBSD, use gmake instead of make.
+On FreeBSD, use `gmake` instead of `make`.
 
 Alternatively, if one doesn’t wish to use `make`, then the `go` commands can be used directly:
 
@@ -168,7 +168,7 @@ To update your version of `lnd` to the latest version run the following commands
     make clean && make && make install
 
 
-On FreeBSD, use gmake instead of make.
+On FreeBSD, use `gmake` instead of `make`.
 
 Alternatively, if one doesn’t wish to use `make`, then the `go` commands can be used directly:
 
@@ -186,9 +186,9 @@ To check that `lnd` was installed properly run the following command:
 
 ### Installing btcd
 
-On FreeBSD, use gmake instead of make.
+On FreeBSD, use `gmake` instead of `make`.
 
-To install btcd, run the following command:
+To install `btcd`, run the following command:
 
     make btcd
 
