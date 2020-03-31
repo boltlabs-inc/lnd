@@ -14,7 +14,7 @@ This tutorial is designed to walk you through how to set up a zero-knowledge cha
 
 Here, we will learn how to set up a local payment channel between a customer, `Alice`, and a merchant, `Bob`. We will have them talk to each other, set up a channel, and let `Alice` initiate payments. We will also establish a baseline understanding of the different components that must work together as part of developing on `zklnd`.
 
-This tutorial assumes you have completed installation of Go, `btcd`, and `zklnd` on simnet. If not, please refer to the [TODO: Add link 'installation instructions'](emptyLink). Note that for the purposes of this tutorial it is not necessary to sync testnet, and the last section of the installation instructions you’ll need to complete is “Installing btcd.”
+This tutorial assumes you have completed installation of Go, `btcd`, and `zklnd` on simnet. If not, please refer to the [installation instructions](zklnd_installation_instructions.md). Note that for the purposes of this tutorial it is not necessary to sync testnet, and the last section of the installation instructions you’ll need to complete is “Installing btcd.”
 
 The schema will be the following.
 
@@ -365,17 +365,17 @@ For Alice to close the channel:
 
     }
 
-We now need to mine three blocks so that the channel is considered closed: (TODO: above command doesn't end before below command is done, add this to description)
+We now need to mine three blocks so that the channel is considered closed, run in a separate window as the above command will not finish until these blocks are mined:
 
     btcctl --simnet --rpcuser=kek --rpcpass=kek generate 3
 
-Alternatively, for Bob, the merchant to close the channel: (TODO: doesn't work + describe where to get escrowtxid)
+Alternatively, for Bob, the merchant to close the channel, he should get the `escrow_tx_id` from Alice, she can get it by running `lncli-alice zkchannelbalance`, next Bob should run:
 
     bob$ lncli-bob merchclose --escrowtxid=<ESCROW_TX_ID>
     {
 
     }
 
-Again, we would need to mine three blocks so that the channel is considered closed:
+Again, we would need to mine three blocks so that the channel is considered closed, run in a separate window as the above command will not finish until these blocks are mined:
 
     btcctl --simnet --rpcuser=kek --rpcpass=kek generate 3
