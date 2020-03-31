@@ -112,7 +112,7 @@ To be able to build `libzkchannels`, you will need to install the EMP-toolkit am
     go get github.com/boltlabs-inc/libzkchannels
     go test -v github.com/boltlabs-inc/libzkchannels
 
-To build libzkchannels and execute all unit tests, run `make`.
+To build libzkchannels and execute all unit tests, run `make` inside the libzkchannels directory.
 
 ### Tests
 

@@ -3,6 +3,7 @@ package lnd
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -14,7 +15,6 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/coreos/bbolt"
-	"github.com/davecgh/go-spew/spew"
 
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
@@ -43,24 +43,35 @@ var (
 	errZkBrarShuttingDown = errors.New("breacharbiter shutting down")
 )
 
-// // ContractBreachEvent is an event the zkBreachArbiter will receive in case a
-// // contract breach is observed on-chain. It contains the necessary information
-// // to handle the breach, and a ProcessACK channel we will use to ACK the event
-// // when we have safely stored all the necessary information.
-// type ContractBreachEvent struct {
-// 	// ChanPoint is the channel point of the breached channel.
-// 	ChanPoint wire.OutPoint
+// ZkCustBreachInfo provides information needed to create a dispute transaction.
+type ZkCustBreachInfo struct {
+	escrowTxid      chainhash.Hash
+	custCloseTxid   chainhash.Hash
+	disputePkScript []byte
+	revLock         string
+	revSecret       string
+	custClosePk     string
+	amount          int64
+}
 
-// 	// ProcessACK is an error channel where a nil error should be sent
-// 	// iff the breach zkretribution info is safely stored in the zkretribution
-// 	// store. In case storing the information to the store fails, a non-nil
-// 	// error should be sent.
-// 	ProcessACK chan error
+// CustContractBreachEvent is an event the zkBreachArbiter will receive in case a
+// contract breach is observed on-chain. It contains the necessary information
+// to handle the breach, and a ProcessACK channel we will use to ACK the event
+// when we have safely stored all the necessary information.
+type CustContractBreachEvent struct {
+	// ChanPoint is the channel point of the breached channel.
+	ChanPoint wire.OutPoint
 
-// 	// BreachRetribution is the information needed to act on this contract
-// 	// breach.
-// 	BreachRetribution *lnwallet.BreachRetribution
-// }
+	// ProcessACK is an error channel where a nil error should be sent
+	// iff the breach zkretribution info is safely stored in the zkretribution
+	// store. In case storing the information to the store fails, a non-nil
+	// error should be sent.
+	ProcessACK chan error
+
+	// ZkCustBreachInfo is the information needed to act on this cust contract
+	// breach.
+	ZkCustBreachInfo
+}
 
 // ZkBreachConfig bundles the required subsystems used by the zk breach arbiter. An
 // instance of ZkBreachConfig is passed to newZkBreachArbiter during instantiation.
@@ -92,11 +103,11 @@ type ZkBreachConfig struct {
 	// transaction to the network.
 	PublishTransaction func(*wire.MsgTx) error
 
-	// ContractBreaches is a channel where the zkBreachArbiter will receive
+	// CustContractBreaches is a channel where the zkBreachArbiter will receive
 	// notifications in the event of a contract breach being observed. A
-	// ContractBreachEvent must be ACKed by the zkBreachArbiter, such that
+	// CustContractBreachEvent must be ACKed by the zkBreachArbiter, such that
 	// the sending subsystem knows that the event is properly handed off.
-	ContractBreaches <-chan *ContractBreachEvent
+	CustContractBreaches <-chan *CustContractBreachEvent
 
 	// Signer is used by the zk breach arbiter to generate sweep transactions,
 	// which move coins from previously open channels back to the user's
@@ -150,74 +161,74 @@ func (b *zkBreachArbiter) Start() error {
 func (b *zkBreachArbiter) start() error {
 	zkbaLog.Tracef("Starting zk breach arbiter")
 
-	// Load all zkretributions currently persisted in the zkretribution store.
-	breachRetInfos := make(map[wire.OutPoint]zkretributionInfo)
-	if err := b.cfg.Store.ForAll(func(ret *zkretributionInfo) error {
-		breachRetInfos[ret.chanPoint] = *ret
-		return nil
-	}); err != nil {
-		return err
-	}
+	// // Load all zkretributions currently persisted in the zkretribution store.
+	// breachRetInfos := make(map[wire.OutPoint]zkretributionInfo)
+	// if err := b.cfg.Store.ForAll(func(ret *zkretributionInfo) error {
+	// 	breachRetInfos[ret.chanPoint] = *ret
+	// 	return nil
+	// }); err != nil {
+	// 	return err
+	// }
 
-	// Load all currently closed channels from disk, we will use the
-	// channels that have been marked fully closed to filter the zkretribution
-	// information loaded from disk. This is necessary in the event that the
-	// channel was marked fully closed, but was not removed from the
-	// zkretribution store.
-	closedChans, err := b.cfg.DB.FetchClosedChannels(false)
-	if err != nil {
-		zkbaLog.Errorf("Unable to fetch closing channels: %v", err)
-		return err
-	}
+	// // Load all currently closed channels from disk, we will use the
+	// // channels that have been marked fully closed to filter the zkretribution
+	// // information loaded from disk. This is necessary in the event that the
+	// // channel was marked fully closed, but was not removed from the
+	// // zkretribution store.
+	// closedChans, err := b.cfg.DB.FetchClosedChannels(false)
+	// if err != nil {
+	// 	zkbaLog.Errorf("Unable to fetch closing channels: %v", err)
+	// 	return err
+	// }
 
-	// Using the set of non-pending, closed channels, reconcile any
-	// discrepancies between the channeldb and the zkretribution store by
-	// removing any zkretribution information for which we have already
-	// finished our responsibilities. If the removal is successful, we also
-	// remove the entry from our in-memory map, to avoid any further action
-	// for this channel.
-	// TODO(halseth): no need continue on IsPending once closed channels
-	// actually means close transaction is confirmed.
-	for _, chanSummary := range closedChans {
-		if chanSummary.IsPending {
-			continue
-		}
+	// // Using the set of non-pending, closed channels, reconcile any
+	// // discrepancies between the channeldb and the zkretribution store by
+	// // removing any zkretribution information for which we have already
+	// // finished our responsibilities. If the removal is successful, we also
+	// // remove the entry from our in-memory map, to avoid any further action
+	// // for this channel.
+	// // TODO(halseth): no need continue on IsPending once closed channels
+	// // actually means close transaction is confirmed.
+	// for _, chanSummary := range closedChans {
+	// 	if chanSummary.IsPending {
+	// 		continue
+	// 	}
 
-		chanPoint := &chanSummary.ChanPoint
-		if _, ok := breachRetInfos[*chanPoint]; ok {
-			if err := b.cfg.Store.Remove(chanPoint); err != nil {
-				zkbaLog.Errorf("Unable to remove closed "+
-					"chanid=%v from zk breach arbiter: %v",
-					chanPoint, err)
-				return err
-			}
-			delete(breachRetInfos, *chanPoint)
-		}
-	}
+	// 	chanPoint := &chanSummary.ChanPoint
+	// 	if _, ok := breachRetInfos[*chanPoint]; ok {
+	// 		if err := b.cfg.Store.Remove(chanPoint); err != nil {
+	// 			zkbaLog.Errorf("Unable to remove closed "+
+	// 				"chanid=%v from zk breach arbiter: %v",
+	// 				chanPoint, err)
+	// 			return err
+	// 		}
+	// 		delete(breachRetInfos, *chanPoint)
+	// 	}
+	// }
 
-	// Spawn the exactZkRetribution tasks to monitor and resolve any breaches
-	// that were loaded from the zkretribution store.
-	for chanPoint := range breachRetInfos {
-		retInfo := breachRetInfos[chanPoint]
+	// // Spawn the exactZkRetribution tasks to monitor and resolve any breaches
+	// // that were loaded from the zkretribution store.
+	// for chanPoint := range breachRetInfos {
+	// 	retInfo := breachRetInfos[chanPoint]
 
-		// Register for a notification when the breach transaction is
-		// confirmed on chain.
-		breachTXID := retInfo.commitHash
-		breachScript := retInfo.zkBreachedOutputs[0].signDesc.Output.PkScript
-		confChan, err := b.cfg.Notifier.RegisterConfirmationsNtfn(
-			&breachTXID, breachScript, 1, retInfo.breachHeight,
-		)
-		if err != nil {
-			zkbaLog.Errorf("Unable to register for conf updates "+
-				"for txid: %v, err: %v", breachTXID, err)
-			return err
-		}
+	// 	// Register for a notification when the breach transaction is
+	// 	// confirmed on chain.
+	// 	breachTXID := retInfo.commitHash
+	// 	breachScript := retInfo.zkBreachedOutputs[0].signDesc.Output.PkScript
+	// 	confChan, err := b.cfg.Notifier.RegisterConfirmationsNtfn(
+	// 		&breachTXID, breachScript, 1, retInfo.breachHeight,
+	// 	)
+	// 	if err != nil {
+	// 		zkbaLog.Errorf("Unable to register for conf updates "+
+	// 			"for txid: %v, err: %v", breachTXID, err)
+	// 		return err
+	// 	}
 
-		// Launch a new goroutine which to finalize the channel
-		// zkretribution after the breach transaction confirms.
-		b.wg.Add(1)
-		go b.exactZkRetribution(confChan, &retInfo)
-	}
+	// 	// Launch a new goroutine which to finalize the channel
+	// 	// zkretribution after the breach transaction confirms.
+	// 	b.wg.Add(1)
+	// 	go b.exactZkRetribution(confChan, &retInfo)
+	// }
 
 	// Start watching the remaining active channels!
 	b.wg.Add(1)
@@ -247,7 +258,7 @@ func (b *zkBreachArbiter) IsBreached(chanPoint *wire.OutPoint) (bool, error) {
 
 // contractObserver is the primary goroutine for the zkBreachArbiter. This
 // goroutine is responsible for handling breach events coming from the
-// contractcourt on the ContractBreaches channel. If a channel breach is
+// contractcourt on the CustContractBreaches channel. If a channel breach is
 // detected, then the contractObserver will execute the zkretribution logic
 // required to sweep ALL outputs from a contested channel into the daemon's
 // wallet.
@@ -260,13 +271,13 @@ func (b *zkBreachArbiter) contractObserver() {
 
 	for {
 		select {
-		case breachEvent := <-b.cfg.ContractBreaches:
+		case custBreachEvent := <-b.cfg.CustContractBreaches:
 			// We have been notified about a contract breach!
 			// Handle the handoff, making sure we ACK the event
 			// after we have safely added it to the zkretribution
 			// store.
 			b.wg.Add(1)
-			go b.handleBreachHandoff(breachEvent)
+			go b.handleCustBreachHandoff(custBreachEvent)
 
 		case <-b.quit:
 			return
@@ -498,7 +509,7 @@ func (b *zkBreachArbiter) waitForSpendEvent(breachInfo *zkretributionInfo,
 //
 // NOTE: This MUST be run as a goroutine.
 func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEvent,
-	breachInfo *zkretributionInfo) {
+	breachInfo *ZkCustBreachInfo) {
 
 	defer b.wg.Done()
 
@@ -508,6 +519,7 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 	case breachConf, ok := <-confChan.Confirmed:
 		// If the second value is !ok, then the channel has been closed
 		// signifying a daemon shutdown, so we exit.
+
 		if !ok {
 			return
 		}
@@ -521,148 +533,191 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 	}
 
 	zkbaLog.Debugf("Breach transaction %v has been confirmed, sweeping "+
-		"revoked funds", breachInfo.commitHash)
+		"revoked funds", breachInfo.custCloseTxid)
 
-	// We may have to wait for some of the HTLC outputs to be spent to the
-	// second level before broadcasting the zkjustice tx. We'll store the
-	// SpendEvents between each attempt to not re-register uneccessarily.
-	spendNtfns := make(map[wire.OutPoint]*chainntnfs.SpendEvent)
+	// breachTxid := breachInfo.custCloseTxid.String()
+	// index := uint32(0)
+	// // TODO: Read toSelfDelay from merchDB
+	// toSelfDelay := "05cf"
+	// // TODO: Generate outputPk from merchant's wallet
+	// outputPk := "03df51984d6b8b8b1cc693e239491f77a36c9e9dfe4a486e9972a18e03610a0d22"
+	// revLock := breachInfo.revLock
+	// revSecret := breachInfo.revSecret
+	// custClosePk := breachInfo.custClosePk
+	// amount := breachInfo.amount
 
-	finalTx, err := b.cfg.Store.GetFinalizedTxn(&breachInfo.chanPoint)
+	// // open the zkchanneldb to load merchState and channelState
+	// zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+
+	// var merchState libzkchannels.MerchState
+	// merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
+	// err = json.Unmarshal(merchStateBytes, &merchState)
+
+	// zkMerchDB.Close()
+
+	// zkbaLog.Warnf("merchState %#v:", merchState)
+
+	// // with all the info needed, create and sign the Dispute/Justice Tx.
+	// finalTxStr, err := libzkchannels.MerchantSignDisputeTx(breachTxid, index, amount, toSelfDelay, outputPk,
+	// 	revLock, revSecret, custClosePk, merchState)
+
+	finalTxStr := "0200000000010120827352e391fe0c6cbaee2d07679ec67e30119448e4183b7818ff29171f489a0000000000ffffffff0106270000000000001600141d2cc47e2a0d77927a333a2165fe2d343b79eefc04483045022100e95687eb9aec340a662d57e29e80efe23bd013ce4b9a2e0383cd3c5f3370a526022063b260ddc1b9a251ca5f6be6fc9d6a30b29402d7e66959985487b7b61530ad3001200d4a4cf5b18a70f5e9f6a677924d0b2450f3d0561402a42338fd08da905112a101017063a8203ae763fc25bc086f73836f21aa05d387cd3adac5a93d5345e782128133cb03e4882102f9e7281167132a13b2326cea57d789b9fd2ea4440c9e9b78e6402e722a1e5c526702cf05b27521027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddb68ac00000000"
+
+	// 	// If this zkretribution has not been finalized before, we will first
+	// 	// construct a sweep transaction and write it to disk. This will allow
+	// 	// the zk breach arbiter to re-register for notifications for the zkjustice
+	// 	// txid.
+	// zkjusticeTxBroadcast:
+	// 	if finalTx == nil {
+	// 		// With the breach transaction confirmed, we now create the
+	// 		// zkjustice tx which will claim ALL the funds within the
+	// 		// channel.
+	// 		finalTx, err = b.createZkJusticeTx(breachInfo)
+	// 		if err != nil {
+	// 			zkbaLog.Errorf("Unable to create zkjustice tx: %v", err)
+	// 			return
+	// 		}
+
+	// 		// Persist our finalized zkjustice transaction before making an
+	// 		// attempt to broadcast.
+	// 		err := b.cfg.Store.Finalize(&breachInfo.chanPoint, finalTx)
+	// 		if err != nil {
+	// 			zkbaLog.Errorf("Unable to finalize zkjustice tx for "+
+	// 				"chanid=%v: %v", &breachInfo.chanPoint, err)
+	// 			return
+	// 		}
+	// 	}
+	zkchLog.Warnf("finalTxStr: %#v\n", finalTxStr)
+
+	// Broadcast dispute Tx on chain
+	finalTxBytes, err := hex.DecodeString(finalTxStr)
 	if err != nil {
-		zkbaLog.Errorf("Unable to get finalized txn for"+
-			"chanid=%v: %v", &breachInfo.chanPoint, err)
-		return
+		zkchLog.Error(err)
 	}
 
-	// If this zkretribution has not been finalized before, we will first
-	// construct a sweep transaction and write it to disk. This will allow
-	// the zk breach arbiter to re-register for notifications for the zkjustice
-	// txid.
-zkjusticeTxBroadcast:
-	if finalTx == nil {
-		// With the breach transaction confirmed, we now create the
-		// zkjustice tx which will claim ALL the funds within the
-		// channel.
-		finalTx, err = b.createZkJusticeTx(breachInfo)
-		if err != nil {
-			zkbaLog.Errorf("Unable to create zkjustice tx: %v", err)
-			return
-		}
-
-		// Persist our finalized zkjustice transaction before making an
-		// attempt to broadcast.
-		err := b.cfg.Store.Finalize(&breachInfo.chanPoint, finalTx)
-		if err != nil {
-			zkbaLog.Errorf("Unable to finalize zkjustice tx for "+
-				"chanid=%v: %v", &breachInfo.chanPoint, err)
-			return
-		}
-	}
-
-	zkbaLog.Debugf("Broadcasting zkjustice tx: %v", newLogClosure(func() string {
-		return spew.Sdump(finalTx)
-	}))
-
-	// We'll now attempt to broadcast the transaction which finalized the
-	// channel's zkretribution against the cheating counter party.
-	err = b.cfg.PublishTransaction(finalTx)
+	var finalTx wire.MsgTx
+	err = finalTx.Deserialize(bytes.NewReader(finalTxBytes))
 	if err != nil {
-		zkbaLog.Errorf("Unable to broadcast zkjustice tx: %v", err)
-
-		if err == lnwallet.ErrDoubleSpend {
-			// Broadcasting the transaction failed because of a
-			// conflict either in the mempool or in chain. We'll
-			// now create spend subscriptions for all HTLC outputs
-			// on the commitment transaction that could possibly
-			// have been spent, and wait for any of them to
-			// trigger.
-			zkbaLog.Infof("Waiting for a spend event before " +
-				"attempting to craft new zkjustice tx.")
-			finalTx = nil
-
-			err := b.waitForSpendEvent(breachInfo, spendNtfns)
-			if err != nil {
-				if err != errZkBrarShuttingDown {
-					zkbaLog.Errorf("error waiting for "+
-						"spend event: %v", err)
-				}
-				return
-			}
-
-			if len(breachInfo.zkBreachedOutputs) == 0 {
-				zkbaLog.Debugf("No more outputs to sweep for "+
-					"breach, marking ChannelPoint(%v) "+
-					"fully resolved", breachInfo.chanPoint)
-
-				err = b.cleanupBreach(&breachInfo.chanPoint)
-				if err != nil {
-					zkbaLog.Errorf("Failed to cleanup "+
-						"breached ChannelPoint(%v): %v",
-						breachInfo.chanPoint, err)
-				}
-				return
-			}
-
-			zkbaLog.Infof("Attempting another zkjustice tx "+
-				"with %d inputs",
-				len(breachInfo.zkBreachedOutputs))
-
-			goto zkjusticeTxBroadcast
-		}
+		zkchLog.Error(err)
 	}
+
+	zkchLog.Debugf("Broadcasting dispute Tx: %#v\n", finalTx)
+
+	err = b.cfg.PublishTransaction(&finalTx)
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	// // We'll now attempt to broadcast the transaction which finalized the
+	// // channel's zkretribution against the cheating counter party.
+	// err = b.cfg.PublishTransaction(finalTx)
+	// if err != nil {
+	// 	zkbaLog.Errorf("Unable to broadcast zkjustice tx: %v", err)
+
+	// 	if err == lnwallet.ErrDoubleSpend {
+	// 		// Broadcasting the transaction failed because of a
+	// 		// conflict either in the mempool or in chain. We'll
+	// 		// now create spend subscriptions for all HTLC outputs
+	// 		// on the commitment transaction that could possibly
+	// 		// have been spent, and wait for any of them to
+	// 		// trigger.
+	// 		zkbaLog.Infof("Waiting for a spend event before " +
+	// 			"attempting to craft new zkjustice tx.")
+	// 		finalTx = nil
+
+	// 		err := b.waitForSpendEvent(breachInfo, spendNtfns)
+	// 		if err != nil {
+	// 			if err != errZkBrarShuttingDown {
+	// 				zkbaLog.Errorf("error waiting for "+
+	// 					"spend event: %v", err)
+	// 			}
+	// 			return
+	// 		}
+
+	// 		if len(breachInfo.zkBreachedOutputs) == 0 {
+	// 			zkbaLog.Debugf("No more outputs to sweep for "+
+	// 				"breach, marking ChannelPoint(%v) "+
+	// 				"fully resolved", breachInfo.chanPoint)
+
+	// 			err = b.cleanupBreach(&breachInfo.chanPoint)
+	// 			if err != nil {
+	// 				zkbaLog.Errorf("Failed to cleanup "+
+	// 					"breached ChannelPoint(%v): %v",
+	// 					breachInfo.chanPoint, err)
+	// 			}
+	// 			return
+	// 		}
+
+	// 		zkbaLog.Infof("Attempting another zkjustice tx "+
+	// 			"with %d inputs",
+	// 			len(breachInfo.zkBreachedOutputs))
+
+	// 		goto zkjusticeTxBroadcast
+	// 	}
+	// }
 
 	// As a conclusionary step, we register for a notification to be
 	// dispatched once the zkjustice tx is confirmed. After confirmation we
 	// notify the caller that initiated the zkretribution workflow that the
 	// deed has been done.
+	zkbaLog.Warnf("finalTx.TxHash() %#v:", finalTx.TxHash())
+	zkbaLog.Warnf("finalTx.TxOut[0].PkScript %#v:", finalTx.TxOut[0].PkScript)
+
 	zkjusticeTXID := finalTx.TxHash()
 	zkjusticeScript := finalTx.TxOut[0].PkScript
 	confChan, err = b.cfg.Notifier.RegisterConfirmationsNtfn(
 		&zkjusticeTXID, zkjusticeScript, 1, breachConfHeight,
 	)
+	zkbaLog.Warn("XXX9999999XXXXX")
+
 	if err != nil {
 		zkbaLog.Errorf("Unable to register for conf for txid(%v): %v",
 			zkjusticeTXID, err)
 		return
 	}
+	zkbaLog.Warn("XXXO++++OOXXX")
 
 	select {
 	case _, ok := <-confChan.Confirmed:
+		zkbaLog.Warn("XXXO=====OOXXX %v", ok)
+
 		if !ok {
+			zkbaLog.Warn("XXXOOO]]]]OOXXX %v", ok)
+
 			return
 		}
 
-		// Compute both the total value of funds being swept and the
-		// amount of funds that were revoked from the counter party.
-		var totalFunds, revokedFunds btcutil.Amount
-		for _, inp := range breachInfo.zkBreachedOutputs {
-			totalFunds += inp.Amount()
+		// // Compute both the total value of funds being swept and the
+		// // amount of funds that were revoked from the counter party.
+		// var totalFunds, revokedFunds btcutil.Amount
+		// for _, inp := range breachInfo.zkBreachedOutputs {
+		// 	totalFunds += inp.Amount()
 
-			// If the output being revoked is the remote commitment
-			// output or an offered HTLC output, it's amount
-			// contributes to the value of funds being revoked from
-			// the counter party.
-			switch inp.WitnessType() {
-			case input.CommitmentRevoke:
-				revokedFunds += inp.Amount()
-			case input.HtlcOfferedRevoke:
-				revokedFunds += inp.Amount()
-			default:
-			}
-		}
+		// 	// If the output being revoked is the remote commitment
+		// 	// output or an offered HTLC output, it's amount
+		// 	// contributes to the value of funds being revoked from
+		// 	// the counter party.
+		// 	switch inp.WitnessType() {
+		// 	case input.CommitmentRevoke:
+		// 		revokedFunds += inp.Amount()
+		// 	case input.HtlcOfferedRevoke:
+		// 		revokedFunds += inp.Amount()
+		// 	default:
+		// 	}
+		// }
+		zkbaLog.Warn("XXXKKKKOOXXX")
 
 		zkbaLog.Infof("ZkJustice for ChannelPoint(%v) has "+
-			"been served, %v revoked funds (%v total) "+
-			"have been claimed", breachInfo.chanPoint,
-			revokedFunds, totalFunds)
+			"been served, %v revoked funds "+
+			"have been claimed", breachInfo.escrowTxid,
+			breachInfo.amount)
 
-		err = b.cleanupBreach(&breachInfo.chanPoint)
-		if err != nil {
-			zkbaLog.Errorf("Failed to cleanup breached "+
-				"ChannelPoint(%v): %v", breachInfo.chanPoint,
-				err)
-		}
+		// err = b.cleanupBreach(&breachInfo.chanPoint)
+		// if err != nil {
+		// 	zkbaLog.Errorf("Failed to cleanup breached "+
+		// 		"ChannelPoint(%v): %v", breachInfo.chanPoint,
+		// 		err)
+		// }
 
 		// TODO(roasbeef): add peer to blacklist?
 
@@ -695,7 +750,7 @@ func (b *zkBreachArbiter) cleanupBreach(chanPoint *wire.OutPoint) error {
 	return nil
 }
 
-// handleBreachHandoff handles a new breach event, by writing it to disk, then
+// handleCustBreachHandoff handles a new breach event, by writing it to disk, then
 // notifies the zkBreachArbiter contract observer goroutine that a channel's
 // contract has been breached by the prior counterparty. Once notified the
 // zkBreachArbiter will attempt to sweep ALL funds within the channel using the
@@ -704,82 +759,86 @@ func (b *zkBreachArbiter) cleanupBreach(chanPoint *wire.OutPoint) error {
 // transaction receives a necessary number of confirmations.
 //
 // NOTE: This MUST be run as a goroutine.
-func (b *zkBreachArbiter) handleBreachHandoff(breachEvent *ContractBreachEvent) {
+func (b *zkBreachArbiter) handleCustBreachHandoff(custBreachEvent *CustContractBreachEvent) {
 	defer b.wg.Done()
 
-	chanPoint := breachEvent.ChanPoint
+	chanPoint := custBreachEvent.ChanPoint
 	zkbaLog.Debugf("Handling breach handoff for ChannelPoint(%v)",
 		chanPoint)
 
-	// A read from this channel indicates that a channel breach has been
-	// detected! So we notify the main coordination goroutine with the
-	// information needed to bring the counterparty to zkjustice.
-	breachInfo := breachEvent.BreachRetribution
-	zkbaLog.Warnf("REVOKED STATE #%v FOR ChannelPoint(%v) "+
+	// // A read from this channel indicates that a channel breach has been
+	// // detected! So we notify the main coordination goroutine with the
+	// // information needed to bring the counterparty to zkjustice.
+	// breachInfo := custBreachEvent.ZkCustBreachInfo
+
+	zkbaLog.Warnf("REVOKED STATE FOR ChannelPoint(%v) "+
 		"broadcast, REMOTE PEER IS DOING SOMETHING "+
-		"SKETCHY!!!", breachInfo.RevokedStateNum,
+		"SKETCHY!!!",
 		chanPoint)
 
-	// Immediately notify the HTLC switch that this link has been
-	// breached in order to ensure any incoming or outgoing
-	// multi-hop HTLCs aren't sent over this link, nor any other
-	// links associated with this peer.
-	b.cfg.CloseLink(&chanPoint, htlcswitch.CloseBreach)
+	// // Immediately notify the HTLC switch that this link has been
+	// // breached in order to ensure any incoming or outgoing
+	// // multi-hop HTLCs aren't sent over this link, nor any other
+	// // links associated with this peer.
+	// b.cfg.CloseLink(&chanPoint, htlcswitch.CloseBreach)
 
-	// TODO(roasbeef): need to handle case of remote broadcast
-	// mid-local initiated state-transition, possible
-	// false-positive?
+	// // TODO(roasbeef): need to handle case of remote broadcast
+	// // mid-local initiated state-transition, possible
+	// // false-positive?
 
 	// Acquire the mutex to ensure consistency between the call to
 	// IsBreached and Add below.
 	b.Lock()
 
-	// We first check if this breach info is already added to the
-	// zkretribution store.
-	breached, err := b.cfg.Store.IsBreached(&chanPoint)
-	if err != nil {
-		b.Unlock()
-		zkbaLog.Errorf("Unable to check breach info in DB: %v", err)
+	// // We first check if this breach info is already added to the
+	// // zkretribution store.
+	// breached, err := b.cfg.Store.IsBreached(&chanPoint)
+	// if err != nil {
+	// 	b.Unlock()
+	// 	zkbaLog.Errorf("Unable to check breach info in DB: %v", err)
 
-		select {
-		case breachEvent.ProcessACK <- err:
-		case <-b.quit:
-		}
-		return
-	}
+	// 	select {
+	// 	case custBreachEvent.ProcessACK <- err:
+	// 	case <-b.quit:
+	// 	}
+	// 	return
+	// }
 
-	// If this channel is already marked as breached in the zkretribution
-	// store, we already have handled the handoff for this breach. In this
-	// case we can safely ACK the handoff, and return.
-	if breached {
-		b.Unlock()
+	// // If this channel is already marked as breached in the zkretribution
+	// // store, we already have handled the handoff for this breach. In this
+	// // case we can safely ACK the handoff, and return.
+	// if breached {
+	// 	b.Unlock()
 
-		select {
-		case breachEvent.ProcessACK <- nil:
-		case <-b.quit:
-		}
-		return
-	}
+	// 	select {
+	// 	case custBreachEvent.ProcessACK <- nil:
+	// 	case <-b.quit:
+	// 	}
+	// 	return
+	// }
 
-	// Using the breach information provided by the wallet and the
-	// channel snapshot, construct the zkretribution information that
-	// will be persisted to disk.
-	retInfo := newZkRetributionInfo(&chanPoint, breachInfo)
+	// // Using the breach information provided by the wallet and the
+	// // channel snapshot, construct the zkretribution information that
+	// // will be persisted to disk.
+	// retInfo := newZkRetributionInfo(&chanPoint, breachInfo)
 
-	// Persist the pending zkretribution state to disk.
-	err = b.cfg.Store.Add(retInfo)
-	b.Unlock()
-	if err != nil {
-		zkbaLog.Errorf("Unable to persist zkretribution "+
-			"info to db: %v", err)
-	}
+	// // Persist the pending zkretribution state to disk.
+	// err = b.cfg.Store.Add(retInfo)
+	// b.Unlock()
+	// if err != nil {
+	// 	zkbaLog.Errorf("Unable to persist zkretribution "+
+	// 		"info to db: %v", err)
+	// }
+
+	// err := fmt.Errorf("mock error from retribution store")
+	var err error
 
 	// Now that the breach has been persisted, try to send an
 	// acknowledgment back to the close observer with the error. If
 	// the ack is successful, the close observer will mark the
 	// channel as pending-closed in the channeldb.
 	select {
-	case breachEvent.ProcessACK <- err:
+	case custBreachEvent.ProcessACK <- err:
 		// Bail if we failed to persist zkretribution info.
 		if err != nil {
 			return
@@ -794,10 +853,19 @@ func (b *zkBreachArbiter) handleBreachHandoff(breachEvent *ContractBreachEvent) 
 	// the breach transaction (the revoked commitment transaction) has been
 	// confirmed in the chain to ensure we're not dealing with a moving
 	// target.
-	breachTXID := &retInfo.commitHash
-	breachScript := retInfo.zkBreachedOutputs[0].signDesc.Output.PkScript
+
+	// breachInfo.ZkCustBreachInfo.pkScript
+
+	// &c.cfg.zkFundingInfo.fundingOut,
+	// c.cfg.zkFundingInfo.pkScript,
+	// c.cfg.zkFundingInfo.broadcastHeight,
+
+	breachTXID := custBreachEvent.ZkCustBreachInfo.custCloseTxid
+	breachScript := custBreachEvent.ZkCustBreachInfo.disputePkScript
+	breachHeight := uint32(0)
+
 	cfChan, err := b.cfg.Notifier.RegisterConfirmationsNtfn(
-		breachTXID, breachScript, 1, retInfo.breachHeight,
+		&breachTXID, breachScript, 1, breachHeight,
 	)
 	if err != nil {
 		zkbaLog.Errorf("Unable to register for conf updates for "+
@@ -813,7 +881,7 @@ func (b *zkBreachArbiter) handleBreachHandoff(breachEvent *ContractBreachEvent) 
 	// finalize the channel zkretribution after the breach transaction has
 	// been confirmed.
 	b.wg.Add(1)
-	go b.exactZkRetribution(cfChan, retInfo)
+	go b.exactZkRetribution(cfChan, &custBreachEvent.ZkCustBreachInfo)
 }
 
 // zkBreachedOutput contains all the information needed to sweep a breached

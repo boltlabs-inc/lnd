@@ -1509,12 +1509,12 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 
 	zkchLog.Debugf("\nwaitForFundingWithTimeout\npkScript: %#x\n\n", pkScript)
 
-	// TEMPORARY CODE TO FLIP BYTES
-	s := ""
-	for i := 0; i < len(CloseEscrowTxid)/2; i++ {
-		s = CloseEscrowTxid[i*2:i*2+2] + s
-	}
-	CloseEscrowTxid = s
+	// // TEMPORARY CODE TO FLIP BYTES
+	// s := ""
+	// for i := 0; i < len(CloseEscrowTxid)/2; i++ {
+	// 	s = CloseEscrowTxid[i*2:i*2+2] + s
+	// }
+	// CloseEscrowTxid = s
 
 	confChannel, err := z.waitForFundingWithTimeout(notifier, CloseEscrowTxid, pkScript)
 	if err != nil {

@@ -2,39 +2,21 @@
 
 package lnd
 
-// import (
-// 	"bytes"
-// 	crand "crypto/rand"
-// 	"crypto/sha256"
-// 	"encoding/binary"
-// 	"fmt"
-// 	"io"
-// 	"io/ioutil"
-// 	"math/rand"
-// 	"net"
-// 	"os"
-// 	"reflect"
-// 	"sync"
-// 	"testing"
-// 	"time"
+import (
+	"sync"
+	"testing"
+	"time"
 
-// 	"github.com/btcsuite/btcd/btcec"
-// 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-// 	"github.com/btcsuite/btcd/txscript"
-// 	"github.com/btcsuite/btcd/wire"
-// 	"github.com/btcsuite/btcutil"
-// 	"github.com/go-errors/errors"
-// 	"github.com/lightningnetwork/lnd/chainntnfs"
-// 	"github.com/lightningnetwork/lnd/channeldb"
-// 	"github.com/lightningnetwork/lnd/htlcswitch"
-// 	"github.com/lightningnetwork/lnd/input"
-// 	"github.com/lightningnetwork/lnd/keychain"
-// 	"github.com/lightningnetwork/lnd/lntest/wait"
-// 	"github.com/lightningnetwork/lnd/lnwallet"
-// 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
-// 	"github.com/lightningnetwork/lnd/lnwire"
-// 	"github.com/lightningnetwork/lnd/shachain"
-// )
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/lightningnetwork/lnd/chainntnfs"
+	"github.com/lightningnetwork/lnd/channeldb"
+	"github.com/lightningnetwork/lnd/htlcswitch"
+	"github.com/lightningnetwork/lnd/lnwallet"
+	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
+	"github.com/lightningnetwork/lnd/lnwire"
+)
 
 // var (
 // 	breachOutPoints = []wire.OutPoint{
@@ -309,6 +291,21 @@ package lnd
 // 		},
 // 	}
 // )
+
+// zkchannel test txs
+const (
+	escrowTx   = "0200000000010132eb1608d217f821e3bfa16c4ab70dc3e56f1d65a7d84dd4a2aba9b244e50d520000000000ffffffff030627000000000000220020f9f4144b30c03dc6f56e29553755e6d1554c32bdad05f8f043283226e07200b40a00000000000000160014d05ac4b544f30ed4648d25eff1700f8e5e0a03b80000000000000000436a414d8e9a9f606a8210478c1fe86a79a98e43484c825df7b18dc351ada564bebd25027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddb0400483045022100e76b48106224b2c896e3095794dded09a38160b46cd86439fe83f399cc2ba9c1022062e4cb1e650c79e4ca78ac347cf08a3ea6377f4d1566169f960ec268a6c0099501473044022005bfbf4706cc3af47366b9a19200adbb6e58c8266a72fd3cd19b4a4e8eb4f9a20220254d2627588a0a66cd69267f01e54d14b941895f649b8d5dbf52273aa686545b0147522103742aaaffc1dd1e8016355012dbcbc7145291412078e209c3e8bf0fe323ccbf29210217d55a1e3ecdd220fde4bddbbfd485a1596c0c5cb7ef11dbfcdb2dd9cf4b85af52ae00000000"
+	escrowTxid = "9a481f1729ff18783b18e4489411307ec69e67072deeba6c0cfe91e352738220"
+
+	merchCloseTx   = "0200000000010113baeb7813f71214b5e93e0d5f43ecb35646768dde7f45f6dd4155ae0ef04d660000000000ffffffff030627000000000000220020f9f4144b30c03dc6f56e29553755e6d1554c32bdad05f8f043283226e07200b40a00000000000000160014d05ac4b544f30ed4648d25eff1700f8e5e0a03b80000000000000000436a414d8e9a9f606a8210478c1fe86a79a98e43484c825df7b18dc351ada564bebd25027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddb0500483045022100a911fdf1b564770404a73d778709931784de4bb6e80263792bfa2ee9213e27dc02205b78a581ba711d30d5d2c3308275dc380e050e2f91113c0f2cab8a17cc21c980014730440220691a29d82fd69586c7f78179232d6cd920061b41fb7df7ee636882db25ccba08022013245c82f1a18bc2e84625946a32d32e6fdc15066fbe31991f985d5091989db50101017263522103742aaaffc1dd1e8016355012dbcbc7145291412078e209c3e8bf0fe323ccbf29210217d55a1e3ecdd220fde4bddbbfd485a1596c0c5cb7ef11dbfcdb2dd9cf4b85af52ae6702cf05b2752103063c5cb34137a7c40de545d52b391f61d11fc31b0a4262a6c3f22f072a11bb63ac6800000000"
+	merchCloseTxid = "f7aaea919dfd714948253c26b5f0ce45bbc16cca6d01c916696ac97566ced04f"
+
+	custCloseTxid = "9a481f1729ff18783b18e4489411307ec69e67072deeba6c0cfe91e352738220"
+	custCloseTx   = "0200000000010132eb1608d217f821e3bfa16c4ab70dc3e56f1d65a7d84dd4a2aba9b244e50d520000000000ffffffff030627000000000000220020f9f4144b30c03dc6f56e29553755e6d1554c32bdad05f8f043283226e07200b40a00000000000000160014d05ac4b544f30ed4648d25eff1700f8e5e0a03b80000000000000000436a414d8e9a9f606a8210478c1fe86a79a98e43484c825df7b18dc351ada564bebd25027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddb0400483045022100e76b48106224b2c896e3095794dded09a38160b46cd86439fe83f399cc2ba9c1022062e4cb1e650c79e4ca78ac347cf08a3ea6377f4d1566169f960ec268a6c0099501473044022005bfbf4706cc3af47366b9a19200adbb6e58c8266a72fd3cd19b4a4e8eb4f9a20220254d2627588a0a66cd69267f01e54d14b941895f649b8d5dbf52273aa686545b0147522103742aaaffc1dd1e8016355012dbcbc7145291412078e209c3e8bf0fe323ccbf29210217d55a1e3ecdd220fde4bddbbfd485a1596c0c5cb7ef11dbfcdb2dd9cf4b85af52ae00000000"
+
+// custCloseMerchTxid = "cc7e73d1f20d69b9bfa858a79a7cfc03529123a12fba57700fad923d4ebe341f"
+// custCloseMerchTx = "020000000001014360aa5440c33ba6ddf6cc1799a49fc46b99b07130544b3134f8cf8a6169fb6b0000000000ffffffff030627000000000000220020eab1b21b1227f90a54c80bd0ac992ff57daca6b89510c68281be97a995bd2ac70a00000000000000160014234f7938f5c82ddbcd99c810a885eb336ce097670000000000000000436a416dad4b8de4ea7765e89a69def72048c6bd1b9f2fb143aec83d0b924c42adc074027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddb050047304402203a440bde54817e96a8611fb69571304e1503a31da20da8bee2033ba06bb5f4cf02200a2fdba6d89004cbb78f995d1a84251df90fbaf36f0022d08df9828a3cf46c72014730440220137c9d3f83f7e8aeb4235e098f446be72aebb06c6aaf92248c2f33e82f38a7760220020517fb88acfbb5d97131f653d4abfe284866d4f526573181cbd3315264831901010172635221025f6ed070ebe3a585e70f77058e3c4ba0c373c3bedebda19a077a860955b6026b210217d55a1e3ecdd220fde4bddbbfd485a1596c0c5cb7ef11dbfcdb2dd9cf4b85af52ae6702cf05b2752103efac29be9b04fc77d27298e36e3c0eded7ab1a98cbe1aee629827df37ef9b6cfac6800000000"
+)
 
 // func init() {
 // 	// Ensure that breached outputs are initialized before starting tests.
@@ -975,70 +972,70 @@ package lnd
 // 	}
 // }
 
-// func initBreachedState(t *testing.T) (*breachArbiter,
-// 	*lnwallet.LightningChannel, *lnwallet.LightningChannel,
-// 	*lnwallet.LocalForceCloseSummary, chan *ContractBreachEvent,
-// 	func(), func()) {
-// 	// Create a pair of channels using a notifier that allows us to signal
-// 	// a spend of the funding transaction. Alice's channel will be the on
-// 	// observing a breach.
-// 	alice, bob, cleanUpChans, err := createInitChannels(1)
-// 	if err != nil {
-// 		t.Fatalf("unable to create test channels: %v", err)
-// 	}
+func initZkBreachedState(t *testing.T) (*zkBreachArbiter,
+	*lnwallet.LightningChannel, *lnwallet.LightningChannel,
+	*lnwallet.LocalForceCloseSummary, chan *CustContractBreachEvent,
+	func(), func()) {
+	// Create a pair of channels using a notifier that allows us to signal
+	// a spend of the funding transaction. Alice's channel will be the on
+	// observing a breach.
+	alice, bob, cleanUpChans, err := createInitChannels(1)
+	if err != nil {
+		t.Fatalf("unable to create test channels: %v", err)
+	}
 
-// 	// Instantiate a breach arbiter to handle the breach of alice's channel.
-// 	contractBreaches := make(chan *ContractBreachEvent)
+	// Instantiate a breach arbiter to handle the breach of alice's channel.
+	custContractBreaches := make(chan *CustContractBreachEvent)
 
-// 	brar, cleanUpArb, err := createTestArbiter(
-// 		t, contractBreaches, alice.State().Db,
-// 	)
-// 	if err != nil {
-// 		t.Fatalf("unable to initialize test breach arbiter: %v", err)
-// 	}
+	brar, cleanUpArb, err := createTestZkArbiter(
+		t, custContractBreaches, alice.State().Db,
+	)
+	if err != nil {
+		t.Fatalf("unable to initialize test breach arbiter: %v", err)
+	}
 
-// 	// Send one HTLC to Bob and perform a state transition to lock it in.
-// 	htlcAmount := lnwire.NewMSatFromSatoshis(20000)
-// 	htlc, _ := createHTLC(0, htlcAmount)
-// 	if _, err := alice.AddHTLC(htlc, nil); err != nil {
-// 		t.Fatalf("alice unable to add htlc: %v", err)
-// 	}
-// 	if _, err := bob.ReceiveHTLC(htlc); err != nil {
-// 		t.Fatalf("bob unable to recv add htlc: %v", err)
-// 	}
-// 	if err := forceStateTransition(alice, bob); err != nil {
-// 		t.Fatalf("Can't update the channel state: %v", err)
-// 	}
+	// Send one HTLC to Bob and perform a state transition to lock it in.
+	htlcAmount := lnwire.NewMSatFromSatoshis(20000)
+	htlc, _ := createHTLC(0, htlcAmount)
+	if _, err := alice.AddHTLC(htlc, nil); err != nil {
+		t.Fatalf("alice unable to add htlc: %v", err)
+	}
+	if _, err := bob.ReceiveHTLC(htlc); err != nil {
+		t.Fatalf("bob unable to recv add htlc: %v", err)
+	}
+	if err := forceStateTransition(alice, bob); err != nil {
+		t.Fatalf("Can't update the channel state: %v", err)
+	}
 
-// 	// Generate the force close summary at this point in time, this will
-// 	// serve as the old state bob will broadcast.
-// 	bobClose, err := bob.ForceClose()
-// 	if err != nil {
-// 		t.Fatalf("unable to force close bob's channel: %v", err)
-// 	}
+	// Generate the force close summary at this point in time, this will
+	// serve as the old state bob will broadcast.
+	bobClose, err := bob.ForceClose()
+	if err != nil {
+		t.Fatalf("unable to force close bob's channel: %v", err)
+	}
 
-// 	// Now send another HTLC and perform a state transition, this ensures
-// 	// Alice is ahead of the state Bob will broadcast.
-// 	htlc2, _ := createHTLC(1, htlcAmount)
-// 	if _, err := alice.AddHTLC(htlc2, nil); err != nil {
-// 		t.Fatalf("alice unable to add htlc: %v", err)
-// 	}
-// 	if _, err := bob.ReceiveHTLC(htlc2); err != nil {
-// 		t.Fatalf("bob unable to recv add htlc: %v", err)
-// 	}
-// 	if err := forceStateTransition(alice, bob); err != nil {
-// 		t.Fatalf("Can't update the channel state: %v", err)
-// 	}
+	// Now send another HTLC and perform a state transition, this ensures
+	// Alice is ahead of the state Bob will broadcast.
+	htlc2, _ := createHTLC(1, htlcAmount)
+	if _, err := alice.AddHTLC(htlc2, nil); err != nil {
+		t.Fatalf("alice unable to add htlc: %v", err)
+	}
+	if _, err := bob.ReceiveHTLC(htlc2); err != nil {
+		t.Fatalf("bob unable to recv add htlc: %v", err)
+	}
+	if err := forceStateTransition(alice, bob); err != nil {
+		t.Fatalf("Can't update the channel state: %v", err)
+	}
 
-// 	return brar, alice, bob, bobClose, contractBreaches, cleanUpChans,
-// 		cleanUpArb
-// }
+	return brar, alice, bob, bobClose, custContractBreaches, cleanUpChans,
+		cleanUpArb
+}
 
 // // TestBreachHandoffSuccess tests that a channel's close observer properly
 // // delivers retribution information to the breach arbiter in response to a
 // // breach close. This test verifies correctness in the event that the handoff
 // // experiences no interruptions.
-// func TestBreachHandoffSuccess(t *testing.T) {
+// func TestZkBreachHandoffSuccess(t *testing.T) {
 // 	brar, alice, _, bobClose, contractBreaches,
 // 		cleanUpChans, cleanUpArb := initBreachedState(t)
 // 	defer cleanUpChans()
@@ -1159,7 +1156,7 @@ package lnd
 // 	assertNoArbiterBreach(t, brar, chanPoint)
 // 	assertNotPendingClosed(t, alice)
 
-// 	brar, cleanUpArb, err := createTestArbiter(
+// 	brar, cleanUpArb, err := createTestZkArbiter(
 // 		t, contractBreaches, alice.State().Db,
 // 	)
 // 	if err != nil {
@@ -1245,276 +1242,257 @@ package lnd
 // 	}
 // )
 
-// var breachTests = []breachTest{
-// 	{
-// 		name:          "all spends",
-// 		spend2ndLevel: true,
-// 		whenNonZeroInputs: func(t *testing.T,
-// 			inputs map[wire.OutPoint]*wire.MsgTx,
-// 			publTx chan *wire.MsgTx) {
+var zkBreachTests = []breachTest{
+	{
+		name:          "all spends",
+		spend2ndLevel: true,
+		whenNonZeroInputs: func(t *testing.T,
+			inputs map[wire.OutPoint]*wire.MsgTx,
+			publTx chan *wire.MsgTx) {
 
-// 			var tx *wire.MsgTx
-// 			select {
-// 			case tx = <-publTx:
-// 			case <-time.After(5 * time.Second):
-// 				t.Fatalf("tx was not published")
-// 			}
+			var tx *wire.MsgTx
+			select {
+			case tx = <-publTx:
+			case <-time.After(5 * time.Second):
+				t.Fatalf("tx was not published")
+			}
 
-// 			// The justice transaction should have thee same number
-// 			// of inputs as we are tracking in the test.
-// 			if len(tx.TxIn) != len(inputs) {
-// 				t.Fatalf("expected justice txn to have %d "+
-// 					"inputs, found %d", len(inputs),
-// 					len(tx.TxIn))
-// 			}
+			// The justice transaction should have thee same number
+			// of inputs as we are tracking in the test.
+			if len(tx.TxIn) != len(inputs) {
+				t.Fatalf("expected justice txn to have %d "+
+					"inputs, found %d", len(inputs),
+					len(tx.TxIn))
+			}
 
-// 			// Ensure that each input exists on the justice
-// 			// transaction.
-// 			for in := range inputs {
-// 				findInputIndex(t, in, tx)
-// 			}
+			// Ensure that each input exists on the justice
+			// transaction.
+			for in := range inputs {
+				findInputIndex(t, in, tx)
+			}
 
-// 		},
-// 		whenZeroInputs: func(t *testing.T,
-// 			inputs map[wire.OutPoint]*wire.MsgTx,
-// 			publTx chan *wire.MsgTx) {
+		},
+		whenZeroInputs: func(t *testing.T,
+			inputs map[wire.OutPoint]*wire.MsgTx,
+			publTx chan *wire.MsgTx) {
 
-// 			// Sanity check to ensure the brar doesn't try to
-// 			// broadcast another sweep, since all outputs have been
-// 			// spent externally.
-// 			select {
-// 			case <-publTx:
-// 				t.Fatalf("tx published unexpectedly")
-// 			case <-time.After(50 * time.Millisecond):
-// 			}
-// 		},
-// 	},
-// 	{
-// 		name:          "commit spends, second level sweep",
-// 		spend2ndLevel: false,
-// 		sendFinalConf: true,
-// 		whenNonZeroInputs: func(t *testing.T,
-// 			inputs map[wire.OutPoint]*wire.MsgTx,
-// 			publTx chan *wire.MsgTx) {
+			// Sanity check to ensure the brar doesn't try to
+			// broadcast another sweep, since all outputs have been
+			// spent externally.
+			select {
+			case <-publTx:
+				t.Fatalf("tx published unexpectedly")
+			case <-time.After(50 * time.Millisecond):
+			}
+		},
+	},
+}
 
-// 			select {
-// 			case <-publTx:
-// 			case <-time.After(5 * time.Second):
-// 				t.Fatalf("tx was not published")
-// 			}
-// 		},
-// 		whenZeroInputs: func(t *testing.T,
-// 			inputs map[wire.OutPoint]*wire.MsgTx,
-// 			publTx chan *wire.MsgTx) {
+// TestBreachSpends checks the behavior of the breach arbiter in response to
+// spend events on a channels outputs by asserting that it properly removes or
+// modifies the inputs from the justice txn.
+func TestZkBreachSpends(t *testing.T) {
+	for _, test := range zkBreachTests {
+		tc := test
+		t.Run(tc.name, func(t *testing.T) {
+			testZkBreachSpends(t, tc)
+		})
+	}
+}
 
-// 			// Now a transaction attempting to spend from the second
-// 			// level tx should be published instead. Let this
-// 			// publish succeed by setting the publishing error to
-// 			// nil.
-// 			var tx *wire.MsgTx
-// 			select {
-// 			case tx = <-publTx:
-// 			case <-time.After(5 * time.Second):
-// 				t.Fatalf("tx was not published")
-// 			}
+func testZkBreachSpends(t *testing.T, test breachTest) {
+	brar, alice, _, _, custContractBreaches,
+		cleanUpChans, cleanUpArb := initZkBreachedState(t)
+	defer cleanUpChans()
+	defer cleanUpArb()
 
-// 			// The commitment outputs should be gone, and there
-// 			// should only be a single htlc spend.
-// 			if len(tx.TxIn) != 1 {
-// 				t.Fatalf("expect 1 htlc output, found %d "+
-// 					"outputs", len(tx.TxIn))
-// 			}
+	// var (
+	// 	height       = bobClose.ChanSnapshot.CommitHeight
+	// 	forceCloseTx = bobClose.CloseTx
+	// 	chanPoint    = alice.ChanPoint
+	// 	publTx       = make(chan *wire.MsgTx)
+	// 	publErr      error
+	// 	publMtx      sync.Mutex
+	// )
 
-// 			// The remaining TxIn  previously attempting to spend
-// 			// the HTLC outpoint should now be spending from the
-// 			// second level tx.
-// 			//
-// 			// NOTE: Commitment outputs and htlc sweeps are spent
-// 			// with a different transactions (and thus txids),
-// 			// ensuring we aren't mistaking this for a different
-// 			// output type.
-// 			onlyInput := tx.TxIn[0].PreviousOutPoint.Hash
-// 			if onlyInput != htlc2ndLevlTx.TxHash() {
-// 				t.Fatalf("tx not attempting to spend second "+
-// 					"level tx, %v", tx.TxIn[0])
-// 			}
-// 		},
-// 	},
-// }
+	// Use hardcoded zkchannel fundingOutpoint
+	var escrowTxidHash chainhash.Hash
+	chainhash.Decode(&escrowTxidHash, escrowTxid)
 
-// // TestBreachSpends checks the behavior of the breach arbiter in response to
-// // spend events on a channels outputs by asserting that it properly removes or
-// // modifies the inputs from the justice txn.
-// func TestBreachSpends(t *testing.T) {
-// 	for _, test := range breachTests {
-// 		tc := test
-// 		t.Run(tc.name, func(t *testing.T) {
-// 			testBreachSpends(t, tc)
-// 		})
-// 	}
-// }
+	fundingOut := &wire.OutPoint{
+		Hash:  escrowTxidHash,
+		Index: uint32(0),
+	}
 
-// func testBreachSpends(t *testing.T, test breachTest) {
-// 	brar, alice, _, bobClose, contractBreaches,
-// 		cleanUpChans, cleanUpArb := initBreachedState(t)
-// 	defer cleanUpChans()
-// 	defer cleanUpArb()
+	var (
+		// height = uint64(0)
+		// forceCloseTx   = custCloseTx
+		forceCloseTxid = custCloseTxid
+		chanPoint      = fundingOut
+		publTx         = make(chan *wire.MsgTx)
+		publErr        error
+		publMtx        sync.Mutex
+	)
 
-// 	var (
-// 		height       = bobClose.ChanSnapshot.CommitHeight
-// 		forceCloseTx = bobClose.CloseTx
-// 		chanPoint    = alice.ChanPoint
-// 		publTx       = make(chan *wire.MsgTx)
-// 		publErr      error
-// 		publMtx      sync.Mutex
-// 	)
+	// Make PublishTransaction always return ErrDoubleSpend to begin with.
+	publErr = lnwallet.ErrDoubleSpend
+	brar.cfg.PublishTransaction = func(tx *wire.MsgTx) error {
+		publTx <- tx
 
-// 	// Make PublishTransaction always return ErrDoubleSpend to begin with.
-// 	publErr = lnwallet.ErrDoubleSpend
-// 	brar.cfg.PublishTransaction = func(tx *wire.MsgTx) error {
-// 		publTx <- tx
+		publMtx.Lock()
+		defer publMtx.Unlock()
+		return publErr
+	}
 
-// 		publMtx.Lock()
-// 		defer publMtx.Unlock()
-// 		return publErr
-// 	}
+	// // Notify the breach arbiter about the breach.
+	// retribution, err := lnwallet.NewBreachRetribution(
+	// 	alice.State(), height, 1,
+	// )
+	// if err != nil {
+	// 	t.Fatalf("unable to create breach retribution: %v", err)
+	// }
 
-// 	// Notify the breach arbiter about the breach.
-// 	retribution, err := lnwallet.NewBreachRetribution(
-// 		alice.State(), height, 1,
-// 	)
-// 	if err != nil {
-// 		t.Fatalf("unable to create breach retribution: %v", err)
-// 	}
+	// Hard coded example
+	// TODO: Move to test list
+	zkCustBreachInfo := ZkCustBreachInfo{
+		escrowTxid:      chainhash.Hash{0xb5, 0x7f, 0x93, 0x7a, 0x5e, 0xb2, 0xd3, 0x3b, 0x27, 0x17, 0xc, 0x0, 0x9d, 0xc2, 0xbe, 0x3d, 0x4d, 0x89, 0xe3, 0x7f, 0xdf, 0x47, 0xa7, 0xd, 0x75, 0x32, 0x1d, 0xde, 0xf5, 0xe5, 0xe, 0x57},
+		custCloseTxid:   chainhash.Hash{0x13, 0x4b, 0x35, 0x6, 0x1c, 0x7e, 0xfa, 0xf0, 0x3d, 0x85, 0xe2, 0xed, 0x69, 0xe7, 0xed, 0xd7, 0xb6, 0x10, 0xa, 0x18, 0xd1, 0xff, 0x46, 0xfd, 0x25, 0x58, 0x38, 0x3a, 0xcb, 0xd0, 0x52, 0x2e},
+		disputePkScript: []uint8{0x0, 0x20, 0xea, 0xb1, 0xb2, 0x1b, 0x12, 0x27, 0xf9, 0xa, 0x54, 0xc8, 0xb, 0xd0, 0xac, 0x99, 0x2f, 0xf5, 0x7d, 0xac, 0xa6, 0xb8, 0x95, 0x10, 0xc6, 0x82, 0x81, 0xbe, 0x97, 0xa9, 0x95, 0xbd, 0x2a, 0xc7},
+		revLock:         "6dad4b8de4ea7765e89a69def72048c6bd1b9f2fb143aec83d0b924c42adc074",
+		custClosePk:     "027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddb",
+		amount:          9990,
+	}
 
-// 	breach := &ContractBreachEvent{
-// 		ChanPoint:         *chanPoint,
-// 		ProcessACK:        make(chan error, 1),
-// 		BreachRetribution: retribution,
-// 	}
-// 	contractBreaches <- breach
+	breach := &CustContractBreachEvent{
+		ChanPoint:        *chanPoint,
+		ProcessACK:       make(chan error, 1),
+		ZkCustBreachInfo: zkCustBreachInfo,
+	}
 
-// 	// We'll also wait to consume the ACK back from the breach arbiter.
-// 	select {
-// 	case err := <-breach.ProcessACK:
-// 		if err != nil {
-// 			t.Fatalf("handoff failed: %v", err)
-// 		}
-// 	case <-time.After(time.Second * 15):
-// 		t.Fatalf("breach arbiter didn't send ack back")
-// 	}
+	custContractBreaches <- breach
 
-// 	state := alice.State()
-// 	err = state.CloseChannel(&channeldb.ChannelCloseSummary{
-// 		ChanPoint:               state.FundingOutpoint,
-// 		ChainHash:               state.ChainHash,
-// 		RemotePub:               state.IdentityPub,
-// 		CloseType:               channeldb.BreachClose,
-// 		Capacity:                state.Capacity,
-// 		IsPending:               true,
-// 		ShortChanID:             state.ShortChanID(),
-// 		RemoteCurrentRevocation: state.RemoteCurrentRevocation,
-// 		RemoteNextRevocation:    state.RemoteNextRevocation,
-// 		LocalChanConfig:         state.LocalChanCfg,
-// 	})
-// 	if err != nil {
-// 		t.Fatalf("unable to close channel: %v", err)
-// 	}
+	// We'll also wait to consume the ACK back from the breach arbiter.
+	select {
+	case err := <-breach.ProcessACK:
+		if err != nil {
+			t.Fatalf("handoff failed: %v", err)
+		}
+	case <-time.After(time.Second * 15):
+		t.Fatalf("breach arbiter didn't send ack back")
+	}
 
-// 	// After exiting, the breach arbiter should have persisted the
-// 	// retribution information and the channel should be shown as pending
-// 	// force closed.
-// 	assertArbiterBreach(t, brar, chanPoint)
+	state := alice.State()
+	err := state.CloseChannel(&channeldb.ChannelCloseSummary{
+		ChanPoint:               state.FundingOutpoint,
+		ChainHash:               state.ChainHash,
+		RemotePub:               state.IdentityPub,
+		CloseType:               channeldb.BreachClose,
+		Capacity:                state.Capacity,
+		IsPending:               true,
+		ShortChanID:             state.ShortChanID(),
+		RemoteCurrentRevocation: state.RemoteCurrentRevocation,
+		RemoteNextRevocation:    state.RemoteNextRevocation,
+		LocalChanConfig:         state.LocalChanCfg,
+	})
+	if err != nil {
+		t.Fatalf("unable to close channel: %v", err)
+	}
 
-// 	// Assert that the database sees the channel as pending close, otherwise
-// 	// the breach arbiter won't be able to fully close it.
-// 	assertPendingClosed(t, alice)
+	// // After exiting, the breach arbiter should have persisted the
+	// // retribution information and the channel should be shown as pending
+	// // force closed.
+	// assertArbiterBreach(t, brar, chanPoint)
 
-// 	// Notify that the breaching transaction is confirmed, to trigger the
-// 	// retribution logic.
-// 	notifier := brar.cfg.Notifier.(*mockSpendNotifier)
-// 	notifier.confChannel <- &chainntnfs.TxConfirmation{}
+	// // Assert that the database sees the channel as pending close, otherwise
+	// // the breach arbiter won't be able to fully close it.
+	// assertPendingClosed(t, alice)
 
-// 	// The breach arbiter should attempt to sweep all outputs on the
-// 	// breached commitment. We'll pretend that the HTLC output has been
-// 	// spent by the channel counter party's second level tx already.
-// 	var tx *wire.MsgTx
-// 	select {
-// 	case tx = <-publTx:
-// 	case <-time.After(5 * time.Second):
-// 		t.Fatalf("tx was not published")
-// 	}
+	// Notify that the breaching transaction is confirmed, to trigger the
+	// retribution logic.
 
-// 	// All outputs should initially spend from the force closed txn.
-// 	forceTxID := forceCloseTx.TxHash()
-// 	for _, txIn := range tx.TxIn {
-// 		if txIn.PreviousOutPoint.Hash != forceTxID {
-// 			t.Fatalf("og justice tx not spending commitment")
-// 		}
-// 	}
+	notifier := brar.cfg.Notifier.(*mockSpendNotifier)
+	notifier.confChannel <- &chainntnfs.TxConfirmation{}
 
-// 	localOutpoint := retribution.LocalOutpoint
-// 	remoteOutpoint := retribution.RemoteOutpoint
-// 	htlcOutpoint := retribution.HtlcRetributions[0].OutPoint
+	// The breach arbiter should attempt to sweep all outputs on the
+	// breached commitment. We'll pretend that the HTLC output has been
+	// spent by the channel counter party's second level tx already.
+	var tx *wire.MsgTx
+	select {
+	case tx = <-publTx:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("tx was not published")
+	}
 
-// 	// Construct a map from outpoint on the force close to the transaction
-// 	// we want it to be spent by. As the test progresses, this map will be
-// 	// updated to contain only the set of commitment or second level
-// 	// outpoints that remain to be spent.
-// 	inputs := map[wire.OutPoint]*wire.MsgTx{
-// 		htlcOutpoint:   htlc2ndLevlTx,
-// 		localOutpoint:  commitSpendTx,
-// 		remoteOutpoint: commitSpendTx,
-// 	}
+	// All outputs should initially spend from the force closed txn.
+	forceTxID := forceCloseTxid
+	for _, txIn := range tx.TxIn {
+		if txIn.PreviousOutPoint.Hash.String() != forceTxID {
+			t.Fatalf("og justice tx not spending commitment %v", forceTxID)
+		}
+	}
 
-// 	// Until no more inputs to spend remain, deliver the spend events and
-// 	// process the assertions prescribed by the test case.
-// 	for len(inputs) > 0 {
-// 		var (
-// 			op      wire.OutPoint
-// 			spendTx *wire.MsgTx
-// 		)
+	// localOutpoint := retribution.LocalOutpoint
+	// remoteOutpoint := retribution.RemoteOutpoint
+	// htlcOutpoint := retribution.HtlcRetributions[0].OutPoint
 
-// 		// Pick an outpoint at random from the set of inputs.
-// 		for op, spendTx = range inputs {
-// 			delete(inputs, op)
-// 			break
-// 		}
+	// // Construct a map from outpoint on the force close to the transaction
+	// // we want it to be spent by. As the test progresses, this map will be
+	// // updated to contain only the set of commitment or second level
+	// // outpoints that remain to be spent.
+	// inputs := map[wire.OutPoint]*wire.MsgTx{
+	// 	htlcOutpoint:   htlc2ndLevlTx,
+	// 	localOutpoint:  commitSpendTx,
+	// 	remoteOutpoint: commitSpendTx,
+	// }
 
-// 		// Deliver the spend notification for the chosen transaction.
-// 		notifier.Spend(&op, 2, spendTx)
+	// // Until no more inputs to spend remain, deliver the spend events and
+	// // process the assertions prescribed by the test case.
+	// for len(inputs) > 0 {
+	// 	var (
+	// 		op      wire.OutPoint
+	// 		spendTx *wire.MsgTx
+	// 	)
 
-// 		// When the second layer transfer is detected, add back the
-// 		// outpoint of the second layer tx so that we can spend it
-// 		// again. Only do so if the test requests this behavior.
-// 		spendTxID := spendTx.TxHash()
-// 		if test.spend2ndLevel && spendTxID == htlc2ndLevlTx.TxHash() {
-// 			// Create the second level outpoint that will be spent,
-// 			// the index is always zero for these 1-in-1-out txns.
-// 			spendOp := wire.OutPoint{Hash: spendTxID}
-// 			inputs[spendOp] = htlcSpendTx
-// 		}
+	// 	// Pick an outpoint at random from the set of inputs.
+	// 	for op, spendTx = range inputs {
+	// 		delete(inputs, op)
+	// 		break
+	// 	}
 
-// 		if len(inputs) > 0 {
-// 			test.whenNonZeroInputs(t, inputs, publTx)
-// 		} else {
-// 			// Reset the publishing error so that any publication,
-// 			// made by the breach arbiter, if any, will succeed.
-// 			publMtx.Lock()
-// 			publErr = nil
-// 			publMtx.Unlock()
-// 			test.whenZeroInputs(t, inputs, publTx)
-// 		}
-// 	}
+	// 	// Deliver the spend notification for the chosen transaction.
+	// 	notifier.Spend(&op, 2, spendTx)
 
-// 	// Deliver confirmation of sweep if the test expects it.
-// 	if test.sendFinalConf {
-// 		notifier.confChannel <- &chainntnfs.TxConfirmation{}
-// 	}
+	// 	// When the second layer transfer is detected, add back the
+	// 	// outpoint of the second layer tx so that we can spend it
+	// 	// again. Only do so if the test requests this behavior.
+	// 	spendTxID := spendTx.TxHash()
+	// 	if test.spend2ndLevel && spendTxID == htlc2ndLevlTx.TxHash() {
+	// 		// Create the second level outpoint that will be spent,
+	// 		// the index is always zero for these 1-in-1-out txns.
+	// 		spendOp := wire.OutPoint{Hash: spendTxID}
+	// 		inputs[spendOp] = htlcSpendTx
+	// 	}
 
-// 	// Assert that the channel is fully resolved.
-// 	assertBrarCleanup(t, brar, alice.ChanPoint, alice.State().Db)
-// }
+	// 	if len(inputs) > 0 {
+	// 		test.whenNonZeroInputs(t, inputs, publTx)
+	// 	} else {
+	// 		// Reset the publishing error so that any publication,
+	// 		// made by the breach arbiter, if any, will succeed.
+	// 		publMtx.Lock()
+	// 		publErr = nil
+	// 		publMtx.Unlock()
+	// 		test.whenZeroInputs(t, inputs, publTx)
+	// 	}
+	// }
+
+	// Deliver confirmation of sweep if the test expects it.
+	if test.sendFinalConf {
+		notifier.confChannel <- &chainntnfs.TxConfirmation{}
+	}
+
+	// // Assert that the channel is fully resolved.
+	// assertBrarCleanup(t, brar, alice.ChanPoint, alice.State().Db)
+}
 
 // // findInputIndex returns the index of the input that spends from the given
 // // outpoint. This method fails if the outpoint is not found.
@@ -1657,45 +1635,45 @@ package lnd
 // 	}
 // }
 
-// // createTestArbiter instantiates a breach arbiter with a failing retribution
-// // store, so that controlled failures can be tested.
-// func createTestArbiter(t *testing.T, contractBreaches chan *ContractBreachEvent,
-// 	db *channeldb.DB) (*breachArbiter, func(), error) {
+// createTestZkArbiter instantiates a breach arbiter with a failing retribution
+// store, so that controlled failures can be tested.
+func createTestZkArbiter(t *testing.T, custContractBreaches chan *CustContractBreachEvent,
+	db *channeldb.DB) (*zkBreachArbiter, func(), error) {
 
-// 	// Create a failing retribution store, that wraps a normal one.
-// 	store := newFailingRetributionStore(func() RetributionStore {
-// 		return newRetributionStore(db)
-// 	})
+	// // Create a failing retribution store, that wraps a normal one.
+	// store := newFailingRetributionStore(func() RetributionStore {
+	// 	return newRetributionStore(db)
+	// })
 
-// 	aliceKeyPriv, _ := btcec.PrivKeyFromBytes(btcec.S256(),
-// 		alicesPrivKey)
-// 	signer := &mockSigner{key: aliceKeyPriv}
+	aliceKeyPriv, _ := btcec.PrivKeyFromBytes(btcec.S256(),
+		alicesPrivKey)
+	signer := &mockSigner{key: aliceKeyPriv}
 
-// 	// Assemble our test arbiter.
-// 	notifier := makeMockSpendNotifier()
-// 	ba := newBreachArbiter(&BreachConfig{
-// 		CloseLink:          func(_ *wire.OutPoint, _ htlcswitch.ChannelCloseType) {},
-// 		DB:                 db,
-// 		Estimator:          chainfee.NewStaticEstimator(12500, 0),
-// 		GenSweepScript:     func() ([]byte, error) { return nil, nil },
-// 		ContractBreaches:   contractBreaches,
-// 		Signer:             signer,
-// 		Notifier:           notifier,
-// 		PublishTransaction: func(_ *wire.MsgTx) error { return nil },
-// 		Store:              store,
-// 	})
+	// Assemble our test arbiter.
+	notifier := makeMockSpendNotifier()
+	ba := newZkBreachArbiter(&ZkBreachConfig{
+		CloseLink:            func(_ *wire.OutPoint, _ htlcswitch.ChannelCloseType) {},
+		DB:                   db,
+		Estimator:            chainfee.NewStaticEstimator(12500, 0),
+		GenSweepScript:       func() ([]byte, error) { return nil, nil },
+		CustContractBreaches: custContractBreaches,
+		Signer:               signer,
+		Notifier:             notifier,
+		PublishTransaction:   func(_ *wire.MsgTx) error { return nil },
+		// Store:              store,
+	})
 
-// 	if err := ba.Start(); err != nil {
-// 		return nil, nil, err
-// 	}
+	if err := ba.Start(); err != nil {
+		return nil, nil, err
+	}
 
-// 	// The caller is responsible for closing the database.
-// 	cleanUp := func() {
-// 		ba.Stop()
-// 	}
+	// The caller is responsible for closing the database.
+	cleanUp := func() {
+		ba.Stop()
+	}
 
-// 	return ba, cleanUp, nil
-// }
+	return ba, cleanUp, nil
+}
 
 // // createInitChannels creates two initialized test channels funded with 10 BTC,
 // // with 5 BTC allocated to each side. Within the channel, Alice is the

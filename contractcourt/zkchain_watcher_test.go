@@ -206,9 +206,7 @@ func TestZkChainWatcherCustClose(t *testing.T) {
 	var uniClose *ZkCustCloseInfo
 	select {
 	case uniClose = <-chanEvents.ZkCustClosure:
-		t.Logf("revLock: %#v\n", uniClose.revLock)
-		t.Logf("custClosePk: %#v\n", uniClose.custClosePk)
-		t.Logf("amount: %#v\n", uniClose.amount)
+		// t.Logf("ZkCustBreachInfo: %#v", *uniClose)
 	case <-time.After(time.Second * 5):
 		t.Fatalf("didn't receive unilateral close event")
 	}

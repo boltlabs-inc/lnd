@@ -884,6 +884,10 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 	// breach events from the ChannelArbitrator to the breachArbiter,
 	contractBreaches := make(chan *ContractBreachEvent, 1)
 
+	// We will use the following channel to reliably hand off contract
+	// breach events from the ChannelArbitrator to the zkBreachArbiter,
+	custContractBreaches := make(chan *CustContractBreachEvent, 1)
+
 	s.chainArb = contractcourt.NewChainArbitrator(contractcourt.ChainArbitratorConfig{
 		ChainHash:              *activeNetParams.GenesisHash,
 		IncomingBroadcastDelta: lncfg.DefaultIncomingBroadcastDelta,
@@ -983,15 +987,15 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 
 		srvrLog.Infof("Starting up zkBreachArbiter")
 		s.zkBreachArbiter = newZkBreachArbiter(&ZkBreachConfig{
-			CloseLink:          closeLink,
-			DB:                 chanDB,
-			Estimator:          s.cc.feeEstimator,
-			GenSweepScript:     newSweepPkScriptGen(cc.wallet),
-			Notifier:           cc.chainNotifier,
-			PublishTransaction: cc.wallet.PublishTransaction,
-			ContractBreaches:   contractBreaches,
-			Signer:             cc.wallet.Cfg.Signer,
-			Store:              newZkRetributionStore(chanDB),
+			CloseLink:            closeLink,
+			DB:                   chanDB,
+			Estimator:            s.cc.feeEstimator,
+			GenSweepScript:       newSweepPkScriptGen(cc.wallet),
+			Notifier:             cc.chainNotifier,
+			PublishTransaction:   cc.wallet.PublishTransaction,
+			CustContractBreaches: custContractBreaches,
+			Signer:               cc.wallet.Cfg.Signer,
+			Store:                newZkRetributionStore(chanDB),
 		})
 	}
 	// Select the configuration and furnding parameters for Bitcoin or
