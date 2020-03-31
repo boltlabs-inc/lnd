@@ -55,7 +55,7 @@ Developing on `zklnd` can be quite complex since there are many more moving piec
 
 #### Running btcd
 
-Let’s start by running btcd, if you don’t have it up already. Open up a new terminal window, ensure you have your `$GOPATH` set, and run:
+Let’s start by running btcd, if you don’t have it up already. Open up a new terminal window and run:
 
     btcd --txindex --simnet --rpcuser=kek --rpcpass=kek  --minrelaytxfee=0
 
@@ -70,7 +70,7 @@ Breaking down the components:
 
 #### Starting zklnd (Alice’s node)
 
-Now, let’s set up the two `zklnd` nodes. To keep things as clean and separate as possible, open up a new terminal window, ensure you have `$GOPATH` set and `$GOPATH/bin` in your `PATH`, and create a new directory called `dev` that will represent our development space. We will create separate folders to store the state for alice and bob, and run all of our `zklnd` nodes on different `localhost` ports instead of using [Docker](/guides/docker/) to make our networking a bit easier.
+Now, let’s set up the two `zklnd` nodes. To keep things as clean and separate as possible, open up a new terminal window, and create a new directory called `dev` that will represent our development space. We will create separate folders to store the state for alice and bob, and run all of our `zklnd` nodes on different `localhost` ports instead of using [Docker](/guides/docker/) to make our networking a bit easier.
 
     # Create our development space
     mkdir dev
@@ -165,7 +165,7 @@ Now that we have our `lnd` nodes up and running, let’s interact with them! To 
 
 We will test our rpc connection to the Alice node. Notice that in the following command we specify the `--rpcserver` here, which corresponds to `--rpcport=10001` that we set when starting the Alice `lnd` node.
 
-Open up a new terminal window, set `$GOPATH` and include `$GOPATH/bin` in your `PATH` as usual. Let’s create Alice’s wallet and set her passphrase:
+Open up a new terminal window. Let’s create Alice’s wallet and set her passphrase:
 
     cd dev/alice
     alice$ lncli --rpcserver=localhost:10001 --macaroonpath=data/chain/bitcoin/simnet/admin.macaroon create
