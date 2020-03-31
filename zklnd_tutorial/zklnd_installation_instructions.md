@@ -163,9 +163,9 @@ Alternatively, if one doesn’t wish to use `make`, then the `go` commands can b
 
 To update your version of `lnd` to the latest version run the following commands:
 
-   cd $GOPATH/src/github.com/boltlabs-inc/lnd
-   git pull
-   make clean && make && make install
+    cd $GOPATH/src/github.com/boltlabs-inc/lnd
+    git pull
+    make clean && make && make install
 
 
 On FreeBSD, use gmake instead of make.
@@ -183,8 +183,6 @@ To check that `lnd` was installed properly run the following command:
 
     make check
 
-This command requires `bitcoind` (almost any version should do) to be available in the system’s `$PATH` variable. Otherwise some of the tests will fail.
-
 
 ### Installing btcd
 
@@ -196,4 +194,4 @@ To install btcd, run the following command:
 
 Alternatively, you can install [`btcd` directly from its repo](https://github.com/btcsuite/btcd).
 
-Note that for our initial release of `zkLND` assumes users are running a btcd node on simnet (rather than the public mainnet or testnet). Therefore, when starting up btcd, it will be necessary to pass in `--bitcoin.simnet`. This is covered in more detail in the tutorial.
+Note that for our initial release of `zkLND` assumes users are running a btcd node on simnet (rather than the public mainnet or testnet). Therefore, when starting up btcd, it will be necessary to pass in `--bitcoin.simnet`. This is covered in more detail in the [zkLND tutorial](zklnd_tutorial.md).
