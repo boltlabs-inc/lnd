@@ -453,6 +453,34 @@ func mainRPCServerPermissions() map[string][]bakery.Op {
 			Entity: "offchain",
 			Action: "write",
 		}},
+		"/lnrpc.Lightning/ZkInfo": {{
+			Entity: "info",
+			Action: "read",
+		}},
+		"/lnrpc.Lightning/ZkChannelBalance": {{
+			Entity: "info",
+			Action: "read",
+		}},
+		"/lnrpc.Lightning/TotalReceived": {{
+			Entity: "info",
+			Action: "read",
+		}},
+		"/lnrpc.Lightning/OpenZkChannel": {{
+			Entity: "info",
+			Action: "write",
+		}},
+		"/lnrpc.Lightning/ZkPay": {{
+			Entity: "info",
+			Action: "write",
+		}},
+		"/lnrpc.Lightning/CloseZkChannel": {{
+			Entity: "info",
+			Action: "write",
+		}},
+		"/lnrpc.Lightning/MerchClose": {{
+			Entity: "info",
+			Action: "write",
+		}},
 	}
 }
 
