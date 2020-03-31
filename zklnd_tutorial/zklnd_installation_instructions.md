@@ -16,37 +16,37 @@ In order to work with [`zkLND`](https://github.com/boltlabs-inc/lnd), the follow
 
 *   **Go:** `lnd` is written in Go. To install, run one of the following commands:
 
- **Note**: The minimum version of Go supported is Go 1.13. We recommend that users use the latest version of Go, which at the time of writing is [`1.13`](https://blog.golang.org/go1.13).
+ **Note**: The minimum version of Go supported is Go 1.14. We recommend that users use the latest version of Go, which at the time of writing is [`1.14`](https://blog.golang.org/go1.14).
 
  On Linux:
 
  (x86-64)
 
-     wget https://dl.google.com/go/go1.13.linux-amd64.tar.gz
-     sha256sum go1.13.linux-amd64.tar.gz | awk -F " " '{ print $1 }'
+     wget https://dl.google.com/go/go1.14.linux-amd64.tar.gz
+     sha256sum go1.14.linux-amd64.tar.gz | awk -F " " '{ print $1 }'
 
 
- The final output of the command above should be `68a2297eb099d1a76097905a2ce334e3155004ec08cdea85f24527be3c48e856`. If it isn’t, then the target REPO HAS BEEN MODIFIED, and you shouldn’t install this version of Go. If it matches, then proceed to install Go:
+ The final output of the command above should be `08df79b46b0adf498ea9f320a0f23d6ec59e9003660b4c9c1ce8e5e2c6f823ca`. If it isn’t, then the target REPO HAS BEEN MODIFIED, and you shouldn’t install this version of Go. If it matches, then proceed to install Go:
 
-     tar -C /usr/local -xzf go1.13.linux-amd64.tar.gz
+     tar -C /usr/local -xzf go1.14.linux-amd64.tar.gz
      export PATH=$PATH:/usr/local/go/bin
 
 
  (ARMv6)
 
-     wget https://dl.google.com/go/go1.13.linux-armv6l.tar.gz
-     sha256sum go1.13.linux-armv6l.tar.gz | awk -F " " '{ print $1 }'
+     wget https://dl.google.com/go/go1.14.linux-armv6l.tar.gz
+     sha256sum go1.14.linux-armv6l.tar.gz | awk -F " " '{ print $1 }'
 
 
- The final output of the command above should be `931906d67cae1222f501e7be26e0ee73ba89420be0c4591925901cb9a4e156f0`. If it isn’t, then the target REPO HAS BEEN MODIFIED, and you shouldn’t install this version of Go. If it matches, then proceed to install Go:
+ The final output of the command above should be `b5e682176d7ad3944404619a39b585453a740a2f82683e789f4279ec285b7ecd`. If it isn’t, then the target REPO HAS BEEN MODIFIED, and you shouldn’t install this version of Go. If it matches, then proceed to install Go:
 
-     tar -C /usr/local -xzf go1.13.linux-armv6l.tar.gz
+     tar -C /usr/local -xzf go1.14.linux-armv6l.tar.gz
      export PATH=$PATH:/usr/local/go/bin
 
 
  On Mac OS X:
 
-     brew install go@1.13
+     brew install go@1.14
 
 
  On FreeBSD:
@@ -104,7 +104,6 @@ To be able to build `libzkchannels`, you will need to install the EMP-toolkit am
 
     git clone https://github.com/boltlabs-inc/libzkchannels
     cd libzkchannels
-    ./deps/install_packages.sh
     ./build.sh ..
     cd ..
     . ./make/libzkchannels.mk
