@@ -5,7 +5,7 @@ After reading this overview, you can try creating your own zkChannels by followi
 ## Introduction
 This overview aims to provide a description of the transaction paths and Bitcoin scripts used in the zkChannels protocol. zkChannels, originally named the BOLT protocol, was inspired by the Lightning Network (LN) and therefore features many of the same characteristics, namely, multisig outputs, revocable outputs with relative timelocks, with penalty transactions.
 
-The main difference between zkChannels and LN payment channels is that zkChannels are asymmetric. zkChannels consist of a 'Customer' and a 'Merchant'. Only the Customer knows the channel balance and is able to initiate payments and close the channel. In comparison, the Merchant is only able to accept payments and close the channel.
+The main difference between zkChannels and LN payment channels is that zkChannels are asymmetric. zkChannels consist of a 'Customer' and a 'Merchant'. Only the Customer knows the channel balance and is able to initiate payments and close the channel. In comparison, the Merchant is only able to accept payments and close the channel. Also, since payments are limited to within the channel, they do not rely on HTLCs. 
 
 ### Channel Establishment
 
