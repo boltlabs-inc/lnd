@@ -210,14 +210,20 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 		// Do merchant initialization if merchant flag was set
 		if cfg.ZkMerchant {
 
-			isCust := DetermineIfCust()
+			isCust, err := DetermineIfCust()
+			if err != nil {
+				return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
+			}
 			if isCust {
 				return fmt.Errorf("Current directory has already been set up with zk customer DB. " +
-					"Delete zkcust.db and try again to run zklnd as a merchant")
+					"Delete zkcust.db and try again to run zklnd as a merchant.")
 			}
 
 			// If there is already a zkmerch.db set up, skip the initialization step
-			isMerch := DetermineIfMerch()
+			isMerch, err := DetermineIfMerch()
+			if err != nil {
+				return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
+			}
 			if !isMerch {
 
 				zkchLog.Infof("Initializing merchant setup")
@@ -242,33 +248,60 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 				}
 
 				// save merchStateBytes in zkMerchDB
-				merchStateBytes, _ := json.Marshal(merchState)
-				zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+				merchStateBytes, err := json.Marshal(merchState)
+				if err != nil {
+					return err
+				}
+				err = zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+				if err != nil {
+					return err
+				}
 
 				// save channelStateBytes in zkMerchDB
-				channelStateBytes, _ := json.Marshal(channelState)
-				zkchanneldb.AddMerchField(zkMerchDB, channelStateBytes, "channelStateKey")
+				channelStateBytes, err := json.Marshal(channelState)
+				if err != nil {
+					return err
+				}
+				err = zkchanneldb.AddMerchField(zkMerchDB, channelStateBytes, "channelStateKey")
+				if err != nil {
+					return err
+				}
 
 				// save totalBalance in zkMerchDB.
 				// With no channels initially, the total balance starts off at 0
 				totalBalance := int64(0)
-				totalBalanceBytes, _ := json.Marshal(totalBalance)
-				zkchanneldb.AddMerchField(zkMerchDB, totalBalanceBytes, "totalBalanceKey")
+				totalBalanceBytes, err := json.Marshal(totalBalance)
+				if err != nil {
+					return err
+				}
+				err = zkchanneldb.AddMerchField(zkMerchDB, totalBalanceBytes, "totalBalanceKey")
+				if err != nil {
+					return err
+				}
 
-				zkMerchDB.Close()
+				err = zkMerchDB.Close()
+				if err != nil {
+					return err
+				}
 				zkchLog.Info("Merchant initialization complete")
 				zkchLog.Info("Merchant Public Key:", *merchState.PkM)
 			}
 
 		} else { // if not zk merchant, then create customer db.
 
-			isMerch := DetermineIfMerch()
+			isMerch, err := DetermineIfMerch()
+			if err != nil {
+				return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
+			}
 			if isMerch {
 				return fmt.Errorf("Current directory has already been set up with zk merchant DB. " +
-					"Delete zkmerch.db and try again to run zklnd as a customer")
+					"Delete zkmerch.db and try again to run zklnd as a customer.")
 			}
 
-			isCust := DetermineIfCust()
+			isCust, err := DetermineIfCust()
+			if err != nil {
+				return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
+			}
 			if !isCust {
 
 				zkchLog.Infof("Creating customer zkchannel db")
@@ -277,7 +310,10 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 				if err != nil {
 					return err
 				}
-				zkCustDB.Close()
+				err = zkCustDB.Close()
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

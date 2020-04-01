@@ -3234,7 +3234,10 @@ func openZkChannel(ctx *cli.Context) error {
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
-	isMerch := lnd.DetermineIfMerch()
+	isMerch, err := lnd.DetermineIfMerch()
+	if err != nil {
+		return err
+	}
 
 	if isMerch {
 		return fmt.Errorf("You are a operating as a merchant, only customers can make payments")
@@ -3329,7 +3332,10 @@ var zkPayCommand = cli.Command{
 
 func zkPay(ctx *cli.Context) error {
 
-	isMerch := lnd.DetermineIfMerch()
+	isMerch, err := lnd.DetermineIfMerch()
+	if err != nil {
+		return err
+	}
 
 	if isMerch {
 		return fmt.Errorf("You are a operating as a merchant, only customers can make payments")
@@ -3404,7 +3410,10 @@ var closeZkChannelCommand = cli.Command{
 }
 
 func closeZkChannel(ctx *cli.Context) error {
-	isCustomer := lnd.DetermineIfCust()
+	isCustomer, err := lnd.DetermineIfCust()
+	if err != nil {
+		return err
+	}
 	if !isCustomer {
 		return fmt.Errorf("This command doesn't work for merchants. " +
 			"TODO: make a command to close channel by channelID that merch can use too")
@@ -3455,7 +3464,10 @@ var merchCloseCommand = cli.Command{
 }
 
 func merchClose(ctx *cli.Context) error {
-	isMerch := lnd.DetermineIfMerch()
+	isMerch, err := lnd.DetermineIfMerch()
+	if err != nil {
+		return err
+	}
 	if !isMerch {
 		return fmt.Errorf("This command doesn't work for customers. " +
 			"Instead, use closezkchannel to close a zk channel.")
@@ -3495,7 +3507,10 @@ var zkChannelBalanceCommand = cli.Command{
 
 func zkChannelBalance(ctx *cli.Context) error {
 
-	isCustomer := lnd.DetermineIfCust()
+	isCustomer, err := lnd.DetermineIfCust()
+	if err != nil {
+		return err
+	}
 
 	if !isCustomer {
 		return fmt.Errorf("You are a operating as a merchant, " +
@@ -3525,7 +3540,10 @@ var totalReceivedCommand = cli.Command{
 
 func totalReceived(ctx *cli.Context) error {
 
-	isMerchant := lnd.DetermineIfMerch()
+	isMerchant, err := lnd.DetermineIfMerch()
+	if err != nil {
+		return err
+	}
 
 	if !isMerchant {
 		return fmt.Errorf("You are a operating as a customer and are not receiving payments, " +
@@ -3555,7 +3573,10 @@ var zkInfoCommand = cli.Command{
 
 func zkInfo(ctx *cli.Context) error {
 
-	isMerchant := lnd.DetermineIfMerch()
+	isMerchant, err := lnd.DetermineIfMerch()
+	if err != nil {
+		return err
+	}
 
 	if !isMerchant {
 		return fmt.Errorf("This feature is not available for customers yet.")

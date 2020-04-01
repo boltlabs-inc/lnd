@@ -3609,9 +3609,7 @@ func (s *server) CloseZkChannel(zkChannelName string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.zkchannelMgr.CloseZkChannel(s.cc.wallet, s.cc.chainNotifier, zkChannelName)
-
-	return nil
+	return s.zkchannelMgr.CloseZkChannel(s.cc.wallet, s.cc.chainNotifier, zkChannelName)
 }
 
 // MerchClose closes a channel with a given escrowTxid for the merchant
@@ -3621,9 +3619,7 @@ func (s *server) MerchClose(EscrowTxid string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.zkchannelMgr.MerchClose(s.cc.wallet, s.cc.chainNotifier, EscrowTxid)
-
-	return nil
+	return s.zkchannelMgr.MerchClose(s.cc.wallet, s.cc.chainNotifier, EscrowTxid)
 }
 
 // ZkChannelBalance sends the request to server to close the connection with peer
