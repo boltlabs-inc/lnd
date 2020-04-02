@@ -1,6 +1,6 @@
 # zkLND Installation
 
-###### Disclaimer: zkLND is in a proof of concept stage and we are actively improving it and adding features. If you encounter any issues, please post them in GitHub issues. Thanks!
+#### Disclaimer: zkLND is in a proof of concept stage and we are actively improving it and adding features. If you encounter any issues, please post them in GitHub issues. Thanks!
 
 ## Introduction
 
