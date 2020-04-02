@@ -10,6 +10,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	"github.com/lightningnetwork/lnd"
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/clock"
@@ -955,6 +956,81 @@ func (c *ChainArbitrator) WatchNewChannel(newChan *channeldb.OpenChannel) error 
 	}
 
 	return chainWatcher.Start()
+}
+
+// WatchNewZkChannel sends the ChainArbitrator a message to create a
+// ChannelArbitrator tasked with watching over a new zkChannel. Once a new
+// channel has finished its final funding flow, it should be registered with
+// the ChainArbitrator so we can properly react to any on-chain events.
+///////// zkchannels work in progress
+func (c *ChainArbitrator) WatchNewZkChannel(newChan *channeldb.OpenChannel) error {
+
+	// inputs:
+	//	fundingPoint
+	// 	isMerch
+	c.Lock()
+	defer c.Unlock()
+
+	log.Infof("Creating new ChannelArbitrator for zkChannelPoint(%v)",
+		newChan.FundingOutpoint)
+
+	// If we're already watching this channel, then we'll ignore this
+	// request.
+	chanPoint := newChan.FundingOutpoint
+	if _, ok := c.activeChannels[chanPoint]; ok {
+		return nil
+	}
+
+	// First, also create an active chainWatcher for this channel to ensure
+	// that we detect any relevant on chain events.
+	zkChainWatcher, err := newZkChainWatcher(zkChainWatcherConfig{
+		isMerch:       true,
+		zkFundingInfo: zkFundingInfo,
+		notifier:      custNotifier,
+		// custContractBreach: func(retInfo *lnwallet.BreachRetribution) error {
+		// 	return c.cfg.CustContractBreach(chanPoint, retInfo)
+		}
+	})
+	if err != nil {
+		return err
+	}
+
+	// chainWatcher, err := newZkChainWatcher(
+	// 	chainWatcherConfig{
+	// 		chanState: newChan,
+	// 		notifier:  c.cfg.Notifier,
+	// 		signer:    c.cfg.Signer,
+	// 		isOurAddr: c.cfg.IsOurAddress,
+	// 		contractBreach: func(retInfo *lnwallet.BreachRetribution) error {
+	// 			return c.cfg.ContractBreach(chanPoint, retInfo)
+	// 		},
+	// 		extractStateNumHint: lnwallet.GetStateNumHint,
+	// 	},
+	// )
+	// if err != nil {
+	// 	return err
+	// }
+
+	// c.activeWatchers[newChan.FundingOutpoint] = chainWatcher
+
+	// // We'll also create a new channel arbitrator instance using this new
+	// // channel, and our internal state.
+	// channelArb, err := newActiveChannelArbitrator(
+	// 	newChan, c, chainWatcher.SubscribeChannelEvents(),
+	// )
+	// if err != nil {
+	// 	return err
+	// }
+
+	// // With the arbitrator created, we'll add it to our set of active
+	// // arbitrators, then launch it.
+	// c.activeChannels[chanPoint] = channelArb
+
+	// if err := channelArb.Start(); err != nil {
+	// 	return err
+	// }
+
+	return zkChainWatcher.Start()
 }
 
 // SubscribeChannelEvents returns a new active subscription for the set of
