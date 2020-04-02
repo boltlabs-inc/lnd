@@ -1,5 +1,7 @@
 # zkLND Installation
 
+###### Disclaimer: zkLND is in a proof of concept stage and we are actively improving it and adding features. If you encounter any issues, please post them in GitHub issues. Thanks!
+
 ## Introduction
 
 `zkLND` is an extension of `lnd`, which is uses the `libzkchannels` library to run the zkChannels protocol. For more information about the protocol, you can read the high level [overview](zklnd_overview.md).

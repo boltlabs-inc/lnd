@@ -1,12 +1,14 @@
 # zkchannel Tutorial
 
+###### Disclaimer: zkLND is in a proof of concept stage and we are actively improving it and adding features. If you encounter any issues, please post them in GitHub issues. Thanks!
+
 This tutorial is based on the [LND Tutorial](https://dev.lightning.community/tutorial/01-lncli) and has been edited to describe the usage of zkLND.
 
 This tutorial assumes you have `zkLND` with `libzkchannels` installed. If not, please refer to the [zkLND installation guide](zklnd_installation_instructions.md).
 
 You may also find it helpful to understand the transactions and Bitcoin scripts used in zkChannels by reading the high level [overview](zklnd_overview.md).
 
-For more information about zkChannels, read the TODO: add link [zkchannels blog post](TODO).
+For more information about zkChannels, read the TODO: add link [zkchannels blog post](https://medium.com/boltlabs/zkchannels-for-bitcoin-f1bbf6e3570e).
 
 ### Introduction
 
@@ -194,7 +196,7 @@ To make sure this was applied to all of your current terminal windows, rerun you
 
     alice$ source ~/.bashrc
     bob$ source ~/.bashrc
-    
+
 For simplicity, the rest of the tutorial will assume that this step was complete.
 
 #### lncli options

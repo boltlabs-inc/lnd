@@ -2,6 +2,8 @@
 
 <img src="zkchannels_header.png">
 
+###### Disclaimer: zkLND is in a proof of concept stage and we are actively improving it and adding features. If you encounter any issues, please post them in GitHub issues. Thanks!
+
 zkLND is a complete implementation of a [zkChannels](https://github.com/boltlabs-inc/libzkchannels) node, forked from the [`lnd`](https://github.com/lightningnetwork/lnd) implementation of the Lightning Network. zkLND interacts with the bitcoin blockchain via a [`btcd`](https://github.com/btcsuite/btcd) node.
 The project's codebase also uses the [btcsuite](https://github.com/btcsuite/) set of Bitcoin libraries, and also exports a large set of isolated re-usable Lightning Network related libraries within it.  In the current state zkLND is capable of:
 * Creating channels.
@@ -30,5 +32,5 @@ It is important to note that zkLND is still **beta** software and that you shoul
 
 
 ## Further reading
-* [Bolt Labs medium page](https://medium.com/boltlabs)
+* [zkChannels blog post](https://medium.com/boltlabs/zkchannels-for-bitcoin-f1bbf6e3570e)
 * [zkchannels overview](zklnd_tutorial/zklnd_overview.md)
