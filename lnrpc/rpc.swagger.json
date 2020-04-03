@@ -516,31 +516,6 @@
         ]
       }
     },
-    "/v1/closezkchannel/{pub_key}": {
-      "delete": {
-        "summary": "* lncli: `closezkchannel`\nZkPay attempts to closezkchannel a zk payment to a peer with whom we have established a\nzkChannel.",
-        "operationId": "CloseZkChannel",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/lnrpcCloseZkChannelResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "pub_key",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Lightning"
-        ]
-      }
-    },
     "/v1/fees": {
       "get": {
         "summary": "lncli: `feereport`\nFeeReport allows the caller to obtain a report detailing the current fee\nschedule enforced by the node globally for each channel.",
@@ -3499,6 +3474,9 @@
         }
       }
     },
+    "lnrpcMerchCloseResponse": {
+      "type": "object"
+    },
     "lnrpcMultiChanBackup": {
       "type": "object",
       "properties": {
@@ -4643,7 +4621,7 @@
           "items": {
             "$ref": "#/definitions/lnrpcZkChannelInfo"
           },
-          "title": "/ Sum of channels zkbalances denominated in satoshis"
+          "title": "/ List of customer's zkchannels with their balances"
         }
       }
     },
@@ -4654,10 +4632,19 @@
           "type": "string",
           "title": "/ The channel name"
         },
+        "escrow_txid": {
+          "type": "string",
+          "title": "/ The channel escrow txid"
+        },
         "local_balance": {
           "type": "string",
           "format": "int64",
-          "title": "/ Number of satoshis in the balance"
+          "title": "/ Number of satoshis in the local balance"
+        },
+        "remote_balance": {
+          "type": "string",
+          "format": "int64",
+          "title": "/ Number of satoshis in the remote balance"
         }
       }
     },

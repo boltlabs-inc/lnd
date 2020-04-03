@@ -1694,6 +1694,44 @@ func ZkInfo() (string, error) {
 	return *merchState.PkM, err
 }
 
+type ListOfZkChannels struct {
+	channelID    []string
+	escrowTxid   []string
+	channelToken []string
+}
+
+// ListZkChannels returns a list of the merchant's zkchannels
+func ListZkChannels() (ListOfZkChannels, error) {
+
+	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	if err != nil {
+		zkchLog.Error(err)
+		return ListOfZkChannels{}, err
+	}
+
+	merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
+	if err != nil {
+		zkchLog.Error(err)
+		return ListOfZkChannels{}, err
+	}
+	var merchState libzkchannels.MerchState
+	err = json.Unmarshal(merchStateBytes, &merchState)
+	if err != nil {
+		zkchLog.Error(err)
+		return ListOfZkChannels{}, err
+	}
+
+	err = zkMerchDB.Close()
+
+	// TODO: Fill in ListOfZkChannels
+	ListOfZkChannels := ListOfZkChannels{
+		nil,
+		nil,
+		nil,
+	}
+	return ListOfZkChannels, err
+}
+
 // DetermineIfCust is used to check the user is a customer
 func DetermineIfCust() (bool, error) {
 	if user, err := CustOrMerch(); user == "cust" {

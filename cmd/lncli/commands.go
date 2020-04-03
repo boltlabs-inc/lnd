@@ -3598,4 +3598,37 @@ func zkInfo(ctx *cli.Context) error {
 	return nil
 }
 
+var listZkChannelsCommand = cli.Command{
+	Name:     "listzkchannels",
+	Category: "ZkChannels",
+	Usage:    "Return list of zkchannels.",
+	Action:   actionDecorator(listZkChannels),
+}
+
+func listZkChannels(ctx *cli.Context) error {
+
+	isMerchant, err := lnd.DetermineIfMerch()
+	if err != nil {
+		return err
+	}
+
+	if !isMerchant {
+		return fmt.Errorf("This command is for merchants only. " +
+			"Use zkchannelbalance command instead")
+	}
+
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	req := &lnrpc.ListZkChannelsRequest{}
+	resp, err := client.ListZkChannels(ctxb, req)
+	if err != nil {
+		return err
+	}
+
+	printRespJSON(resp)
+	return nil
+}
+
 // ########### ln-mpc end ###########

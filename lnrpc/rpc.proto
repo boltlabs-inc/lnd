@@ -728,6 +728,15 @@ service Lightning {
             get: "/v1/balance/zkinfo"
         };
     }
+
+    /** lncli: `listzkchannels`
+    ZkInfo returns information about this zklnd node.
+    */
+    rpc ListZkChannels (ListZkChannelsRequest) returns (ListZkChannelsResponse) {
+        option (google.api.http) = {
+            get: "/v1/balance/listzkchannels"
+        };
+    }
     // ########### ln-mpc end ###########
 }
 
@@ -3654,7 +3663,7 @@ message ZkChannelInfo {
 message ZkChannelBalanceRequest {
 }
 message ZkChannelBalanceResponse {
-    /// Sum of channels zkbalances denominated in satoshis
+    /// List of customer's zkchannels with their balances
     repeated ZkChannelInfo zk_channel = 1 [json_name = "zk_channel"];
 }
 
@@ -3670,6 +3679,23 @@ message ZkInfoRequest {
 message ZkInfoResponse {
     /// Merchant's pubkey
     string merch_pubkey = 1 [json_name = "merch_pubkey"];
+}
+
+message ListZkChannelsInfo {
+    /// The channel ID
+    string zk_channel_id = 1 [json_name = "channel_id"];
+    /// The channel escrow txid
+    string escrow_txid = 2 [json_name = "escrow_txid"];
+    /// The channel Token
+    string channel_token = 3 [json_name = "channel_token"];
+}
+
+
+message ListZkChannelsRequest {
+}
+message ListZkChannelsResponse {
+    /// List of merchant's zkchannels
+    repeated ListZkChannelsInfo zk_channel = 1 [json_name = "zk_channel"];
 }
 
 // ########### ln-mpc end ###########

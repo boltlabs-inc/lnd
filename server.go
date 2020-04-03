@@ -3622,8 +3622,7 @@ func (s *server) MerchClose(EscrowTxid string) error {
 	return s.zkchannelMgr.MerchClose(s.cc.wallet, s.cc.chainNotifier, EscrowTxid)
 }
 
-// ZkChannelBalance sends the request to server to close the connection with peer
-// identified by public key.
+// ZkChannelBalance returns a list of zkchannels and their balances to the customer.
 func (s *server) ZkChannelBalance(zkChannelName string) (string, int64, int64) {
 	escrowTxid, custBalance, merchBalance, _ := ZkChannelBalance(zkChannelName)
 	return escrowTxid, custBalance, merchBalance
@@ -3636,10 +3635,16 @@ func (s *server) TotalReceived() int64 {
 	return total
 }
 
-// ZkInfo returns the merch's pubkey
+// ZkInfo returns the merch's pubkey.
 func (s *server) ZkInfo() string {
 	merchPubKey, _ := ZkInfo()
 	return merchPubKey
+}
+
+// ListZkChannels returns the list of zkChannels for the merchant.
+func (s *server) ListZkChannels() ListOfZkChannels {
+	ListOfZkChannels, _ := ListZkChannels()
+	return ListOfZkChannels
 }
 
 // ########### ln-mpc end ###########

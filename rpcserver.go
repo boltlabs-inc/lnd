@@ -481,6 +481,10 @@ func mainRPCServerPermissions() map[string][]bakery.Op {
 			Entity: "info",
 			Action: "write",
 		}},
+		"/lnrpc.Lightning/ListZkChannels": {{
+			Entity: "info",
+			Action: "read",
+		}},
 	}
 }
 
@@ -6673,6 +6677,33 @@ func (r *rpcServer) ZkInfo(ctx context.Context,
 	return &lnrpc.ZkInfoResponse{
 		MerchPubkey: merch_pubkey,
 	}, nil
+}
+
+// ListZkChannels lists all open channels for the merchant
+func (r *rpcServer) ListZkChannels(ctx context.Context,
+	in *lnrpc.ListZkChannelsRequest) (*lnrpc.ListZkChannelsResponse, error) {
+
+	// return a list of channels
+	ListOfZkChannels := r.server.ListZkChannels()
+
+	// put the channel details in to a json
+	numChannels := len(ListOfZkChannels.channelID)
+
+	resp := &lnrpc.ListZkChannelsResponse{
+		ZkChannel: make([]*lnrpc.ListZkChannelsInfo, 0, numChannels),
+	}
+
+	for i := 0; i < numChannels; i++ {
+		listOfZkChannels := &lnrpc.ListZkChannelsInfo{
+			ZkChannelId:  ListOfZkChannels.channelID[i],
+			EscrowTxid:   ListOfZkChannels.escrowTxid[i],
+			ChannelToken: ListOfZkChannels.channelToken[i],
+		}
+		resp.ZkChannel = append(resp.ZkChannel, listOfZkChannels)
+	}
+
+	return resp, nil
+
 }
 
 // ########### ln-mpc ###########

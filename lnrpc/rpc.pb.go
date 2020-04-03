@@ -11884,7 +11884,7 @@ func (m *ZkChannelBalanceRequest) XXX_DiscardUnknown() {
 var xxx_messageInfo_ZkChannelBalanceRequest proto.InternalMessageInfo
 
 type ZkChannelBalanceResponse struct {
-	/// Sum of channels zkbalances denominated in satoshis
+	/// List of customer's zkchannels with their balances
 	ZkChannel            []*ZkChannelInfo `protobuf:"bytes,1,rep,name=zk_channel,proto3" json:"zk_channel,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
 	XXX_unrecognized     []byte           `json:"-"`
@@ -12063,6 +12063,135 @@ func (m *ZkInfoResponse) GetMerchPubkey() string {
 		return m.MerchPubkey
 	}
 	return ""
+}
+
+type ListZkChannelsInfo struct {
+	/// The channel ID
+	ZkChannelId string `protobuf:"bytes,1,opt,name=zk_channel_id,json=channel_id,proto3" json:"zk_channel_id,omitempty"`
+	/// The channel escrow txid
+	EscrowTxid string `protobuf:"bytes,2,opt,name=escrow_txid,proto3" json:"escrow_txid,omitempty"`
+	/// The channel Token
+	ChannelToken         string   `protobuf:"bytes,3,opt,name=channel_token,proto3" json:"channel_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ListZkChannelsInfo) Reset()         { *m = ListZkChannelsInfo{} }
+func (m *ListZkChannelsInfo) String() string { return proto.CompactTextString(m) }
+func (*ListZkChannelsInfo) ProtoMessage()    {}
+func (*ListZkChannelsInfo) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{163}
+}
+
+func (m *ListZkChannelsInfo) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ListZkChannelsInfo.Unmarshal(m, b)
+}
+func (m *ListZkChannelsInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ListZkChannelsInfo.Marshal(b, m, deterministic)
+}
+func (m *ListZkChannelsInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListZkChannelsInfo.Merge(m, src)
+}
+func (m *ListZkChannelsInfo) XXX_Size() int {
+	return xxx_messageInfo_ListZkChannelsInfo.Size(m)
+}
+func (m *ListZkChannelsInfo) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListZkChannelsInfo.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListZkChannelsInfo proto.InternalMessageInfo
+
+func (m *ListZkChannelsInfo) GetZkChannelId() string {
+	if m != nil {
+		return m.ZkChannelId
+	}
+	return ""
+}
+
+func (m *ListZkChannelsInfo) GetEscrowTxid() string {
+	if m != nil {
+		return m.EscrowTxid
+	}
+	return ""
+}
+
+func (m *ListZkChannelsInfo) GetChannelToken() string {
+	if m != nil {
+		return m.ChannelToken
+	}
+	return ""
+}
+
+type ListZkChannelsRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ListZkChannelsRequest) Reset()         { *m = ListZkChannelsRequest{} }
+func (m *ListZkChannelsRequest) String() string { return proto.CompactTextString(m) }
+func (*ListZkChannelsRequest) ProtoMessage()    {}
+func (*ListZkChannelsRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{164}
+}
+
+func (m *ListZkChannelsRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ListZkChannelsRequest.Unmarshal(m, b)
+}
+func (m *ListZkChannelsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ListZkChannelsRequest.Marshal(b, m, deterministic)
+}
+func (m *ListZkChannelsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListZkChannelsRequest.Merge(m, src)
+}
+func (m *ListZkChannelsRequest) XXX_Size() int {
+	return xxx_messageInfo_ListZkChannelsRequest.Size(m)
+}
+func (m *ListZkChannelsRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListZkChannelsRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListZkChannelsRequest proto.InternalMessageInfo
+
+type ListZkChannelsResponse struct {
+	/// List of merchant's zkchannels
+	ZkChannel            []*ListZkChannelsInfo `protobuf:"bytes,1,rep,name=zk_channel,proto3" json:"zk_channel,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
+}
+
+func (m *ListZkChannelsResponse) Reset()         { *m = ListZkChannelsResponse{} }
+func (m *ListZkChannelsResponse) String() string { return proto.CompactTextString(m) }
+func (*ListZkChannelsResponse) ProtoMessage()    {}
+func (*ListZkChannelsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{165}
+}
+
+func (m *ListZkChannelsResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ListZkChannelsResponse.Unmarshal(m, b)
+}
+func (m *ListZkChannelsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ListZkChannelsResponse.Marshal(b, m, deterministic)
+}
+func (m *ListZkChannelsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListZkChannelsResponse.Merge(m, src)
+}
+func (m *ListZkChannelsResponse) XXX_Size() int {
+	return xxx_messageInfo_ListZkChannelsResponse.Size(m)
+}
+func (m *ListZkChannelsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListZkChannelsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListZkChannelsResponse proto.InternalMessageInfo
+
+func (m *ListZkChannelsResponse) GetZkChannel() []*ListZkChannelsInfo {
+	if m != nil {
+		return m.ZkChannel
+	}
+	return nil
 }
 
 func init() {
@@ -12263,6 +12392,9 @@ func init() {
 	proto.RegisterType((*TotalReceivedResponse)(nil), "lnrpc.TotalReceivedResponse")
 	proto.RegisterType((*ZkInfoRequest)(nil), "lnrpc.ZkInfoRequest")
 	proto.RegisterType((*ZkInfoResponse)(nil), "lnrpc.ZkInfoResponse")
+	proto.RegisterType((*ListZkChannelsInfo)(nil), "lnrpc.ListZkChannelsInfo")
+	proto.RegisterType((*ListZkChannelsRequest)(nil), "lnrpc.ListZkChannelsRequest")
+	proto.RegisterType((*ListZkChannelsResponse)(nil), "lnrpc.ListZkChannelsResponse")
 }
 
 func init() { proto.RegisterFile("rpc.proto", fileDescriptor_77a6da22d6a3feb1) }
@@ -13360,6 +13492,9 @@ type LightningClient interface {
 	//* lncli: `zkinfo`
 	//ZkInfo returns information about this zklnd node.
 	ZkInfo(ctx context.Context, in *ZkInfoRequest, opts ...grpc.CallOption) (*ZkInfoResponse, error)
+	//* lncli: `listzkchannels`
+	//ZkInfo returns information about this zklnd node.
+	ListZkChannels(ctx context.Context, in *ListZkChannelsRequest, opts ...grpc.CallOption) (*ListZkChannelsResponse, error)
 }
 
 type lightningClient struct {
@@ -14180,6 +14315,15 @@ func (c *lightningClient) ZkInfo(ctx context.Context, in *ZkInfoRequest, opts ..
 	return out, nil
 }
 
+func (c *lightningClient) ListZkChannels(ctx context.Context, in *ListZkChannelsRequest, opts ...grpc.CallOption) (*ListZkChannelsResponse, error) {
+	out := new(ListZkChannelsResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/ListZkChannels", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LightningServer is the server API for Lightning service.
 type LightningServer interface {
 	// lncli: `walletbalance`
@@ -14526,6 +14670,9 @@ type LightningServer interface {
 	//* lncli: `zkinfo`
 	//ZkInfo returns information about this zklnd node.
 	ZkInfo(context.Context, *ZkInfoRequest) (*ZkInfoResponse, error)
+	//* lncli: `listzkchannels`
+	//ZkInfo returns information about this zklnd node.
+	ListZkChannels(context.Context, *ListZkChannelsRequest) (*ListZkChannelsResponse, error)
 }
 
 func RegisterLightningServer(s *grpc.Server, srv LightningServer) {
@@ -15696,6 +15843,24 @@ func _Lightning_ZkInfo_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Lightning_ListZkChannels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListZkChannelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).ListZkChannels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/ListZkChannels",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).ListZkChannels(ctx, req.(*ListZkChannelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Lightning_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "lnrpc.Lightning",
 	HandlerType: (*LightningServer)(nil),
@@ -15903,6 +16068,10 @@ var _Lightning_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ZkInfo",
 			Handler:    _Lightning_ZkInfo_Handler,
+		},
+		{
+			MethodName: "ListZkChannels",
+			Handler:    _Lightning_ListZkChannels_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

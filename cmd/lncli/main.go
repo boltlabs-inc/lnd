@@ -318,6 +318,7 @@ func main() {
 		zkChannelBalanceCommand,
 		totalReceivedCommand,
 		zkInfoCommand,
+		listZkChannelsCommand,
 	}
 
 	// Add any extra commands determined by build flags.
