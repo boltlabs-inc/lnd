@@ -3405,6 +3405,11 @@ var closeZkChannelCommand = cli.Command{
 			Name:  "force",
 			Usage: "attempt an uncooperative closure",
 		},
+		cli.BoolFlag{
+			Name: "dryrun",
+			Usage: "for debugging: return the close tx in the log, " +
+				"without broadcasting it",
+		},
 	},
 	Action: actionDecorator(closeZkChannel),
 }
@@ -3424,12 +3429,15 @@ func closeZkChannel(ctx *cli.Context) error {
 		return fmt.Errorf("there is no payment channel with that name")
 	}
 
+	dryRun := ctx.Bool("dryrun")
+
 	ctxb := context.Background()
 	client, cleanUp := getClient(ctx)
 	defer cleanUp()
 
 	req := &lnrpc.CloseZkChannelRequest{
 		ZkChannelName: zkChannelName,
+		DryRun:        dryRun,
 	}
 
 	lnid, err := client.CloseZkChannel(ctxb, req)

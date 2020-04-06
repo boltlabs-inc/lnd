@@ -3613,13 +3613,13 @@ func (s *server) ZkPay(pubKey *btcec.PublicKey, zkChannelName string, Amount int
 
 // CloseZkChannel sends the request to server to close the connection with peer
 // identified by public key.
-func (s *server) CloseZkChannel(zkChannelName string) error {
+func (s *server) CloseZkChannel(zkChannelName string, dryRun bool) error {
 	zkchLog.Infof("CloseZkChannel initiated")
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.zkchannelMgr.CloseZkChannel(s.cc.wallet, s.cc.chainNotifier, zkChannelName)
+	return s.zkchannelMgr.CloseZkChannel(s.cc.wallet, s.cc.chainNotifier, zkChannelName, dryRun)
 }
 
 // MerchClose closes a channel with a given escrowTxid for the merchant

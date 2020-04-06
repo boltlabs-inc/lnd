@@ -426,7 +426,7 @@ func (c *zkChainWatcher) SubscribeChannelEvents() *ZkChainEventSubscription {
 func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 	defer c.wg.Done()
 
-	fmt.Printf("\n\n\nzkCloseObserver is running\n\n\n")
+	fmt.Printf("zkCloseObserver is running\n")
 	// determine if this node is a merchant
 	isMerch := c.cfg.IsMerch
 
@@ -442,7 +442,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			return
 		}
 
-		fmt.Printf("\n\nSpend from escrow detected\n\n")
+		fmt.Printf("Spend from escrow detected\n")
 
 		escrowTxid := commitSpend.SpentOutPoint.Hash
 		commitTxBroadcast := commitSpend.SpendingTx
@@ -456,7 +456,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 		// merchCloseTx has one output.
 		case numOutputs < 2:
-			fmt.Printf("\n\nMerch close detected\n\n")
+			fmt.Printf("Merch close detected\n")
 
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
 
@@ -512,7 +512,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 				// state. We must send the relevant transaction information
 				// to the breachArbiter to broadcast the dispute/justice tx.
 				if isOldRevLock {
-					fmt.Printf("\n\nRevoked Cust close detected\n\n")
+					fmt.Printf("Revoked Cust close detected\n")
 
 					err := c.zkDispatchCustBreach(escrowTxid, closeTxid, disputePkScript, revLock, revSecret, custClosePk, amount)
 
@@ -526,7 +526,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					// store the Revocation Lock to prevent a customer making
 					// a payment with it.
 				} else {
-					fmt.Printf("\n\nLatest Cust close detected\n\n")
+					fmt.Printf("Latest Cust close detected\n")
 
 					// custClose is not the latest state. The customer has attempted to
 					// close on a previous state, possibly a double spend.
@@ -794,6 +794,7 @@ func (c *zkChainWatcher) zkDispatchCustBreach(escrowTxid chainhash.Hash,
 		amount:          amount,
 	}
 
+	fmt.Printf("zkDispatchCustBreach, custBreachInfo %#v:\n", custBreachInfo)
 	// Hand the retribution info over to the breach arbiter.
 	if err := c.cfg.custContractBreach(&custBreachInfo); err != nil {
 		log.Errorf("unable to hand breached contract off to "+
@@ -805,6 +806,7 @@ func (c *zkChainWatcher) zkDispatchCustBreach(escrowTxid chainhash.Hash,
 	for _, sub := range c.clientSubscriptions {
 		select {
 		case sub.ZkCustBreach <- &custBreachInfo:
+
 		case <-c.quit:
 			c.Unlock()
 			return fmt.Errorf("exiting")

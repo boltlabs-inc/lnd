@@ -1479,7 +1479,7 @@ func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p l
 }
 
 // CloseZkChannel broadcasts a close transaction
-func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, zkChannelName string) error {
+func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, zkChannelName string, dryRun bool) error {
 
 	// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
 	// This is used to prevent another payment being made
@@ -1559,6 +1559,13 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 	if err != nil {
 		zkchLog.Error(err)
 		return err
+	}
+
+	if dryRun {
+		zkchLog.Infof("DryRun: Not Broadcasting close transaction:",
+			CloseEscrowTx)
+
+		return nil
 	}
 
 	zkchLog.Info("Broadcasting close transaction")

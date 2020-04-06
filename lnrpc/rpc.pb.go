@@ -11645,7 +11645,9 @@ var xxx_messageInfo_ZkPayResponse proto.InternalMessageInfo
 
 type CloseZkChannelRequest struct {
 	/// A unique name for the zkchannel
-	ZkChannelName        string   `protobuf:"bytes,1,opt,name=zk_channel_name,json=zkchannel_name,proto3" json:"zk_channel_name,omitempty"`
+	ZkChannelName string `protobuf:"bytes,1,opt,name=zk_channel_name,json=zkchannel_name,proto3" json:"zk_channel_name,omitempty"`
+	/// For debugging: Return closetx in log without broadcasting it
+	DryRun               bool     `protobuf:"varint,2,opt,name=dry_run,proto3" json:"dry_run,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -11681,6 +11683,13 @@ func (m *CloseZkChannelRequest) GetZkChannelName() string {
 		return m.ZkChannelName
 	}
 	return ""
+}
+
+func (m *CloseZkChannelRequest) GetDryRun() bool {
+	if m != nil {
+		return m.DryRun
+	}
+	return false
 }
 
 type CloseZkChannelResponse struct {

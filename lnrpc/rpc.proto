@@ -3636,6 +3636,8 @@ message ZkPayResponse {
 message CloseZkChannelRequest {
     /// A unique name for the zkchannel
     string zk_channel_name = 1 [json_name = "zkchannel_name"];
+    /// For debugging: Return closetx in log without broadcasting it
+    bool dry_run = 2 [json_name = "dry_run"];
 }
 message CloseZkChannelResponse {
 }
