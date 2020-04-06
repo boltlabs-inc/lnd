@@ -856,9 +856,9 @@ func (b *zkBreachArbiter) handleCustBreachHandoff(custBreachEvent *CustContractB
 
 	// breachInfo.ZkCustBreachInfo.pkScript
 
-	// &c.cfg.zkFundingInfo.fundingOut,
-	// c.cfg.zkFundingInfo.pkScript,
-	// c.cfg.zkFundingInfo.broadcastHeight,
+	// &c.cfg.ZkFundingInfo.fundingOut,
+	// c.cfg.ZkFundingInfo.pkScript,
+	// c.cfg.ZkFundingInfo.broadcastHeight,
 
 	breachTXID := custBreachEvent.ZkCustBreachInfo.custCloseTxid
 	breachScript := custBreachEvent.ZkCustBreachInfo.disputePkScript

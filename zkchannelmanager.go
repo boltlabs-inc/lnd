@@ -14,6 +14,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/jinzhu/copier"
 	"github.com/lightningnetwork/lnd/chainntnfs"
+	"github.com/lightningnetwork/lnd/contractcourt"
 	"github.com/lightningnetwork/lnd/libzkchannels"
 	"github.com/lightningnetwork/lnd/lnpeer"
 	"github.com/lightningnetwork/lnd/lnwallet"
@@ -21,10 +22,21 @@ import (
 	"github.com/lightningnetwork/lnd/zkchanneldb"
 )
 
+type ZkFundingInfo struct {
+	fundingOut      wire.OutPoint
+	pkScript        []byte
+	broadcastHeight uint32
+}
+
 type zkChannelManager struct {
 	zkChannelName string
 	Notifier      chainntnfs.ChainNotifier
 	wg            sync.WaitGroup
+	// WatchNewZkChannel is to be called once a new zkchannel enters the final
+	// funding stage: waiting for on-chain confirmation. This method sends
+	// the channel to the ChainArbitrator so it can watch for any on-chain
+	// events related to the channel.
+	WatchNewZkChannel func(contractcourt.ZkChainWatcherConfig) error
 }
 
 func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changeScriptPK string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
@@ -544,10 +556,59 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 	}
 	p.SendMessage(false, &zkEstablishStateValidated)
 
+	// Start watching the channel in order to respond to breach Txs
+
+	// TEMPORARY CODE TO FLIP BYTES
+	s := ""
+	for i := 0; i < len(escrowTxid)/2; i++ {
+		s = escrowTxid[i*2:i*2+2] + s
+	}
+	escrowTxidLittleEn := s
+
+	var escrowTxidHash chainhash.Hash
+	chainhash.Decode(&escrowTxidHash, escrowTxidLittleEn)
+	zkchLog.Debugf("escrowTxidHash: %v", escrowTxidHash.String())
+
+	fundingOut := &wire.OutPoint{
+		Hash:  escrowTxidHash,
+		Index: uint32(0),
+	}
+	zkchLog.Debugf("fundingOut: %v", fundingOut)
+
+	ZkFundingInfo := contractcourt.ZkFundingInfo{
+		FundingOut:      *fundingOut,
+		PkScript:        pkScript,
+		BroadcastHeight: uint32(300), // TODO: Replace with actual fundingtx confirm height
+	}
+	zkchLog.Debugf("ZkFundingInfo: %v", ZkFundingInfo)
+	zkchLog.Debugf("pkScript: %v", pkScript)
+
+	// // With the channels created, we'll now create a chain watcher instance
+	// // which will be watching for any closes of Alice's channel.
+	// custNotifier := &mockNotifier{
+	// 	spendChan: make(chan *chainntnfs.SpendDetail),
+	// }
+
+	const isMerch = true
+
+	zkChainWatcherCfg := contractcourt.ZkChainWatcherConfig{
+		ZkFundingInfo: ZkFundingInfo,
+		IsMerch:       isMerch,
+		Notifier:      notifier,
+	}
+	zkchLog.Debugf("notifier: %v", notifier)
+
+	if err := z.WatchNewZkChannel(zkChainWatcherCfg); err != nil {
+		fndgLog.Errorf("Unable to send new ChannelPoint(%v) for "+
+			"arbitration: %v", escrowTxid, err)
+	}
+
 	// Wait for on chain confirmations of escrow transaction
 
 	zkchLog.Debugf("waitForFundingWithTimeout\npkScript: %#x\n", pkScript)
 
+	// ZKCHANNEL TODO: REFACTOR TO WRAP waitForFundingWithTimeout IN GO ROUTINE
+	// AND PASS REFERENCE TO A CHANNELDB
 	confChannel, err := z.waitForFundingWithTimeout(notifier, escrowTxid, pkScript)
 	if err != nil {
 		zkchLog.Infof("error waiting for funding "+
@@ -555,6 +616,7 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 	}
 
 	zkchLog.Debugf("%#v\n", confChannel)
+	zkchLog.Infof("\n\nEscrow transaction has 3 confirmations\n\n")
 
 }
 
@@ -599,6 +661,8 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 
 	pkScript := msgTx.TxOut[0].PkScript
 
+	// ZKCHANNEL TODO: REFACTOR TO WRAP waitForFundingWithTimeout IN GO ROUTINE
+	// AND PASS REFERENCE TO A CHANNELDB
 	// Wait for confirmations
 	confChannel, err := z.waitForFundingWithTimeout(notifier, escrowTxid, pkScript)
 	if err != nil {
@@ -1516,6 +1580,8 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 	// }
 	// CloseEscrowTxid = s
 
+	// ZKCHANNEL TODO: REFACTOR TO WRAP waitForFundingWithTimeout IN GO ROUTINE
+	// AND PASS REFERENCE TO A CHANNELDB
 	confChannel, err := z.waitForFundingWithTimeout(notifier, CloseEscrowTxid, pkScript)
 	if err != nil {
 		zkchLog.Infof("error waiting for funding "+
@@ -1696,7 +1762,6 @@ func ZkInfo() (string, error) {
 
 type ListOfZkChannels struct {
 	channelID    []string
-	escrowTxid   []string
 	channelToken []string
 }
 
@@ -1725,7 +1790,6 @@ func ListZkChannels() (ListOfZkChannels, error) {
 
 	// TODO: Fill in ListOfZkChannels
 	ListOfZkChannels := ListOfZkChannels{
-		nil,
 		nil,
 		nil,
 	}

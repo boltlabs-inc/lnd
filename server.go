@@ -1015,6 +1015,12 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 		return nil, err
 	}
 
+	s.zkchannelMgr = &zkChannelManager{
+		WatchNewZkChannel: func(z contractcourt.ZkChainWatcherConfig) error {
+			return s.chainArb.WatchNewZkChannel(z)
+		},
+	}
+
 	s.fundingMgr, err = newFundingManager(fundingConfig{
 		IDKey:              nodeKeyECDH.PubKey(),
 		Wallet:             cc.wallet,

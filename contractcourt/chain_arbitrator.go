@@ -963,7 +963,7 @@ func (c *ChainArbitrator) WatchNewChannel(newChan *channeldb.OpenChannel) error 
 // channel has finished its final funding flow, it should be registered with
 // the ChainArbitrator so we can properly react to any on-chain events.
 ///////// zkchannels work in progress
-func (c *ChainArbitrator) WatchNewZkChannel(newChan *channeldb.OpenChannel) error {
+func (c *ChainArbitrator) WatchNewZkChannel(zkChainWatcherCfg ZkChainWatcherConfig) error {
 
 	// inputs:
 	//	fundingPoint
@@ -971,8 +971,9 @@ func (c *ChainArbitrator) WatchNewZkChannel(newChan *channeldb.OpenChannel) erro
 	c.Lock()
 	defer c.Unlock()
 
-	log.Infof("Creating new ChannelArbitrator for zkChannelPoint(%v)",
-		newChan.FundingOutpoint)
+	fundingTxid := zkChainWatcherCfg.ZkFundingInfo.FundingOut.Hash.String()
+	log.Infof("Creating new ChannelArbitrator for zkChannelPoint(%v)", fundingTxid)
+	fmt.Println("Creating new ChannelArbitrator for zkChannelPoint", fundingTxid)
 
 	// If we're already watching this channel, then we'll ignore this
 	// request.

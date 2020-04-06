@@ -666,7 +666,6 @@ service Lightning {
     OpenZkChannel establishes a zkchannel with a merchant.
     */
     rpc OpenZkChannel (OpenZkChannelRequest) returns (OpenZkChannelResponse) {
-        /// darius TODO: Figure out what this does. Copied from rpc disconnect
         option (google.api.http) = {
             delete: "/v1/openzkchannel/{pub_key}"
         };

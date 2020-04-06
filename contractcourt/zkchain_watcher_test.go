@@ -31,7 +31,7 @@ const (
 func TestZkChainWatcherMerchClose(t *testing.T) {
 	t.Parallel()
 
-	// Populate fields of zkFundingInfo.
+	// Populate fields of ZkFundingInfo.
 	var escrowTxidHash chainhash.Hash
 	chainhash.Decode(&escrowTxidHash, escrowTxid)
 
@@ -54,10 +54,10 @@ func TestZkChainWatcherMerchClose(t *testing.T) {
 	// in zkChannels, the funding outpoint is always the first index of the output.
 	pkScript := msgTx.TxOut[0].PkScript
 
-	zkFundingInfo := zkFundingInfo{
-		fundingOut:      *fundingOut,
-		pkScript:        pkScript,
-		broadcastHeight: uint32(0), // TODO: Replace with actual fundingtx confirm height
+	ZkFundingInfo := ZkFundingInfo{
+		FundingOut:      *fundingOut,
+		PkScript:        pkScript,
+		BroadcastHeight: uint32(0), // TODO: Replace with actual fundingtx confirm height
 	}
 
 	// With the channels created, we'll now create a chain watcher instance
@@ -66,10 +66,10 @@ func TestZkChainWatcherMerchClose(t *testing.T) {
 		spendChan: make(chan *chainntnfs.SpendDetail),
 	}
 
-	custChainWatcher, err := newZkChainWatcher(zkChainWatcherConfig{
-		isMerch:       true,
-		zkFundingInfo: zkFundingInfo,
-		notifier:      custNotifier,
+	custChainWatcher, err := newZkChainWatcher(ZkChainWatcherConfig{
+		IsMerch:       true,
+		ZkFundingInfo: ZkFundingInfo,
+		Notifier:      custNotifier,
 	})
 	if err != nil {
 		t.Fatalf("unable to create chain watcher: %v", err)
@@ -127,7 +127,7 @@ func TestZkChainWatcherMerchClose(t *testing.T) {
 func TestZkChainWatcherCustClose(t *testing.T) {
 	t.Parallel()
 
-	// Populate fields of zkFundingInfo.
+	// Populate fields of ZkFundingInfo.
 	var escrowTxidHash chainhash.Hash
 	chainhash.Decode(&escrowTxidHash, escrowTxid)
 
@@ -150,10 +150,10 @@ func TestZkChainWatcherCustClose(t *testing.T) {
 	// in zkChannels, the funding outpoint is always the first index of the output.
 	pkScript := msgTx.TxOut[0].PkScript
 
-	zkFundingInfo := zkFundingInfo{
-		fundingOut:      *fundingOut,
-		pkScript:        pkScript,
-		broadcastHeight: uint32(0), // TODO: Replace with actual fundingtx confirm height
+	ZkFundingInfo := ZkFundingInfo{
+		FundingOut:      *fundingOut,
+		PkScript:        pkScript,
+		BroadcastHeight: uint32(0), // TODO: Replace with actual fundingtx confirm height
 	}
 
 	// With the channels created, we'll now create a chain watcher instance
@@ -162,10 +162,10 @@ func TestZkChainWatcherCustClose(t *testing.T) {
 		spendChan: make(chan *chainntnfs.SpendDetail),
 	}
 
-	custChainWatcher, err := newZkChainWatcher(zkChainWatcherConfig{
-		isMerch:       true,
-		zkFundingInfo: zkFundingInfo,
-		notifier:      custNotifier,
+	custChainWatcher, err := newZkChainWatcher(ZkChainWatcherConfig{
+		IsMerch:       true,
+		ZkFundingInfo: ZkFundingInfo,
+		Notifier:      custNotifier,
 	})
 	if err != nil {
 		t.Fatalf("unable to create chain watcher: %v", err)

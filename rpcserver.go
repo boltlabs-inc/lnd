@@ -6696,7 +6696,6 @@ func (r *rpcServer) ListZkChannels(ctx context.Context,
 	for i := 0; i < numChannels; i++ {
 		listOfZkChannels := &lnrpc.ListZkChannelsInfo{
 			ZkChannelId:  ListOfZkChannels.channelID[i],
-			EscrowTxid:   ListOfZkChannels.escrowTxid[i],
 			ChannelToken: ListOfZkChannels.channelToken[i],
 		}
 		resp.ZkChannel = append(resp.ZkChannel, listOfZkChannels)
