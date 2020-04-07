@@ -1269,8 +1269,11 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	isOk, merchState, err := libzkchannels.PayUpdateMerchant(channelState, stateNonce, payTokenMaskCom, revLockCom, amount, merchState)
 
 	// TODO: Handle this case properly
-	if isOk {
+	if !isOk {
 		zkchLog.Debug("MPC unsuccessful")
+	}
+	if err != nil {
+		zkchLog.Error(err)
 	}
 
 	// TODO: Move this until after previous state has been revoked

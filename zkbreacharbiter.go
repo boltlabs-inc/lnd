@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,10 +19,13 @@ import (
 
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
+	"github.com/lightningnetwork/lnd/contractcourt"
 	"github.com/lightningnetwork/lnd/htlcswitch"
 	"github.com/lightningnetwork/lnd/input"
+	"github.com/lightningnetwork/lnd/libzkchannels"
 	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
+	"github.com/lightningnetwork/lnd/zkchanneldb"
 )
 
 var (
@@ -70,7 +74,7 @@ type CustContractBreachEvent struct {
 
 	// ZkCustBreachInfo is the information needed to act on this cust contract
 	// breach.
-	ZkCustBreachInfo
+	ZkCustBreachInfo contractcourt.ZkCustBreachInfo
 }
 
 // ZkBreachConfig bundles the required subsystems used by the zk breach arbiter. An
@@ -285,44 +289,44 @@ func (b *zkBreachArbiter) contractObserver() {
 	}
 }
 
-// zkConvertToSecondLevelRevoke takes a breached output, and a transaction that
-// spends it to the second level, and mutates the breach output into one that
-// is able to properly sweep that second level output. We'll use this function
-// when we go to sweep a breached commitment transaction, but the cheating
-// party has already attempted to take it to the second level
-func zkConvertToSecondLevelRevoke(bo *zkBreachedOutput, breachInfo *zkretributionInfo,
-	spendDetails *chainntnfs.SpendDetail) {
+// // zkConvertToSecondLevelRevoke takes a breached output, and a transaction that
+// // spends it to the second level, and mutates the breach output into one that
+// // is able to properly sweep that second level output. We'll use this function
+// // when we go to sweep a breached commitment transaction, but the cheating
+// // party has already attempted to take it to the second level
+// func zkConvertToSecondLevelRevoke(bo *zkBreachedOutput, breachInfo *zkretributionInfo,
+// 	spendDetails *chainntnfs.SpendDetail) {
 
-	// In this case, we'll modify the witness type of this output to
-	// actually prepare for a second level revoke.
-	bo.witnessType = input.HtlcSecondLevelRevoke
+// 	// In this case, we'll modify the witness type of this output to
+// 	// actually prepare for a second level revoke.
+// 	bo.witnessType = input.HtlcSecondLevelRevoke
 
-	// We'll also redirect the outpoint to this second level output, so the
-	// spending transaction updates it inputs accordingly.
-	spendingTx := spendDetails.SpendingTx
-	oldOp := bo.outpoint
-	bo.outpoint = wire.OutPoint{
-		Hash:  spendingTx.TxHash(),
-		Index: 0,
-	}
+// 	// We'll also redirect the outpoint to this second level output, so the
+// 	// spending transaction updates it inputs accordingly.
+// 	spendingTx := spendDetails.SpendingTx
+// 	oldOp := bo.outpoint
+// 	bo.outpoint = wire.OutPoint{
+// 		Hash:  spendingTx.TxHash(),
+// 		Index: 0,
+// 	}
 
-	// Next, we need to update the amount so we can do fee estimation
-	// properly, and also so we can generate a valid signature as we need
-	// to know the new input value (the second level transactions shaves
-	// off some funds to fees).
-	newAmt := spendingTx.TxOut[0].Value
-	bo.amt = btcutil.Amount(newAmt)
-	bo.signDesc.Output.Value = newAmt
-	bo.signDesc.Output.PkScript = spendingTx.TxOut[0].PkScript
+// 	// Next, we need to update the amount so we can do fee estimation
+// 	// properly, and also so we can generate a valid signature as we need
+// 	// to know the new input value (the second level transactions shaves
+// 	// off some funds to fees).
+// 	newAmt := spendingTx.TxOut[0].Value
+// 	bo.amt = btcutil.Amount(newAmt)
+// 	bo.signDesc.Output.Value = newAmt
+// 	bo.signDesc.Output.PkScript = spendingTx.TxOut[0].PkScript
 
-	// Finally, we'll need to adjust the witness program in the
-	// SignDescriptor.
-	bo.signDesc.WitnessScript = bo.secondLevelWitnessScript
+// 	// Finally, we'll need to adjust the witness program in the
+// 	// SignDescriptor.
+// 	bo.signDesc.WitnessScript = bo.secondLevelWitnessScript
 
-	zkbaLog.Warnf("HTLC(%v) for ChannelPoint(%v) has been spent to the "+
-		"second-level, adjusting -> %v", oldOp, breachInfo.chanPoint,
-		bo.outpoint)
-}
+// 	zkbaLog.Warnf("HTLC(%v) for ChannelPoint(%v) has been spent to the "+
+// 		"second-level, adjusting -> %v", oldOp, breachInfo.chanPoint,
+// 		bo.outpoint)
+// }
 
 // waitForSpendEvent waits for any of the breached outputs to get spent, and
 // mutates the breachInfo to be able to sweep it. This method should be used
@@ -509,7 +513,7 @@ func (b *zkBreachArbiter) waitForSpendEvent(breachInfo *zkretributionInfo,
 //
 // NOTE: This MUST be run as a goroutine.
 func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEvent,
-	breachInfo *ZkCustBreachInfo) {
+	breachInfo *contractcourt.ZkCustBreachInfo) {
 
 	defer b.wg.Done()
 
@@ -533,35 +537,36 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 	}
 
 	zkbaLog.Debugf("Breach transaction %v has been confirmed, sweeping "+
-		"revoked funds", breachInfo.custCloseTxid)
+		"revoked funds", breachInfo.CustCloseTxid)
 
-	// breachTxid := breachInfo.custCloseTxid.String()
-	// index := uint32(0)
-	// // TODO: Read toSelfDelay from merchDB
-	// toSelfDelay := "05cf"
-	// // TODO: Generate outputPk from merchant's wallet
-	// outputPk := "03df51984d6b8b8b1cc693e239491f77a36c9e9dfe4a486e9972a18e03610a0d22"
-	// revLock := breachInfo.revLock
-	// revSecret := breachInfo.revSecret
-	// custClosePk := breachInfo.custClosePk
-	// amount := breachInfo.amount
+	breachTxid := breachInfo.CustCloseTxid.String()
+	index := uint32(0)
+	// TODO: Read toSelfDelay from merchDB
+	toSelfDelay := "05cf"
+	// TODO: Generate outputPk from merchant's wallet
+	outputPk := "03df51984d6b8b8b1cc693e239491f77a36c9e9dfe4a486e9972a18e03610a0d22"
+	revLock := breachInfo.RevLock
+	revSecret := breachInfo.RevSecret
+	custClosePk := breachInfo.CustClosePk
+	amount := breachInfo.Amount
 
-	// // open the zkchanneldb to load merchState and channelState
-	// zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	// open the zkchanneldb to load merchState and channelState
+	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
 
-	// var merchState libzkchannels.MerchState
-	// merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
-	// err = json.Unmarshal(merchStateBytes, &merchState)
+	var merchState libzkchannels.MerchState
+	merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
+	err = json.Unmarshal(merchStateBytes, &merchState)
 
-	// zkMerchDB.Close()
+	zkMerchDB.Close()
 
-	// zkbaLog.Warnf("merchState %#v:", merchState)
+	zkbaLog.Debugf("merchState %#v:", merchState)
 
-	// // with all the info needed, create and sign the Dispute/Justice Tx.
-	// finalTxStr, err := libzkchannels.MerchantSignDisputeTx(breachTxid, index, amount, toSelfDelay, outputPk,
-	// 	revLock, revSecret, custClosePk, merchState)
+	// with all the info needed, create and sign the Dispute/Justice Tx.
+	finalTxStr, err := libzkchannels.MerchantSignDisputeTx(breachTxid, index, amount, toSelfDelay, outputPk,
+		revLock, revSecret, custClosePk, merchState)
 
-	finalTxStr := "0200000000010120827352e391fe0c6cbaee2d07679ec67e30119448e4183b7818ff29171f489a0000000000ffffffff0106270000000000001600141d2cc47e2a0d77927a333a2165fe2d343b79eefc04483045022100e95687eb9aec340a662d57e29e80efe23bd013ce4b9a2e0383cd3c5f3370a526022063b260ddc1b9a251ca5f6be6fc9d6a30b29402d7e66959985487b7b61530ad3001200d4a4cf5b18a70f5e9f6a677924d0b2450f3d0561402a42338fd08da905112a101017063a8203ae763fc25bc086f73836f21aa05d387cd3adac5a93d5345e782128133cb03e4882102f9e7281167132a13b2326cea57d789b9fd2ea4440c9e9b78e6402e722a1e5c526702cf05b27521027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddb68ac00000000"
+	// Dummy finalTxStr for zkBreachArbiter Test
+	// finalTxStr := "0200000000010120827352e391fe0c6cbaee2d07679ec67e30119448e4183b7818ff29171f489a0000000000ffffffff0106270000000000001600141d2cc47e2a0d77927a333a2165fe2d343b79eefc04483045022100e95687eb9aec340a662d57e29e80efe23bd013ce4b9a2e0383cd3c5f3370a526022063b260ddc1b9a251ca5f6be6fc9d6a30b29402d7e66959985487b7b61530ad3001200d4a4cf5b18a70f5e9f6a677924d0b2450f3d0561402a42338fd08da905112a101017063a8203ae763fc25bc086f73836f21aa05d387cd3adac5a93d5345e782128133cb03e4882102f9e7281167132a13b2326cea57d789b9fd2ea4440c9e9b78e6402e722a1e5c526702cf05b27521027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddb68ac00000000"
 
 	// 	// If this zkretribution has not been finalized before, we will first
 	// 	// construct a sweep transaction and write it to disk. This will allow
@@ -660,30 +665,24 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 	// dispatched once the zkjustice tx is confirmed. After confirmation we
 	// notify the caller that initiated the zkretribution workflow that the
 	// deed has been done.
-	zkbaLog.Warnf("finalTx.TxHash() %#v:", finalTx.TxHash())
-	zkbaLog.Warnf("finalTx.TxOut[0].PkScript %#v:", finalTx.TxOut[0].PkScript)
+	zkbaLog.Debugf("finalTx.TxHash() %#v:", finalTx.TxHash())
+	zkbaLog.Debugf("finalTx.TxOut[0].PkScript %#v:", finalTx.TxOut[0].PkScript)
 
 	zkjusticeTXID := finalTx.TxHash()
 	zkjusticeScript := finalTx.TxOut[0].PkScript
 	confChan, err = b.cfg.Notifier.RegisterConfirmationsNtfn(
 		&zkjusticeTXID, zkjusticeScript, 1, breachConfHeight,
 	)
-	zkbaLog.Warn("XXX9999999XXXXX")
 
 	if err != nil {
 		zkbaLog.Errorf("Unable to register for conf for txid(%v): %v",
 			zkjusticeTXID, err)
 		return
 	}
-	zkbaLog.Warn("XXXO++++OOXXX")
 
 	select {
 	case _, ok := <-confChan.Confirmed:
-		zkbaLog.Warn("XXXO=====OOXXX %v", ok)
-
 		if !ok {
-			zkbaLog.Warn("XXXOOO]]]]OOXXX %v", ok)
-
 			return
 		}
 
@@ -705,12 +704,11 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 		// 	default:
 		// 	}
 		// }
-		zkbaLog.Warn("XXXKKKKOOXXX")
 
 		zkbaLog.Infof("ZkJustice for ChannelPoint(%v) has "+
 			"been served, %v revoked funds "+
-			"have been claimed", breachInfo.escrowTxid,
-			breachInfo.amount)
+			"have been claimed", breachInfo.EscrowTxid,
+			breachInfo.Amount)
 
 		// err = b.cleanupBreach(&breachInfo.chanPoint)
 		// if err != nil {
@@ -860,9 +858,9 @@ func (b *zkBreachArbiter) handleCustBreachHandoff(custBreachEvent *CustContractB
 	// c.cfg.ZkFundingInfo.pkScript,
 	// c.cfg.ZkFundingInfo.broadcastHeight,
 
-	breachTXID := custBreachEvent.ZkCustBreachInfo.custCloseTxid
-	breachScript := custBreachEvent.ZkCustBreachInfo.disputePkScript
-	breachHeight := uint32(0)
+	breachTXID := custBreachEvent.ZkCustBreachInfo.CustCloseTxid
+	breachScript := custBreachEvent.ZkCustBreachInfo.DisputePkScript
+	breachHeight := uint32(300) // TODO: Put in actual breachHeight
 
 	cfChan, err := b.cfg.Notifier.RegisterConfirmationsNtfn(
 		&breachTXID, breachScript, 1, breachHeight,

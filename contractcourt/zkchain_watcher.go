@@ -70,13 +70,13 @@ type ZkCustCloseInfo struct {
 
 // ZkCustBreachInfo provides information needed to create a dispute transaction.
 type ZkCustBreachInfo struct {
-	escrowTxid      chainhash.Hash
-	custCloseTxid   chainhash.Hash
+	EscrowTxid      chainhash.Hash
+	CustCloseTxid   chainhash.Hash
 	DisputePkScript []byte
-	revLock         string
-	revSecret       string
-	custClosePk     string
-	amount          int64
+	RevLock         string
+	RevSecret       string
+	CustClosePk     string
+	Amount          int64
 }
 
 // // RemoteUnilateralCloseInfo wraps the normal UnilateralCloseSummary to couple
@@ -153,9 +153,9 @@ type ZkChainEventSubscription struct {
 	// event that the Customer's close transaction is confirmed.
 	ZkCustClosure chan *ZkCustCloseInfo
 
-	// ZkCustBreach is a channel that will be sent upon in the
+	// ZkCustContractBreach is a channel that will be sent upon in the
 	// event that the Customer's close transaction is confirmed.
-	ZkCustBreach chan *ZkCustBreachInfo
+	ZkCustContractBreach chan *ZkCustBreachInfo
 
 	// LocalUnilateralClosure is a channel that will be sent upon in the
 	// event that our commitment transaction is confirmed.
@@ -330,7 +330,7 @@ func (c *zkChainWatcher) SubscribeChannelEvents() *ZkChainEventSubscription {
 		RemoteUnilateralClosure: make(chan *RemoteUnilateralCloseInfo, 1),
 		ZkMerchClosure:          make(chan *ZkMerchCloseInfo, 1),
 		ZkCustClosure:           make(chan *ZkCustCloseInfo, 1),
-		ZkCustBreach:            make(chan *ZkCustBreachInfo, 1),
+		ZkCustContractBreach:    make(chan *ZkCustBreachInfo, 1),
 		LocalUnilateralClosure:  make(chan *LocalUnilateralCloseInfo, 1),
 		CooperativeClosure:      make(chan *CooperativeCloseInfo, 1),
 		ContractBreach:          make(chan *lnwallet.BreachRetribution, 1),
@@ -785,13 +785,13 @@ func (c *zkChainWatcher) zkDispatchCustBreach(escrowTxid chainhash.Hash,
 	revSecret string, custClosePk string, amount int64) error {
 
 	custBreachInfo := ZkCustBreachInfo{
-		escrowTxid:      escrowTxid,
-		custCloseTxid:   custCloseTxid,
+		EscrowTxid:      escrowTxid,
+		CustCloseTxid:   custCloseTxid,
 		DisputePkScript: DisputePkScript,
-		revLock:         revLock,
-		revSecret:       revSecret,
-		custClosePk:     custClosePk,
-		amount:          amount,
+		RevLock:         revLock,
+		RevSecret:       revSecret,
+		CustClosePk:     custClosePk,
+		Amount:          amount,
 	}
 
 	fmt.Printf("zkDispatchCustBreach, custBreachInfo %#v:\n", custBreachInfo)
@@ -805,7 +805,7 @@ func (c *zkChainWatcher) zkDispatchCustBreach(escrowTxid chainhash.Hash,
 	c.Lock()
 	for _, sub := range c.clientSubscriptions {
 		select {
-		case sub.ZkCustBreach <- &custBreachInfo:
+		case sub.ZkCustContractBreach <- &custBreachInfo:
 
 		case <-c.quit:
 			c.Unlock()

@@ -10,7 +10,6 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/lightningnetwork/lnd"
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/clock"
@@ -103,6 +102,9 @@ type ChainArbitratorConfig struct {
 	// necessary breach info for this channel point, and it is safe to mark
 	// the channel as pending close in the database.
 	ContractBreach func(wire.OutPoint, *lnwallet.BreachRetribution) error
+
+	// CustContractBreach if a channel for customerClose breaches in zkchannels.
+	CustContractBreach func(zkInfo *ZkCustBreachInfo) error
 
 	// IsOurAddress is a function that returns true if the passed address
 	// is known to the underlying wallet. Otherwise, false should be
@@ -963,7 +965,7 @@ func (c *ChainArbitrator) WatchNewChannel(newChan *channeldb.OpenChannel) error 
 // channel has finished its final funding flow, it should be registered with
 // the ChainArbitrator so we can properly react to any on-chain events.
 ///////// zkchannels work in progress
-func (c *ChainArbitrator) WatchNewZkChannel(zkChainWatcherCfg ZkChainWatcherConfig) error {
+func (c *ChainArbitrator) WatchNewZkChannel(zkCfg ZkChainWatcherConfig) error {
 
 	// inputs:
 	//	fundingPoint
@@ -971,7 +973,7 @@ func (c *ChainArbitrator) WatchNewZkChannel(zkChainWatcherCfg ZkChainWatcherConf
 	c.Lock()
 	defer c.Unlock()
 
-	fundingTxid := zkChainWatcherCfg.ZkFundingInfo.FundingOut.Hash.String()
+	fundingTxid := zkCfg.ZkFundingInfo.FundingOut.Hash.String()
 	log.Infof("Creating new ChannelArbitrator for zkChannelPoint(%v)", fundingTxid)
 	fmt.Println("Creating new ChannelArbitrator for zkChannelPoint", fundingTxid)
 
@@ -984,14 +986,15 @@ func (c *ChainArbitrator) WatchNewZkChannel(zkChainWatcherCfg ZkChainWatcherConf
 
 	// First, also create an active chainWatcher for this channel to ensure
 	// that we detect any relevant on chain events.
-	zkChainWatcher, err := newZkChainWatcher(zkChainWatcherConfig{
-		isMerch:       true,
-		zkFundingInfo: zkFundingInfo,
-		notifier:      custNotifier,
-		// custContractBreach: func(retInfo *lnwallet.BreachRetribution) error {
-		// 	return c.cfg.CustContractBreach(chanPoint, retInfo)
-		}
+	zkChainWatcher, err := newZkChainWatcher(ZkChainWatcherConfig{
+		ZkFundingInfo: zkCfg.ZkFundingInfo,
+		IsMerch:       zkCfg.IsMerch,
+		Notifier:      zkCfg.Notifier,
+		custContractBreach: func(zkInfo *ZkCustBreachInfo) error {
+			return c.cfg.CustContractBreach(zkInfo)
+		},
 	})
+
 	if err != nil {
 		return err
 	}
