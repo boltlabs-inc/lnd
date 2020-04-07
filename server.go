@@ -1016,7 +1016,7 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 			PublishTransaction:   cc.wallet.PublishTransaction,
 			CustContractBreaches: custContractBreaches,
 			Signer:               cc.wallet.Cfg.Signer,
-			Store:                newZkRetributionStore(chanDB),
+			// Store:                newZkRetributionStore(chanDB),
 		})
 	}
 	// Select the configuration and furnding parameters for Bitcoin or

@@ -557,7 +557,6 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 	p.SendMessage(false, &zkEstablishStateValidated)
 
 	// Start watching the channel in order to respond to breach Txs
-
 	// TEMPORARY CODE TO FLIP BYTES
 	s := ""
 	for i := 0; i < len(escrowTxid)/2; i++ {
@@ -581,13 +580,7 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 		BroadcastHeight: uint32(300), // TODO: Replace with actual fundingtx confirm height
 	}
 	zkchLog.Debugf("ZkFundingInfo: %v", ZkFundingInfo)
-	zkchLog.Debugf("pkScript: %v", pkScript)
-
-	// // With the channels created, we'll now create a chain watcher instance
-	// // which will be watching for any closes of Alice's channel.
-	// custNotifier := &mockNotifier{
-	// 	spendChan: make(chan *chainntnfs.SpendDetail),
-	// }
+	zkchLog.Debugf("pkScript: %v", ZkFundingInfo.PkScript)
 
 	const isMerch = true
 
@@ -640,7 +633,7 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 
 	zkCustDB.Close()
 
-	// Broadcast escrow tx on chain
+	// Convert escrow to wire.MsgTx to broadcast on chain
 	serializedTx, err := hex.DecodeString(signedEscrowTx)
 	if err != nil {
 		zkchLog.Error(err)
@@ -650,6 +643,34 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 	err = msgTx.Deserialize(bytes.NewReader(serializedTx))
 	if err != nil {
 		zkchLog.Error(err)
+	}
+
+	fundingOut := &wire.OutPoint{
+		Hash:  msgTx.TxHash(),
+		Index: uint32(0),
+	}
+	zkchLog.Debugf("fundingOut: %v", fundingOut)
+
+	ZkFundingInfo := contractcourt.ZkFundingInfo{
+		FundingOut:      *fundingOut,
+		PkScript:        msgTx.TxOut[0].PkScript,
+		BroadcastHeight: uint32(300), // TODO: Replace with actual fundingtx confirm height
+	}
+	zkchLog.Debugf("ZkFundingInfo: %v", ZkFundingInfo)
+	zkchLog.Debugf("pkScript: %v", ZkFundingInfo.PkScript)
+
+	const isMerch = false
+
+	zkChainWatcherCfg := contractcourt.ZkChainWatcherConfig{
+		ZkFundingInfo: ZkFundingInfo,
+		IsMerch:       isMerch,
+		Notifier:      notifier,
+	}
+	zkchLog.Debugf("notifier: %v", notifier)
+
+	if err := z.WatchNewZkChannel(zkChainWatcherCfg); err != nil {
+		fndgLog.Errorf("Unable to send new ChannelPoint(%v) for "+
+			"arbitration: %v", escrowTxid, err)
 	}
 
 	zkchLog.Debugf("Broadcasting signedEscrowTx: %#v\n", signedEscrowTx)
