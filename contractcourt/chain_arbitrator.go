@@ -104,7 +104,7 @@ type ChainArbitratorConfig struct {
 	ContractBreach func(wire.OutPoint, *lnwallet.BreachRetribution) error
 
 	// CustContractBreach if a channel for customerClose breaches in zkchannels.
-	CustContractBreach func(zkInfo *ZkCustBreachInfo) error
+	CustContractBreach func(zkInfo *ZkBreachInfo) error
 
 	// IsOurAddress is a function that returns true if the passed address
 	// is known to the underlying wallet. Otherwise, false should be
@@ -990,7 +990,7 @@ func (c *ChainArbitrator) WatchNewZkChannel(zkCfg ZkChainWatcherConfig) error {
 		ZkFundingInfo: zkCfg.ZkFundingInfo,
 		IsMerch:       zkCfg.IsMerch,
 		Notifier:      zkCfg.Notifier,
-		custContractBreach: func(zkInfo *ZkCustBreachInfo) error {
+		zkContractBreach: func(zkInfo *ZkBreachInfo) error {
 			return c.cfg.CustContractBreach(zkInfo)
 		},
 	})

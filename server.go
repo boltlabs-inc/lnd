@@ -958,10 +958,10 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 				return ErrServerShuttingDown
 			}
 		},
-		CustContractBreach: func(zkinfo *contractcourt.ZkCustBreachInfo) error {
+		CustContractBreach: func(zkinfo *contractcourt.ZkBreachInfo) error {
 			event := &CustContractBreachEvent{
-				ZkCustBreachInfo: *zkinfo,
-				ProcessACK:       make(chan error, 1),
+				ZkBreachInfo: *zkinfo,
+				ProcessACK:   make(chan error, 1),
 			}
 
 			// Send the contract breach event to the breachArbiter.

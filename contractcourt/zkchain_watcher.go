@@ -60,23 +60,23 @@ type ZkMerchCloseInfo struct {
 
 // ZkCustCloseInfo provides details about the customer close tx.
 type ZkCustCloseInfo struct {
-	escrowTxid    chainhash.Hash
-	custCloseTxid chainhash.Hash
-	pkScript      []byte
-	revLock       string
-	custClosePk   string
-	amount        int64
+	escrowTxid  chainhash.Hash
+	closeTxid   chainhash.Hash
+	pkScript    []byte
+	revLock     string
+	custClosePk string
+	amount      int64
 }
 
-// ZkCustBreachInfo provides information needed to create a dispute transaction.
-type ZkCustBreachInfo struct {
-	EscrowTxid      chainhash.Hash
-	CustCloseTxid   chainhash.Hash
-	DisputePkScript []byte
-	RevLock         string
-	RevSecret       string
-	CustClosePk     string
-	Amount          int64
+// ZkBreachInfo provides information needed to create a dispute transaction.
+type ZkBreachInfo struct {
+	EscrowTxid    chainhash.Hash
+	CloseTxid     chainhash.Hash
+	ClosePkScript []byte
+	RevLock       string
+	RevSecret     string
+	CustClosePk   string
+	Amount        int64
 }
 
 // // RemoteUnilateralCloseInfo wraps the normal UnilateralCloseSummary to couple
@@ -155,7 +155,7 @@ type ZkChainEventSubscription struct {
 
 	// ZkCustContractBreach is a channel that will be sent upon in the
 	// event that the Customer's close transaction is confirmed.
-	ZkCustContractBreach chan *ZkCustBreachInfo
+	ZkCustContractBreach chan *ZkBreachInfo
 
 	// LocalUnilateralClosure is a channel that will be sent upon in the
 	// event that our commitment transaction is confirmed.
@@ -209,7 +209,7 @@ type ZkChainWatcherConfig struct {
 	// detects that a contract breach transaction has been confirmed. Only
 	// when this method returns with a non-nil error it will be safe to mark
 	// the channel as pending close in the database.
-	custContractBreach func(*ZkCustBreachInfo) error
+	zkContractBreach func(*ZkBreachInfo) error
 
 	// isOurAddr is a function that returns true if the passed address is
 	// known to us.
@@ -330,7 +330,7 @@ func (c *zkChainWatcher) SubscribeChannelEvents() *ZkChainEventSubscription {
 		RemoteUnilateralClosure: make(chan *RemoteUnilateralCloseInfo, 1),
 		ZkMerchClosure:          make(chan *ZkMerchCloseInfo, 1),
 		ZkCustClosure:           make(chan *ZkCustCloseInfo, 1),
-		ZkCustContractBreach:    make(chan *ZkCustBreachInfo, 1),
+		ZkCustContractBreach:    make(chan *ZkBreachInfo, 1),
 		LocalUnilateralClosure:  make(chan *LocalUnilateralCloseInfo, 1),
 		CooperativeClosure:      make(chan *CooperativeCloseInfo, 1),
 		ContractBreach:          make(chan *lnwallet.BreachRetribution, 1),
@@ -455,7 +455,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 		switch {
 
 		// merchCloseTx has one output.
-		case numOutputs < 2:
+		case numOutputs < 2 && isMerch:
 			fmt.Printf("Merch close detected\n")
 
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
@@ -468,10 +468,34 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					escrowTxid, err)
 			}
 
+		// merchCloseTx has one output.
+		case numOutputs < 2 && !isMerch:
+			fmt.Printf("Merch close detected\n")
+
+			pkScript := commitTxBroadcast.TxOut[0].PkScript
+
+			zkBreachInfo := ZkBreachInfo{
+				EscrowTxid:    escrowTxid,
+				CloseTxid:     closeTxid,
+				ClosePkScript: pkScript,
+				// RevLock:       revLock,
+				// RevSecret:     revSecret,
+				// CustClosePk:   custClosePk,
+				Amount: amount,
+			}
+
+			err := c.zkDispatchBreach(zkBreachInfo)
+
+			if err != nil {
+				log.Errorf("unable to handle remote "+
+					"close for channel=%v",
+					escrowTxid, err)
+			}
+
 		// custCloseTx has 3 outputs.
 		case numOutputs > 2:
 
-			disputePkScript := commitTxBroadcast.TxOut[0].PkScript
+			ClosePkScript := commitTxBroadcast.TxOut[0].PkScript
 
 			opreturnScript := commitTxBroadcast.TxOut[2].PkScript
 			revLockBytes := opreturnScript[2:34]
@@ -480,11 +504,11 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			custClosePkBytes := opreturnScript[34:67]
 			custClosePk := hex.EncodeToString(custClosePkBytes)
 
-			// If the user is a customer and they broadcastes custClose,
+			// If the user is a customer and they broadcasted custClose,
 			// there is nothing more to do.
 			if !isMerch {
 
-				err := c.zkDispatchCustClose(escrowTxid, closeTxid, disputePkScript, revLock, custClosePk, amount)
+				err := c.zkDispatchCustClose(escrowTxid, closeTxid, ClosePkScript, revLock, custClosePk, amount)
 				// custClose is not the latest state. The customer has attempted to
 				// close on a previous state, possibly a double spend.
 
@@ -514,7 +538,17 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 				if isOldRevLock {
 					fmt.Printf("Revoked Cust close detected\n")
 
-					err := c.zkDispatchCustBreach(escrowTxid, closeTxid, disputePkScript, revLock, revSecret, custClosePk, amount)
+					zkBreachInfo := ZkBreachInfo{
+						EscrowTxid:    escrowTxid,
+						CloseTxid:     closeTxid,
+						ClosePkScript: ClosePkScript,
+						RevLock:       revLock,
+						RevSecret:     revSecret,
+						CustClosePk:   custClosePk,
+						Amount:        amount,
+					}
+
+					err := c.zkDispatchBreach(zkBreachInfo)
 
 					if err != nil {
 						log.Errorf("unable to handle remote breach"+
@@ -530,7 +564,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 					// custClose is not the latest state. The customer has attempted to
 					// close on a previous state, possibly a double spend.
-					err := c.zkDispatchCustClose(escrowTxid, closeTxid, disputePkScript, revLock, custClosePk, amount)
+					err := c.zkDispatchCustClose(escrowTxid, closeTxid, ClosePkScript, revLock, custClosePk, amount)
 
 					if err != nil {
 						log.Errorf("unable to handle remote "+
@@ -749,22 +783,22 @@ func (c *zkChainWatcher) zkDispatchMerchClose(escrowTxid chainhash.Hash,
 }
 
 // zkDispatchCustClose processes a detected force close by the Customer.
-// It will return the escrowTxid, custCloseTxid, the custClose pkScript,
+// It will return the escrowTxid, closeTxid, the custClose pkScript,
 // the revLock, and custClosePk.
 func (c *zkChainWatcher) zkDispatchCustClose(escrowTxid chainhash.Hash,
-	custCloseTxid chainhash.Hash, pkScript []byte, revLock string,
+	closeTxid chainhash.Hash, pkScript []byte, revLock string,
 	custClosePk string, amount int64) error {
 
 	c.Lock()
 	for _, sub := range c.clientSubscriptions {
 		select {
 		case sub.ZkCustClosure <- &ZkCustCloseInfo{
-			escrowTxid:    escrowTxid,
-			custCloseTxid: custCloseTxid,
-			pkScript:      pkScript,
-			revLock:       revLock,
-			custClosePk:   custClosePk,
-			amount:        amount,
+			escrowTxid:  escrowTxid,
+			closeTxid:   closeTxid,
+			pkScript:    pkScript,
+			revLock:     revLock,
+			custClosePk: custClosePk,
+			amount:      amount,
 		}:
 		case <-c.quit:
 			c.Unlock()
@@ -776,27 +810,15 @@ func (c *zkChainWatcher) zkDispatchCustClose(escrowTxid chainhash.Hash,
 	return nil
 }
 
-// zkDispatchCustBreach processes a detected force close by the customer
-// with a revoked state.
-// It will return the escrowTxid, custCloseTxid, the custClose pkScript,
+// zkDispatchBreach processes a detected force close by the customer
+// or by the merchant.
+// It will return the escrowTxid,closeTxid, the ClosePkScript,
 // the revLock, and custClosePk.
-func (c *zkChainWatcher) zkDispatchCustBreach(escrowTxid chainhash.Hash,
-	custCloseTxid chainhash.Hash, DisputePkScript []byte, revLock string,
-	revSecret string, custClosePk string, amount int64) error {
+func (c *zkChainWatcher) zkDispatchBreach(zkBreachInfo ZkBreachInfo) error {
 
-	custBreachInfo := ZkCustBreachInfo{
-		EscrowTxid:      escrowTxid,
-		CustCloseTxid:   custCloseTxid,
-		DisputePkScript: DisputePkScript,
-		RevLock:         revLock,
-		RevSecret:       revSecret,
-		CustClosePk:     custClosePk,
-		Amount:          amount,
-	}
-
-	fmt.Printf("zkDispatchCustBreach, custBreachInfo %#v:\n", custBreachInfo)
+	fmt.Printf("zkDispatchCustBreach, zkBreachInfo %#v:\n", zkBreachInfo)
 	// Hand the retribution info over to the breach arbiter.
-	if err := c.cfg.custContractBreach(&custBreachInfo); err != nil {
+	if err := c.cfg.zkContractBreach(&zkBreachInfo); err != nil {
 		log.Errorf("unable to hand breached contract off to "+
 			"zkBreachArbiter: %v", err)
 		return err
@@ -805,7 +827,7 @@ func (c *zkChainWatcher) zkDispatchCustBreach(escrowTxid chainhash.Hash,
 	c.Lock()
 	for _, sub := range c.clientSubscriptions {
 		select {
-		case sub.ZkCustContractBreach <- &custBreachInfo:
+		case sub.ZkCustContractBreach <- &zkBreachInfo:
 
 		case <-c.quit:
 			c.Unlock()

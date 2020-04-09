@@ -39,15 +39,15 @@ var (
 	errZkBrarShuttingDown = errors.New("breacharbiter shutting down")
 )
 
-// ZkCustBreachInfo provides information needed to create a dispute transaction.
-type ZkCustBreachInfo struct {
-	escrowTxid      chainhash.Hash
-	custCloseTxid   chainhash.Hash
-	disputePkScript []byte
-	revLock         string
-	revSecret       string
-	custClosePk     string
-	amount          int64
+// ZkBreachInfo provides information needed to create a dispute transaction.
+type ZkBreachInfo struct {
+	escrowTxid    chainhash.Hash
+	closeTxid     chainhash.Hash
+	ClosePkScript []byte
+	revLock       string
+	revSecret     string
+	custClosePk   string
+	amount        int64
 }
 
 // CustContractBreachEvent is an event the zkBreachArbiter will receive in case a
@@ -64,9 +64,9 @@ type CustContractBreachEvent struct {
 	// error should be sent.
 	ProcessACK chan error
 
-	// ZkCustBreachInfo is the information needed to act on this cust contract
+	// ZkBreachInfo is the information needed to act on this cust contract
 	// breach.
-	ZkCustBreachInfo contractcourt.ZkCustBreachInfo
+	ZkBreachInfo contractcourt.ZkBreachInfo
 }
 
 // ZkBreachConfig bundles the required subsystems used by the zk breach arbiter. An
@@ -267,13 +267,13 @@ func (b *zkBreachArbiter) contractObserver() {
 
 	for {
 		select {
-		case custBreachEvent := <-b.cfg.CustContractBreaches:
+		case zkBreachEvent := <-b.cfg.CustContractBreaches:
 			// We have been notified about a contract breach!
 			// Handle the handoff, making sure we ACK the event
 			// after we have safely added it to the zkretribution
 			// store.
 			b.wg.Add(1)
-			go b.handleCustBreachHandoff(custBreachEvent)
+			go b.handleCustBreachHandoff(zkBreachEvent)
 
 		case <-b.quit:
 			return
@@ -505,7 +505,7 @@ func (b *zkBreachArbiter) contractObserver() {
 //
 // NOTE: This MUST be run as a goroutine.
 func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEvent,
-	breachInfo *contractcourt.ZkCustBreachInfo) {
+	breachInfo *contractcourt.ZkBreachInfo) {
 
 	defer b.wg.Done()
 
@@ -529,9 +529,9 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 	}
 
 	zkbaLog.Debugf("Breach transaction %v has been confirmed, sweeping "+
-		"revoked funds", breachInfo.CustCloseTxid)
+		"revoked funds", breachInfo.CloseTxid)
 
-	breachTxid := breachInfo.CustCloseTxid.String()
+	breachTxid := breachInfo.CloseTxid.String()
 	index := uint32(0)
 	// TODO: Read toSelfDelay from merchDB
 	toSelfDelay := "05cf"
@@ -749,17 +749,17 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 // transaction receives a necessary number of confirmations.
 //
 // NOTE: This MUST be run as a goroutine.
-func (b *zkBreachArbiter) handleCustBreachHandoff(custBreachEvent *CustContractBreachEvent) {
+func (b *zkBreachArbiter) handleCustBreachHandoff(zkBreachEvent *CustContractBreachEvent) {
 	defer b.wg.Done()
 
-	chanPoint := custBreachEvent.ChanPoint
+	chanPoint := zkBreachEvent.ChanPoint
 	zkbaLog.Debugf("Handling breach handoff for ChannelPoint(%v)",
 		chanPoint)
 
 	// // A read from this channel indicates that a channel breach has been
 	// // detected! So we notify the main coordination goroutine with the
 	// // information needed to bring the counterparty to zkjustice.
-	// breachInfo := custBreachEvent.ZkCustBreachInfo
+	// breachInfo := zkBreachEvent.ZkBreachInfo
 
 	zkbaLog.Warnf("REVOKED STATE FOR ChannelPoint(%v) "+
 		"broadcast, REMOTE PEER IS DOING SOMETHING "+
@@ -788,7 +788,7 @@ func (b *zkBreachArbiter) handleCustBreachHandoff(custBreachEvent *CustContractB
 	// 	zkbaLog.Errorf("Unable to check breach info in DB: %v", err)
 
 	// 	select {
-	// 	case custBreachEvent.ProcessACK <- err:
+	// 	case zkBreachEvent.ProcessACK <- err:
 	// 	case <-b.quit:
 	// 	}
 	// 	return
@@ -801,7 +801,7 @@ func (b *zkBreachArbiter) handleCustBreachHandoff(custBreachEvent *CustContractB
 	// 	b.Unlock()
 
 	// 	select {
-	// 	case custBreachEvent.ProcessACK <- nil:
+	// 	case zkBreachEvent.ProcessACK <- nil:
 	// 	case <-b.quit:
 	// 	}
 	// 	return
@@ -828,7 +828,7 @@ func (b *zkBreachArbiter) handleCustBreachHandoff(custBreachEvent *CustContractB
 	// the ack is successful, the close observer will mark the
 	// channel as pending-closed in the channeldb.
 	select {
-	case custBreachEvent.ProcessACK <- err:
+	case zkBreachEvent.ProcessACK <- err:
 		// Bail if we failed to persist zkretribution info.
 		if err != nil {
 			return
@@ -844,14 +844,14 @@ func (b *zkBreachArbiter) handleCustBreachHandoff(custBreachEvent *CustContractB
 	// confirmed in the chain to ensure we're not dealing with a moving
 	// target.
 
-	// breachInfo.ZkCustBreachInfo.pkScript
+	// breachInfo.ZkBreachInfo.pkScript
 
 	// &c.cfg.ZkFundingInfo.fundingOut,
 	// c.cfg.ZkFundingInfo.pkScript,
 	// c.cfg.ZkFundingInfo.broadcastHeight,
 
-	breachTXID := custBreachEvent.ZkCustBreachInfo.CustCloseTxid
-	breachScript := custBreachEvent.ZkCustBreachInfo.DisputePkScript
+	breachTXID := zkBreachEvent.ZkBreachInfo.CloseTxid
+	breachScript := zkBreachEvent.ZkBreachInfo.ClosePkScript
 	breachHeight := uint32(300) // TODO: Put in actual breachHeight
 
 	cfChan, err := b.cfg.Notifier.RegisterConfirmationsNtfn(
@@ -871,7 +871,7 @@ func (b *zkBreachArbiter) handleCustBreachHandoff(custBreachEvent *CustContractB
 	// finalize the channel zkretribution after the breach transaction has
 	// been confirmed.
 	b.wg.Add(1)
-	go b.exactZkRetribution(cfChan, &custBreachEvent.ZkCustBreachInfo)
+	go b.exactZkRetribution(cfChan, &zkBreachEvent.ZkBreachInfo)
 }
 
 // // zkBreachedOutput contains all the information needed to sweep a breached
