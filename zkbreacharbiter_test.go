@@ -12,6 +12,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
+	"github.com/lightningnetwork/lnd/contractcourt"
 	"github.com/lightningnetwork/lnd/htlcswitch"
 	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
@@ -974,7 +975,7 @@ const (
 
 func initZkBreachedState(t *testing.T) (*zkBreachArbiter,
 	*lnwallet.LightningChannel, *lnwallet.LightningChannel,
-	*lnwallet.LocalForceCloseSummary, chan *CustContractBreachEvent,
+	*lnwallet.LocalForceCloseSummary, chan *ZkContractBreachEvent,
 	func(), func()) {
 	// Create a pair of channels using a notifier that allows us to signal
 	// a spend of the funding transaction. Alice's channel will be the on
@@ -985,7 +986,7 @@ func initZkBreachedState(t *testing.T) (*zkBreachArbiter,
 	}
 
 	// Instantiate a breach arbiter to handle the breach of alice's channel.
-	custContractBreaches := make(chan *CustContractBreachEvent)
+	custContractBreaches := make(chan *ZkContractBreachEvent)
 
 	brar, cleanUpArb, err := createTestZkArbiter(
 		t, custContractBreaches, alice.State().Db,
@@ -1354,19 +1355,19 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 
 	// Hard coded example
 	// TODO: Move to test list
-	zkCustBreachInfo := ZkBreachInfo{
-		escrowTxid:    chainhash.Hash{0xb5, 0x7f, 0x93, 0x7a, 0x5e, 0xb2, 0xd3, 0x3b, 0x27, 0x17, 0xc, 0x0, 0x9d, 0xc2, 0xbe, 0x3d, 0x4d, 0x89, 0xe3, 0x7f, 0xdf, 0x47, 0xa7, 0xd, 0x75, 0x32, 0x1d, 0xde, 0xf5, 0xe5, 0xe, 0x57},
-		custCloseTxid: chainhash.Hash{0x13, 0x4b, 0x35, 0x6, 0x1c, 0x7e, 0xfa, 0xf0, 0x3d, 0x85, 0xe2, 0xed, 0x69, 0xe7, 0xed, 0xd7, 0xb6, 0x10, 0xa, 0x18, 0xd1, 0xff, 0x46, 0xfd, 0x25, 0x58, 0x38, 0x3a, 0xcb, 0xd0, 0x52, 0x2e},
+	ZkCustBreachInfo := contractcourt.ZkBreachInfo{
+		EscrowTxid:    chainhash.Hash{0xb5, 0x7f, 0x93, 0x7a, 0x5e, 0xb2, 0xd3, 0x3b, 0x27, 0x17, 0xc, 0x0, 0x9d, 0xc2, 0xbe, 0x3d, 0x4d, 0x89, 0xe3, 0x7f, 0xdf, 0x47, 0xa7, 0xd, 0x75, 0x32, 0x1d, 0xde, 0xf5, 0xe5, 0xe, 0x57},
+		CloseTxid:     chainhash.Hash{0x13, 0x4b, 0x35, 0x6, 0x1c, 0x7e, 0xfa, 0xf0, 0x3d, 0x85, 0xe2, 0xed, 0x69, 0xe7, 0xed, 0xd7, 0xb6, 0x10, 0xa, 0x18, 0xd1, 0xff, 0x46, 0xfd, 0x25, 0x58, 0x38, 0x3a, 0xcb, 0xd0, 0x52, 0x2e},
 		ClosePkScript: []uint8{0x0, 0x20, 0xea, 0xb1, 0xb2, 0x1b, 0x12, 0x27, 0xf9, 0xa, 0x54, 0xc8, 0xb, 0xd0, 0xac, 0x99, 0x2f, 0xf5, 0x7d, 0xac, 0xa6, 0xb8, 0x95, 0x10, 0xc6, 0x82, 0x81, 0xbe, 0x97, 0xa9, 0x95, 0xbd, 0x2a, 0xc7},
-		revLock:       "6dad4b8de4ea7765e89a69def72048c6bd1b9f2fb143aec83d0b924c42adc074",
-		custClosePk:   "027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddb",
-		amount:        9990,
+		RevLock:       "6dad4b8de4ea7765e89a69def72048c6bd1b9f2fb143aec83d0b924c42adc074",
+		CustClosePk:   "027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddb",
+		Amount:        9990,
 	}
 
-	breach := &CustContractBreachEvent{
+	breach := &ZkContractBreachEvent{
 		ChanPoint:    *chanPoint,
 		ProcessACK:   make(chan error, 1),
-		ZkBreachInfo: zkCustBreachInfo,
+		ZkBreachInfo: ZkCustBreachInfo,
 	}
 
 	custContractBreaches <- breach
@@ -1637,7 +1638,7 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 
 // createTestZkArbiter instantiates a breach arbiter with a failing retribution
 // store, so that controlled failures can be tested.
-func createTestZkArbiter(t *testing.T, custContractBreaches chan *CustContractBreachEvent,
+func createTestZkArbiter(t *testing.T, custContractBreaches chan *ZkContractBreachEvent,
 	db *channeldb.DB) (*zkBreachArbiter, func(), error) {
 
 	// // Create a failing retribution store, that wraps a normal one.

@@ -886,7 +886,7 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 
 	// We will use the following channel to reliably hand off contract
 	// breach events from the ChannelArbitrator to the zkBreachArbiter,
-	custContractBreaches := make(chan *CustContractBreachEvent, 1)
+	custContractBreaches := make(chan *ZkContractBreachEvent, 1)
 
 	s.chainArb = contractcourt.NewChainArbitrator(contractcourt.ChainArbitratorConfig{
 		ChainHash:              *activeNetParams.GenesisHash,
@@ -959,7 +959,7 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 			}
 		},
 		CustContractBreach: func(zkinfo *contractcourt.ZkBreachInfo) error {
-			event := &CustContractBreachEvent{
+			event := &ZkContractBreachEvent{
 				ZkBreachInfo: *zkinfo,
 				ProcessACK:   make(chan error, 1),
 			}

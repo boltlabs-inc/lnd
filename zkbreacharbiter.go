@@ -7,7 +7,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 
 	"github.com/lightningnetwork/lnd/chainntnfs"
@@ -39,22 +38,11 @@ var (
 	errZkBrarShuttingDown = errors.New("breacharbiter shutting down")
 )
 
-// ZkBreachInfo provides information needed to create a dispute transaction.
-type ZkBreachInfo struct {
-	escrowTxid    chainhash.Hash
-	closeTxid     chainhash.Hash
-	ClosePkScript []byte
-	revLock       string
-	revSecret     string
-	custClosePk   string
-	amount        int64
-}
-
-// CustContractBreachEvent is an event the zkBreachArbiter will receive in case a
+// ZkContractBreachEvent is an event the zkBreachArbiter will receive in case a
 // contract breach is observed on-chain. It contains the necessary information
 // to handle the breach, and a ProcessACK channel we will use to ACK the event
 // when we have safely stored all the necessary information.
-type CustContractBreachEvent struct {
+type ZkContractBreachEvent struct {
 	// ChanPoint is the channel point of the breached channel.
 	ChanPoint wire.OutPoint
 
@@ -101,9 +89,9 @@ type ZkBreachConfig struct {
 
 	// CustContractBreaches is a channel where the zkBreachArbiter will receive
 	// notifications in the event of a contract breach being observed. A
-	// CustContractBreachEvent must be ACKed by the zkBreachArbiter, such that
+	// ZkContractBreachEvent must be ACKed by the zkBreachArbiter, such that
 	// the sending subsystem knows that the event is properly handed off.
-	CustContractBreaches <-chan *CustContractBreachEvent
+	CustContractBreaches <-chan *ZkContractBreachEvent
 
 	// Signer is used by the zk breach arbiter to generate sweep transactions,
 	// which move coins from previously open channels back to the user's
@@ -498,13 +486,13 @@ func (b *zkBreachArbiter) contractObserver() {
 // 	return nil
 // }
 
-// exactZkRetribution is a goroutine which is executed once a contract breach has
-// been detected by a breachObserver. This function is responsible for
-// punishing a counterparty for violating the channel contract by sweeping ALL
-// the lingering funds within the channel into the daemon's wallet.
+// exactZkDispute is a goroutine which is executed once a contract breach has
+// been detected by a breachObserver. This function creates and broadcasts
+// the disputeTx, which the merchant uses to punish a customer broadcasting
+// a revoked custCloseTx
 //
 // NOTE: This MUST be run as a goroutine.
-func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEvent,
+func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	breachInfo *contractcourt.ZkBreachInfo) {
 
 	defer b.wg.Done()
@@ -560,30 +548,6 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 	// Dummy finalTxStr for zkBreachArbiter Test
 	// finalTxStr := "0200000000010120827352e391fe0c6cbaee2d07679ec67e30119448e4183b7818ff29171f489a0000000000ffffffff0106270000000000001600141d2cc47e2a0d77927a333a2165fe2d343b79eefc04483045022100e95687eb9aec340a662d57e29e80efe23bd013ce4b9a2e0383cd3c5f3370a526022063b260ddc1b9a251ca5f6be6fc9d6a30b29402d7e66959985487b7b61530ad3001200d4a4cf5b18a70f5e9f6a677924d0b2450f3d0561402a42338fd08da905112a101017063a8203ae763fc25bc086f73836f21aa05d387cd3adac5a93d5345e782128133cb03e4882102f9e7281167132a13b2326cea57d789b9fd2ea4440c9e9b78e6402e722a1e5c526702cf05b27521027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddb68ac00000000"
 
-	// 	// If this zkretribution has not been finalized before, we will first
-	// 	// construct a sweep transaction and write it to disk. This will allow
-	// 	// the zk breach arbiter to re-register for notifications for the zkjustice
-	// 	// txid.
-	// zkjusticeTxBroadcast:
-	// 	if finalTx == nil {
-	// 		// With the breach transaction confirmed, we now create the
-	// 		// zkjustice tx which will claim ALL the funds within the
-	// 		// channel.
-	// 		finalTx, err = b.createZkJusticeTx(breachInfo)
-	// 		if err != nil {
-	// 			zkbaLog.Errorf("Unable to create zkjustice tx: %v", err)
-	// 			return
-	// 		}
-
-	// 		// Persist our finalized zkjustice transaction before making an
-	// 		// attempt to broadcast.
-	// 		err := b.cfg.Store.Finalize(&breachInfo.chanPoint, finalTx)
-	// 		if err != nil {
-	// 			zkbaLog.Errorf("Unable to finalize zkjustice tx for "+
-	// 				"chanid=%v: %v", &breachInfo.chanPoint, err)
-	// 			return
-	// 		}
-	// 	}
 	zkchLog.Warnf("finalTxStr: %#v\n", finalTxStr)
 
 	// Broadcast dispute Tx on chain
@@ -604,54 +568,6 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 	if err != nil {
 		zkchLog.Error(err)
 	}
-
-	// // We'll now attempt to broadcast the transaction which finalized the
-	// // channel's zkretribution against the cheating counter party.
-	// err = b.cfg.PublishTransaction(finalTx)
-	// if err != nil {
-	// 	zkbaLog.Errorf("Unable to broadcast zkjustice tx: %v", err)
-
-	// 	if err == lnwallet.ErrDoubleSpend {
-	// 		// Broadcasting the transaction failed because of a
-	// 		// conflict either in the mempool or in chain. We'll
-	// 		// now create spend subscriptions for all HTLC outputs
-	// 		// on the commitment transaction that could possibly
-	// 		// have been spent, and wait for any of them to
-	// 		// trigger.
-	// 		zkbaLog.Infof("Waiting for a spend event before " +
-	// 			"attempting to craft new zkjustice tx.")
-	// 		finalTx = nil
-
-	// 		err := b.waitForSpendEvent(breachInfo, spendNtfns)
-	// 		if err != nil {
-	// 			if err != errZkBrarShuttingDown {
-	// 				zkbaLog.Errorf("error waiting for "+
-	// 					"spend event: %v", err)
-	// 			}
-	// 			return
-	// 		}
-
-	// 		if len(breachInfo.zkBreachedOutputs) == 0 {
-	// 			zkbaLog.Debugf("No more outputs to sweep for "+
-	// 				"breach, marking ChannelPoint(%v) "+
-	// 				"fully resolved", breachInfo.chanPoint)
-
-	// 			err = b.cleanupBreach(&breachInfo.chanPoint)
-	// 			if err != nil {
-	// 				zkbaLog.Errorf("Failed to cleanup "+
-	// 					"breached ChannelPoint(%v): %v",
-	// 					breachInfo.chanPoint, err)
-	// 			}
-	// 			return
-	// 		}
-
-	// 		zkbaLog.Infof("Attempting another zkjustice tx "+
-	// 			"with %d inputs",
-	// 			len(breachInfo.zkBreachedOutputs))
-
-	// 		goto zkjusticeTxBroadcast
-	// 	}
-	// }
 
 	// As a conclusionary step, we register for a notification to be
 	// dispatched once the zkjustice tx is confirmed. After confirmation we
@@ -678,47 +594,116 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 			return
 		}
 
-		// // Compute both the total value of funds being swept and the
-		// // amount of funds that were revoked from the counter party.
-		// var totalFunds, revokedFunds btcutil.Amount
-		// for _, inp := range breachInfo.zkBreachedOutputs {
-		// 	totalFunds += inp.Amount()
-
-		// 	// If the output being revoked is the remote commitment
-		// 	// output or an offered HTLC output, it's amount
-		// 	// contributes to the value of funds being revoked from
-		// 	// the counter party.
-		// 	switch inp.WitnessType() {
-		// 	case input.CommitmentRevoke:
-		// 		revokedFunds += inp.Amount()
-		// 	case input.HtlcOfferedRevoke:
-		// 		revokedFunds += inp.Amount()
-		// 	default:
-		// 	}
-		// }
-
 		zkbaLog.Infof("ZkJustice for ChannelPoint(%v) has "+
 			"been served, %v revoked funds "+
 			"have been claimed", breachInfo.EscrowTxid,
 			breachInfo.Amount)
-
-		// err = b.cleanupBreach(&breachInfo.chanPoint)
-		// if err != nil {
-		// 	zkbaLog.Errorf("Failed to cleanup breached "+
-		// 		"ChannelPoint(%v): %v", breachInfo.chanPoint,
-		// 		err)
-		// }
-
-		// TODO(roasbeef): add peer to blacklist?
-
-		// TODO(roasbeef): close other active channels with offending
-		// peer
 
 		return
 	case <-b.quit:
 		return
 	}
 }
+
+// // exactZkCloseMerch is a goroutine which is executed once a contract breach has
+// // been detected by a breachObserver. This function creates and broadcasts
+// // the latest custClose, which the customer uses to close a channel in response
+// // to the merchant broadcasting merchClose.
+// //
+// // NOTE: This MUST be run as a goroutine.
+// func (b *zkBreachArbiter) exactZkCloseMerch(confChan *chainntnfs.ConfirmationEvent,
+// 	breachInfo *contractcourt.ZkBreachInfo) {
+
+// 	defer b.wg.Done()
+
+// 	// TODO(roasbeef): state needs to be checkpointed here
+// 	var breachConfHeight uint32
+// 	select {
+// 	case breachConf, ok := <-confChan.Confirmed:
+// 		// If the second value is !ok, then the channel has been closed
+// 		// signifying a daemon shutdown, so we exit.
+
+// 		if !ok {
+// 			return
+// 		}
+
+// 		breachConfHeight = breachConf.BlockHeight
+
+// 		// Otherwise, if this is a real confirmation notification, then
+// 		// we fall through to complete our duty.
+// 	case <-b.quit:
+// 		return
+// 	}
+
+// 	zkbaLog.Debugf("Merch Close transaction %v has been confirmed. ", breachInfo.CloseTxid)
+
+// 	breachTxid := breachInfo.CloseTxid.String()
+// 	index := uint32(0)
+// 	// TODO: Read toSelfDelay from merchDB
+// 	toSelfDelay := "05cf"
+// 	// TODO: Generate outputPk from merchant's wallet
+// 	outputPk := "03df51984d6b8b8b1cc693e239491f77a36c9e9dfe4a486e9972a18e03610a0d22"
+// 	revLock := breachInfo.RevLock
+// 	revSecret := breachInfo.RevSecret
+// 	custClosePk := breachInfo.CustClosePk
+// 	amount := breachInfo.Amount
+
+// 	zkchLog.Warnf("finalTxStr: %#v\n", finalTxStr)
+
+// 	// Broadcast dispute Tx on chain
+// 	finalTxBytes, err := hex.DecodeString(finalTxStr)
+// 	if err != nil {
+// 		zkchLog.Error(err)
+// 	}
+
+// 	var finalTx wire.MsgTx
+// 	err = finalTx.Deserialize(bytes.NewReader(finalTxBytes))
+// 	if err != nil {
+// 		zkchLog.Error(err)
+// 	}
+
+// 	zkchLog.Debugf("Broadcasting dispute Tx: %#v\n", finalTx)
+
+// 	err = b.cfg.PublishTransaction(&finalTx)
+// 	if err != nil {
+// 		zkchLog.Error(err)
+// 	}
+
+// 	// As a conclusionary step, we register for a notification to be
+// 	// dispatched once the zkjustice tx is confirmed. After confirmation we
+// 	// notify the caller that initiated the zkretribution workflow that the
+// 	// deed has been done.
+// 	zkbaLog.Debugf("finalTx.TxHash() %#v:", finalTx.TxHash())
+// 	zkbaLog.Debugf("finalTx.TxOut[0].PkScript %#v:", finalTx.TxOut[0].PkScript)
+
+// 	zkjusticeTXID := finalTx.TxHash()
+// 	zkjusticeScript := finalTx.TxOut[0].PkScript
+// 	confChan, err = b.cfg.Notifier.RegisterConfirmationsNtfn(
+// 		&zkjusticeTXID, zkjusticeScript, 1, breachConfHeight,
+// 	)
+
+// 	if err != nil {
+// 		zkbaLog.Errorf("Unable to register for conf for txid(%v): %v",
+// 			zkjusticeTXID, err)
+// 		return
+// 	}
+
+// 	select {
+// 	case _, ok := <-confChan.Confirmed:
+// 		if !ok {
+// 			return
+// 		}
+
+// 		zkbaLog.Infof("ZkJustice for ChannelPoint(%v) has "+
+// 			"been served, %v revoked funds "+
+// 			"have been claimed", breachInfo.EscrowTxid,
+// 			breachInfo.Amount)
+
+// 		return
+// 	case <-b.quit:
+// 		return
+// 	}
+// }
 
 // // cleanupBreach marks the given channel point as fully resolved and removes the
 // // zkretribution for that the channel from the zkretribution store.
@@ -749,7 +734,7 @@ func (b *zkBreachArbiter) exactZkRetribution(confChan *chainntnfs.ConfirmationEv
 // transaction receives a necessary number of confirmations.
 //
 // NOTE: This MUST be run as a goroutine.
-func (b *zkBreachArbiter) handleCustBreachHandoff(zkBreachEvent *CustContractBreachEvent) {
+func (b *zkBreachArbiter) handleCustBreachHandoff(zkBreachEvent *ZkContractBreachEvent) {
 	defer b.wg.Done()
 
 	chanPoint := zkBreachEvent.ChanPoint
@@ -844,12 +829,6 @@ func (b *zkBreachArbiter) handleCustBreachHandoff(zkBreachEvent *CustContractBre
 	// confirmed in the chain to ensure we're not dealing with a moving
 	// target.
 
-	// breachInfo.ZkBreachInfo.pkScript
-
-	// &c.cfg.ZkFundingInfo.fundingOut,
-	// c.cfg.ZkFundingInfo.pkScript,
-	// c.cfg.ZkFundingInfo.broadcastHeight,
-
 	breachTXID := zkBreachEvent.ZkBreachInfo.CloseTxid
 	breachScript := zkBreachEvent.ZkBreachInfo.ClosePkScript
 	breachHeight := uint32(300) // TODO: Put in actual breachHeight
@@ -866,12 +845,10 @@ func (b *zkBreachArbiter) handleCustBreachHandoff(zkBreachEvent *CustContractBre
 	zkbaLog.Warnf("A channel has been breached with txid: %v. Waiting "+
 		"for confirmation, then zkjustice will be served!", breachTXID)
 
-	// With the zkretribution state persisted, channel close persisted, and
-	// notification registered, we launch a new goroutine which will
-	// finalize the channel zkretribution after the breach transaction has
-	// been confirmed.
+	// exactZkRetribution will broadcast either the latest custClose,
+	// or the
 	b.wg.Add(1)
-	go b.exactZkRetribution(cfChan, &zkBreachEvent.ZkBreachInfo)
+	go b.exactZkDispute(cfChan, &zkBreachEvent.ZkBreachInfo)
 }
 
 // // zkBreachedOutput contains all the information needed to sweep a breached

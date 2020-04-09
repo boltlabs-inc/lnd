@@ -662,9 +662,10 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 	const isMerch = false
 
 	zkChainWatcherCfg := contractcourt.ZkChainWatcherConfig{
-		ZkFundingInfo: ZkFundingInfo,
-		IsMerch:       isMerch,
-		Notifier:      notifier,
+		ZkFundingInfo:   ZkFundingInfo,
+		IsMerch:         isMerch,
+		CustChannelName: zkChannelName,
+		Notifier:        notifier,
 	}
 	zkchLog.Debugf("notifier: %v", notifier)
 

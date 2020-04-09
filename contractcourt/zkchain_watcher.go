@@ -70,13 +70,15 @@ type ZkCustCloseInfo struct {
 
 // ZkBreachInfo provides information needed to create a dispute transaction.
 type ZkBreachInfo struct {
-	EscrowTxid    chainhash.Hash
-	CloseTxid     chainhash.Hash
-	ClosePkScript []byte
-	RevLock       string
-	RevSecret     string
-	CustClosePk   string
-	Amount        int64
+	IsMerchClose    bool
+	EscrowTxid      chainhash.Hash
+	CloseTxid       chainhash.Hash
+	ClosePkScript   []byte
+	CustChannelName string
+	RevLock         string
+	RevSecret       string
+	CustClosePk     string
+	Amount          int64
 }
 
 // // RemoteUnilateralCloseInfo wraps the normal UnilateralCloseSummary to couple
@@ -153,9 +155,9 @@ type ZkChainEventSubscription struct {
 	// event that the Customer's close transaction is confirmed.
 	ZkCustClosure chan *ZkCustCloseInfo
 
-	// ZkCustContractBreach is a channel that will be sent upon in the
+	// ZkContractBreach is a channel that will be sent upon in the
 	// event that the Customer's close transaction is confirmed.
-	ZkCustContractBreach chan *ZkBreachInfo
+	ZkContractBreach chan *ZkBreachInfo
 
 	// LocalUnilateralClosure is a channel that will be sent upon in the
 	// event that our commitment transaction is confirmed.
@@ -184,6 +186,10 @@ type ZkChainWatcherConfig struct {
 
 	// isMerch is true if this node is the merchant's
 	IsMerch bool
+
+	// CustChannelName is the name the customer gives to the channel.
+	// For the merchant, this field will be left blank
+	CustChannelName string
 
 	// chanState is a snapshot of the persistent state of the channel that
 	// we're watching. In the event of an on-chain event, we'll query the
@@ -330,7 +336,7 @@ func (c *zkChainWatcher) SubscribeChannelEvents() *ZkChainEventSubscription {
 		RemoteUnilateralClosure: make(chan *RemoteUnilateralCloseInfo, 1),
 		ZkMerchClosure:          make(chan *ZkMerchCloseInfo, 1),
 		ZkCustClosure:           make(chan *ZkCustCloseInfo, 1),
-		ZkCustContractBreach:    make(chan *ZkBreachInfo, 1),
+		ZkContractBreach:        make(chan *ZkBreachInfo, 1),
 		LocalUnilateralClosure:  make(chan *LocalUnilateralCloseInfo, 1),
 		CooperativeClosure:      make(chan *CooperativeCloseInfo, 1),
 		ContractBreach:          make(chan *lnwallet.BreachRetribution, 1),
@@ -475,9 +481,11 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
 
 			zkBreachInfo := ZkBreachInfo{
-				EscrowTxid:    escrowTxid,
-				CloseTxid:     closeTxid,
-				ClosePkScript: pkScript,
+				IsMerchClose:    true,
+				EscrowTxid:      escrowTxid,
+				CloseTxid:       closeTxid,
+				ClosePkScript:   pkScript,
+				CustChannelName: c.cfg.CustChannelName,
 				// RevLock:       revLock,
 				// RevSecret:     revSecret,
 				// CustClosePk:   custClosePk,
@@ -539,6 +547,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					fmt.Printf("Revoked Cust close detected\n")
 
 					zkBreachInfo := ZkBreachInfo{
+						IsMerchClose:  false,
 						EscrowTxid:    escrowTxid,
 						CloseTxid:     closeTxid,
 						ClosePkScript: ClosePkScript,
@@ -827,7 +836,7 @@ func (c *zkChainWatcher) zkDispatchBreach(zkBreachInfo ZkBreachInfo) error {
 	c.Lock()
 	for _, sub := range c.clientSubscriptions {
 		select {
-		case sub.ZkCustContractBreach <- &zkBreachInfo:
+		case sub.ZkContractBreach <- &zkBreachInfo:
 
 		case <-c.quit:
 			c.Unlock()
