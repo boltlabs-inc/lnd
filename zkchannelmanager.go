@@ -1506,74 +1506,17 @@ func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p l
 // CloseZkChannel broadcasts a close transaction
 func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, zkChannelName string, dryRun bool) error {
 
-	// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
-	// This is used to prevent another payment being made
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	closeEscrowTx, closeEscrowTxid, err := getSignedCustCloseTxs(zkChannelName)
 	if err != nil {
 		zkchLog.Error(err)
 		return err
 	}
 
-	closeInitiatedBytes, _ := json.Marshal(true)
-	err = zkchanneldb.AddCustField(zkCustDB, zkChannelName, closeInitiatedBytes, "closeInitiatedKey")
-	if err != nil {
-		zkchLog.Error(err)
-		return err
-	}
-
-	custStateBytes, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
-	if err != nil {
-		zkchLog.Error(err)
-		return err
-	}
-	var custState libzkchannels.CustState
-	err = json.Unmarshal(custStateBytes, &custState)
-	if err != nil {
-		zkchLog.Error(err)
-		return err
-	}
-
-	channelStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelStateKey")
-	if err != nil {
-		zkchLog.Error(err)
-		return err
-	}
-	var channelState libzkchannels.ChannelState
-	err = json.Unmarshal(channelStateBytes, &channelState)
-	if err != nil {
-		zkchLog.Error(err)
-		return err
-	}
-
-	channelTokenBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelTokenKey")
-	if err != nil {
-		zkchLog.Error(err)
-		return err
-	}
-	var channelToken libzkchannels.ChannelToken
-	err = json.Unmarshal(channelTokenBytes, &channelToken)
-	if err != nil {
-		zkchLog.Error(err)
-		return err
-	}
-
-	err = zkCustDB.Close()
-	if err != nil {
-		zkchLog.Error(err)
-		return err
-	}
-
-	CloseEscrowTx, CloseEscrowTxid, err := libzkchannels.CustomerCloseTx(channelState, channelToken, true, custState)
-	if err != nil {
-		zkchLog.Error(err)
-		return err
-	}
-
-	zkchLog.Debug("Signed CloseEscrowTx =>:", CloseEscrowTx)
-	zkchLog.Debug("CloseEscrowTx =>:", CloseEscrowTxid)
+	zkchLog.Debug("Signed CloseEscrowTx =>:", closeEscrowTx)
+	zkchLog.Debug("CloseEscrowTx =>:", closeEscrowTxid)
 
 	// Broadcast escrow tx on chain
-	serializedTx, err := hex.DecodeString(CloseEscrowTx)
+	serializedTx, err := hex.DecodeString(closeEscrowTx)
 	if err != nil {
 		zkchLog.Error(err)
 		return err
@@ -1588,7 +1531,7 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 
 	if dryRun {
 		zkchLog.Infof("DryRun: Not Broadcasting close transaction:",
-			CloseEscrowTx)
+			closeEscrowTx)
 
 		return nil
 	}
@@ -1603,27 +1546,95 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 	// Start watching for on-chain notifications of merchClose
 	pkScript := msgTx.TxOut[0].PkScript
 
-	zkchLog.Debugf("\nwaitForFundingWithTimeout\npkScript: %#x\n\n", pkScript)
-
-	// // TEMPORARY CODE TO FLIP BYTES
-	// s := ""
-	// for i := 0; i < len(CloseEscrowTxid)/2; i++ {
-	// 	s = CloseEscrowTxid[i*2:i*2+2] + s
-	// }
-	// CloseEscrowTxid = s
+	// TEMPORARY CODE TO FLIP BYTES
+	s := ""
+	for i := 0; i < len(closeEscrowTxid)/2; i++ {
+		s = closeEscrowTxid[i*2:i*2+2] + s
+	}
+	closeEscrowTxid = s
 
 	// ZKCHANNEL TODO: REFACTOR TO WRAP waitForFundingWithTimeout IN GO ROUTINE
 	// AND PASS REFERENCE TO A CHANNELDB
-	confChannel, err := z.waitForFundingWithTimeout(notifier, CloseEscrowTxid, pkScript)
+	confChannel, err := z.waitForFundingWithTimeout(notifier, closeEscrowTxid, pkScript)
 	if err != nil {
 		zkchLog.Infof("error waiting for funding "+
 			"confirmation: %v", err)
 		return err
 	}
 
-	zkchLog.Debugf("\n\n%#v\n", confChannel)
-	zkchLog.Infof("\n\nCustClose (from escrow) close transaction has 3 confirmations\n\n")
+	zkchLog.Debugf("\n%#v\n", confChannel)
+	zkchLog.Debugf("\nwaitForFundingWithTimeout\npkScript: %#x\n\n", pkScript)
+
 	return nil
+}
+
+func getSignedCustCloseTxs(zkChannelName string) (CloseEscrowTx string, CloseEscrowTxid string, err error) {
+	// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
+	// This is used to prevent another payment being made
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	if err != nil {
+		zkchLog.Error(err)
+		return "", "", err
+	}
+
+	// Set closeInitiated to true, to prevent further payments on this channel
+	closeInitiatedBytes, _ := json.Marshal(true)
+	err = zkchanneldb.AddCustField(zkCustDB, zkChannelName, closeInitiatedBytes, "closeInitiatedKey")
+	if err != nil {
+		zkchLog.Error(err)
+		return "", "", err
+	}
+
+	custStateBytes, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
+	if err != nil {
+		zkchLog.Error(err)
+		return "", "", err
+	}
+	var custState libzkchannels.CustState
+	err = json.Unmarshal(custStateBytes, &custState)
+	if err != nil {
+		zkchLog.Error(err)
+		return "", "", err
+	}
+
+	channelStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelStateKey")
+	if err != nil {
+		zkchLog.Error(err)
+		return "", "", err
+	}
+	var channelState libzkchannels.ChannelState
+	err = json.Unmarshal(channelStateBytes, &channelState)
+	if err != nil {
+		zkchLog.Error(err)
+		return "", "", err
+	}
+
+	channelTokenBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelTokenKey")
+	if err != nil {
+		zkchLog.Error(err)
+		return "", "", err
+	}
+	var channelToken libzkchannels.ChannelToken
+	err = json.Unmarshal(channelTokenBytes, &channelToken)
+	if err != nil {
+		zkchLog.Error(err)
+		return "", "", err
+	}
+
+	err = zkCustDB.Close()
+	if err != nil {
+		zkchLog.Error(err)
+		return "", "", err
+	}
+
+	closeEscrowTx, closeEscrowTxid, err := libzkchannels.CustomerCloseTx(channelState, channelToken, true, custState)
+	if err != nil {
+		zkchLog.Error(err)
+		return "", "", err
+	}
+
+	return closeEscrowTx, closeEscrowTxid, nil
+
 }
 
 // MerchClose broadcasts a close transaction for a given escrow txid
