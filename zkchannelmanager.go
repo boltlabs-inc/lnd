@@ -585,9 +585,10 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 	const isMerch = true
 
 	zkChainWatcherCfg := contractcourt.ZkChainWatcherConfig{
-		ZkFundingInfo: ZkFundingInfo,
-		IsMerch:       isMerch,
-		Notifier:      notifier,
+		ZkFundingInfo:   ZkFundingInfo,
+		IsMerch:         isMerch,
+		CustChannelName: "",
+		Notifier:        notifier,
 	}
 	zkchLog.Debugf("notifier: %v", notifier)
 
@@ -1506,7 +1507,9 @@ func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p l
 // CloseZkChannel broadcasts a close transaction
 func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, zkChannelName string, dryRun bool) error {
 
-	closeEscrowTx, closeEscrowTxid, err := getSignedCustCloseTxs(zkChannelName)
+	closeFromEscrow := true
+
+	closeEscrowTx, closeEscrowTxid, err := GetSignedCustCloseTxs(zkChannelName, closeFromEscrow)
 	if err != nil {
 		zkchLog.Error(err)
 		return err
@@ -1568,7 +1571,9 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 	return nil
 }
 
-func getSignedCustCloseTxs(zkChannelName string) (CloseEscrowTx string, CloseEscrowTxid string, err error) {
+// GetSignedCustCloseTxs gets the custCloseTx and also sets closeInitiated to true
+// to signal that no further payments should be made with this channel.
+func GetSignedCustCloseTxs(zkChannelName string, closeEscrow bool) (CloseEscrowTx string, CloseEscrowTxid string, err error) {
 	// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
 	// This is used to prevent another payment being made
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
@@ -1627,7 +1632,7 @@ func getSignedCustCloseTxs(zkChannelName string) (CloseEscrowTx string, CloseEsc
 		return "", "", err
 	}
 
-	closeEscrowTx, closeEscrowTxid, err := libzkchannels.CustomerCloseTx(channelState, channelToken, true, custState)
+	closeEscrowTx, closeEscrowTxid, err := libzkchannels.CustomerCloseTx(channelState, channelToken, closeEscrow, custState)
 	if err != nil {
 		zkchLog.Error(err)
 		return "", "", err

@@ -605,105 +605,108 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	}
 }
 
-// // exactZkCloseMerch is a goroutine which is executed once a contract breach has
-// // been detected by a breachObserver. This function creates and broadcasts
-// // the latest custClose, which the customer uses to close a channel in response
-// // to the merchant broadcasting merchClose.
-// //
-// // NOTE: This MUST be run as a goroutine.
-// func (b *zkBreachArbiter) exactZkCloseMerch(confChan *chainntnfs.ConfirmationEvent,
-// 	breachInfo *contractcourt.ZkBreachInfo) {
+// exactZkCloseMerch is a goroutine which is executed once a contract breach has
+// been detected by a breachObserver. This function creates and broadcasts
+// the latest custClose, which the customer uses to close a channel in response
+// to the merchant broadcasting merchClose.
+//
+// NOTE: This MUST be run as a goroutine.
+func (b *zkBreachArbiter) exactZkCloseMerch(confChan *chainntnfs.ConfirmationEvent,
+	breachInfo *contractcourt.ZkBreachInfo) {
 
-// 	defer b.wg.Done()
+	defer b.wg.Done()
 
-// 	// TODO(roasbeef): state needs to be checkpointed here
-// 	var breachConfHeight uint32
-// 	select {
-// 	case breachConf, ok := <-confChan.Confirmed:
-// 		// If the second value is !ok, then the channel has been closed
-// 		// signifying a daemon shutdown, so we exit.
+	// TODO(roasbeef): state needs to be checkpointed here
+	var breachConfHeight uint32
+	select {
+	case breachConf, ok := <-confChan.Confirmed:
+		// If the second value is !ok, then the channel has been closed
+		// signifying a daemon shutdown, so we exit.
 
-// 		if !ok {
-// 			return
-// 		}
+		if !ok {
+			return
+		}
 
-// 		breachConfHeight = breachConf.BlockHeight
+		breachConfHeight = breachConf.BlockHeight
 
-// 		// Otherwise, if this is a real confirmation notification, then
-// 		// we fall through to complete our duty.
-// 	case <-b.quit:
-// 		return
-// 	}
+		// Otherwise, if this is a real confirmation notification, then
+		// we fall through to complete our duty.
+	case <-b.quit:
+		return
+	}
 
-// 	zkbaLog.Debugf("Merch Close transaction %v has been confirmed. ", breachInfo.CloseTxid)
+	zkbaLog.Debugf("Merch Close transaction %v has been confirmed. ", breachInfo.CloseTxid)
 
-// 	breachTxid := breachInfo.CloseTxid.String()
-// 	index := uint32(0)
-// 	// TODO: Read toSelfDelay from merchDB
-// 	toSelfDelay := "05cf"
-// 	// TODO: Generate outputPk from merchant's wallet
-// 	outputPk := "03df51984d6b8b8b1cc693e239491f77a36c9e9dfe4a486e9972a18e03610a0d22"
-// 	revLock := breachInfo.RevLock
-// 	revSecret := breachInfo.RevSecret
-// 	custClosePk := breachInfo.CustClosePk
-// 	amount := breachInfo.Amount
+	// breachTxid := breachInfo.CloseTxid.String()
+	// index := uint32(0)
+	// // TODO: Read toSelfDelay from merchDB
+	// toSelfDelay := "05cf"
+	// // TODO: Generate outputPk from merchant's wallet
+	// outputPk := "03df51984d6b8b8b1cc693e239491f77a36c9e9dfe4a486e9972a18e03610a0d22"
+	// revLock := breachInfo.RevLock
+	// revSecret := breachInfo.RevSecret
+	// custClosePk := breachInfo.CustClosePk
+	// amount := breachInfo.Amount
 
-// 	zkchLog.Warnf("finalTxStr: %#v\n", finalTxStr)
+	closeFromEscrow := false
+	closeMerchTx, _, err := GetSignedCustCloseTxs(breachInfo.CustChannelName, closeFromEscrow)
 
-// 	// Broadcast dispute Tx on chain
-// 	finalTxBytes, err := hex.DecodeString(finalTxStr)
-// 	if err != nil {
-// 		zkchLog.Error(err)
-// 	}
+	zkchLog.Warnf("closeMerchTx: %#v\n", closeMerchTx)
 
-// 	var finalTx wire.MsgTx
-// 	err = finalTx.Deserialize(bytes.NewReader(finalTxBytes))
-// 	if err != nil {
-// 		zkchLog.Error(err)
-// 	}
+	// Broadcast dispute Tx on chain
+	finalTxBytes, err := hex.DecodeString(closeMerchTx)
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
-// 	zkchLog.Debugf("Broadcasting dispute Tx: %#v\n", finalTx)
+	var finalTx wire.MsgTx
+	err = finalTx.Deserialize(bytes.NewReader(finalTxBytes))
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
-// 	err = b.cfg.PublishTransaction(&finalTx)
-// 	if err != nil {
-// 		zkchLog.Error(err)
-// 	}
+	zkchLog.Debugf("Broadcasting closeMerchTx: %#v\n", finalTx)
 
-// 	// As a conclusionary step, we register for a notification to be
-// 	// dispatched once the zkjustice tx is confirmed. After confirmation we
-// 	// notify the caller that initiated the zkretribution workflow that the
-// 	// deed has been done.
-// 	zkbaLog.Debugf("finalTx.TxHash() %#v:", finalTx.TxHash())
-// 	zkbaLog.Debugf("finalTx.TxOut[0].PkScript %#v:", finalTx.TxOut[0].PkScript)
+	err = b.cfg.PublishTransaction(&finalTx)
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
-// 	zkjusticeTXID := finalTx.TxHash()
-// 	zkjusticeScript := finalTx.TxOut[0].PkScript
-// 	confChan, err = b.cfg.Notifier.RegisterConfirmationsNtfn(
-// 		&zkjusticeTXID, zkjusticeScript, 1, breachConfHeight,
-// 	)
+	// As a conclusionary step, we register for a notification to be
+	// dispatched once the zkjustice tx is confirmed. After confirmation we
+	// notify the caller that initiated the zkretribution workflow that the
+	// deed has been done.
+	zkbaLog.Debugf("finalTx.TxHash() %#v:", finalTx.TxHash())
+	zkbaLog.Debugf("finalTx.TxOut[0].PkScript %#v:", finalTx.TxOut[0].PkScript)
 
-// 	if err != nil {
-// 		zkbaLog.Errorf("Unable to register for conf for txid(%v): %v",
-// 			zkjusticeTXID, err)
-// 		return
-// 	}
+	merchCloseTxid := finalTx.TxHash()
+	merchCloseScript := finalTx.TxOut[0].PkScript
+	confChan, err = b.cfg.Notifier.RegisterConfirmationsNtfn(
+		&merchCloseTxid, merchCloseScript, 1, breachConfHeight,
+	)
 
-// 	select {
-// 	case _, ok := <-confChan.Confirmed:
-// 		if !ok {
-// 			return
-// 		}
+	if err != nil {
+		zkbaLog.Errorf("Unable to register for conf for txid(%v): %v",
+			merchCloseTxid, err)
+		return
+	}
 
-// 		zkbaLog.Infof("ZkJustice for ChannelPoint(%v) has "+
-// 			"been served, %v revoked funds "+
-// 			"have been claimed", breachInfo.EscrowTxid,
-// 			breachInfo.Amount)
+	select {
+	case _, ok := <-confChan.Confirmed:
+		if !ok {
+			return
+		}
 
-// 		return
-// 	case <-b.quit:
-// 		return
-// 	}
-// }
+		zkbaLog.Infof("ZkJustice for ChannelPoint(%v) has "+
+			"been served, %v revoked funds "+
+			"have been claimed", breachInfo.EscrowTxid,
+			breachInfo.Amount)
+
+		return
+	case <-b.quit:
+		return
+	}
+}
 
 // // cleanupBreach marks the given channel point as fully resolved and removes the
 // // zkretribution for that the channel from the zkretribution store.
@@ -848,7 +851,11 @@ func (b *zkBreachArbiter) handleCustBreachHandoff(zkBreachEvent *ZkContractBreac
 	// exactZkRetribution will broadcast either the latest custClose,
 	// or the
 	b.wg.Add(1)
-	go b.exactZkDispute(cfChan, &zkBreachEvent.ZkBreachInfo)
+	if zkBreachEvent.ZkBreachInfo.IsMerchClose {
+		go b.exactZkCloseMerch(cfChan, &zkBreachEvent.ZkBreachInfo)
+	} else {
+		go b.exactZkDispute(cfChan, &zkBreachEvent.ZkBreachInfo)
+	}
 }
 
 // // zkBreachedOutput contains all the information needed to sweep a breached

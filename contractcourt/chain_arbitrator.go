@@ -987,9 +987,10 @@ func (c *ChainArbitrator) WatchNewZkChannel(zkCfg ZkChainWatcherConfig) error {
 	// First, also create an active chainWatcher for this channel to ensure
 	// that we detect any relevant on chain events.
 	zkChainWatcher, err := newZkChainWatcher(ZkChainWatcherConfig{
-		ZkFundingInfo: zkCfg.ZkFundingInfo,
-		IsMerch:       zkCfg.IsMerch,
-		Notifier:      zkCfg.Notifier,
+		ZkFundingInfo:   zkCfg.ZkFundingInfo,
+		IsMerch:         zkCfg.IsMerch,
+		CustChannelName: zkCfg.CustChannelName,
+		Notifier:        zkCfg.Notifier,
 		zkContractBreach: func(zkInfo *ZkBreachInfo) error {
 			return c.cfg.CustContractBreach(zkInfo)
 		},
