@@ -24,7 +24,6 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/btcsuite/btcutil/bech32"
 	"github.com/btcsuite/btcutil/psbt"
 	"github.com/btcsuite/btcwallet/wallet/txauthor"
 	"github.com/davecgh/go-spew/spew"
@@ -484,6 +483,10 @@ func mainRPCServerPermissions() map[string][]bakery.Op {
 		"/lnrpc.Lightning/ListZkChannels": {{
 			Entity: "info",
 			Action: "read",
+		}},
+		"/lnrpc.Lightning/CustClaim": {{
+			Entity: "info",
+			Action: "write",
 		}},
 	}
 }
@@ -6513,20 +6516,26 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	custInputSk := fmt.Sprintf("\"%v\"", custInputSkRaw)
+	custInputSk := fmt.Sprintf("%v", custInputSkRaw)
 	// fmt.Println("Using this SK: ", custInputSk)
 
-	changeAddrRaw, err := r.server.cc.wallet.NewAddress(lnwallet.WitnessPubKey, true)
+	// changeAddrRaw, err := r.server.cc.wallet.NewAddress(lnwallet.WitnessPubKey, true)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// changeAddr := changeAddrRaw.String()
+	// _, data, err := bech32.Decode(changeAddr)
+	// changePkHash, err := bech32.ConvertBits(data[1:], 5, 8, false)
+
+	// changePkHashStr := hex.EncodeToString(changePkHash)
+	// changeScriptPK := "0014" + changePkHashStr
+	// fmt.Printf("changeScriptPK: %v\n", changeScriptPK)
+
+	changePubKey, err := r.server.cc.wallet.NewPubKey()
 	if err != nil {
 		return nil, err
 	}
-	changeAddr := changeAddrRaw.String()
-	_, data, err := bech32.Decode(changeAddr)
-	changePkHash, err := bech32.ConvertBits(data[1:], 5, 8, false)
-
-	changePkHashStr := hex.EncodeToString(changePkHash)
-	changeScriptPK := "0014" + changePkHashStr
-	fmt.Printf("changeScriptPK: %v\n", changeScriptPK)
+	fmt.Printf("changePubKey: %v\n", changePubKey)
 
 	custStateSk, err := r.server.cc.wallet.NewPrivKey()
 	if err != nil {
@@ -6544,7 +6553,7 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
-	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changeScriptPK, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
+	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
 		return nil, fmt.Errorf("Could not open channel "+
 			"with peer: %v", err)
 	}
@@ -6633,13 +6642,19 @@ func (r *rpcServer) ZkChannelBalance(ctx context.Context,
 	zkChannelList := zkchanneldb.Buckets("zkcust.db")
 	zkchLog.Info("zkChannelList:", zkChannelList)
 
+	zkClaimList := zkchanneldb.Buckets("zkclaim.db")
+	zkchLog.Info("zkClaimList:", zkClaimList)
+
 	resp := &lnrpc.ZkChannelBalanceResponse{
 		ZkChannel: make([]*lnrpc.ZkChannelInfo, 0, len(zkChannelList)),
 	}
 
 	for _, zkChannelName := range zkChannelList {
 
-		escrowTxid, localBalance, remoteBalance := r.server.ZkChannelBalance(zkChannelName)
+		escrowTxid, localBalance, remoteBalance, err := r.server.ZkChannelBalance(zkChannelName)
+		if err != nil {
+			return nil, fmt.Errorf("r.server.ZkChannelBalance: %v", err)
+		}
 
 		zkchannel := &lnrpc.ZkChannelInfo{
 			ZkChannelName: zkChannelName,
@@ -6679,7 +6694,7 @@ func (r *rpcServer) ZkInfo(ctx context.Context,
 	}, nil
 }
 
-// ListZkChannels lists all open channels for the merchant
+// ListZkChannels lists all open channels for the merchant.
 func (r *rpcServer) ListZkChannels(ctx context.Context,
 	in *lnrpc.ListZkChannelsRequest) (*lnrpc.ListZkChannelsResponse, error) {
 
@@ -6702,6 +6717,25 @@ func (r *rpcServer) ListZkChannels(ctx context.Context,
 	}
 
 	return resp, nil
+
+}
+
+// CustClaim sweeps a customers output from a close tx.
+func (r *rpcServer) CustClaim(ctx context.Context,
+	in *lnrpc.CustClaimRequest) (*lnrpc.CustClaimResponse, error) {
+
+	zkchLog.Debugf("CustClaim initiated for channel: %v", in.EscrowTxid)
+
+	if !r.server.Started() {
+		return nil, fmt.Errorf("chain backend is still syncing, server " +
+			"not active yet")
+	}
+
+	if err := r.server.CustClaim(in.EscrowTxid); err != nil {
+		return nil, fmt.Errorf("could not close channel: %v", err)
+	}
+
+	return &lnrpc.CustClaimResponse{}, nil
 
 }
 

@@ -349,6 +349,11 @@ func (*mockWalletController) NewPrivKey() (string, error) {
 	return "", nil
 }
 
+// This is a hack for zkLND
+func (*mockWalletController) NewPubKey() (string, error) {
+	return "", nil
+}
+
 type mockSecretKeyRing struct {
 	rootKey *btcec.PrivateKey
 }

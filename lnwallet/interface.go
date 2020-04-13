@@ -268,6 +268,10 @@ type WalletController interface {
 	// NewPrivKey returns a new private key.
 	// This function is specific for zkLND
 	NewPrivKey() (string, error)
+
+	// NewPubKey returns a new public key.
+	// This function is specific for zkLND
+	NewPubKey() (string, error)
 }
 
 // BlockChainIO is a dedicated source which will be used to obtain queries

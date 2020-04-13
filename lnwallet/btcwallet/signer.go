@@ -1,6 +1,7 @@
 package btcwallet
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -143,6 +144,31 @@ func (b *BtcWallet) NewPrivKey() (string, error) {
 	}
 
 	return privKey.D.Text(16), nil
+}
+
+// NewPubKey returns a new public key.
+// This function is specific for zkLND
+func (b *BtcWallet) NewPubKey() (string, error) {
+
+	newAddr, err := b.NewAddress(lnwallet.NestedWitnessPubKey, false)
+	if err != nil {
+		return "", err
+	}
+
+	outputScript := newAddr.ScriptAddress()
+	prefix := []byte{0x00, 0x14}
+	PkScript := append(prefix, outputScript...)
+
+	walletAddr, err := b.fetchOutputAddr(PkScript)
+	if err != nil {
+		return "", err
+	}
+
+	pka := walletAddr.(waddrmgr.ManagedPubKeyAddress)
+	pubKey := pka.PubKey()
+	PkBytes := pubKey.SerializeCompressed()
+
+	return hex.EncodeToString(PkBytes), nil
 }
 
 // deriveFromKeyLoc attempts to derive a private key using a fully specified

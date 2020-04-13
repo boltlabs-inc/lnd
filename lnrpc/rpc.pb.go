@@ -12203,6 +12203,77 @@ func (m *ListZkChannelsResponse) GetZkChannel() []*ListZkChannelsInfo {
 	return nil
 }
 
+type CustClaimRequest struct {
+	/// The escrow txid of the closed channel
+	EscrowTxid           string   `protobuf:"bytes,1,opt,name=escrow_txid,json=close_txid,proto3" json:"escrow_txid,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CustClaimRequest) Reset()         { *m = CustClaimRequest{} }
+func (m *CustClaimRequest) String() string { return proto.CompactTextString(m) }
+func (*CustClaimRequest) ProtoMessage()    {}
+func (*CustClaimRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{166}
+}
+
+func (m *CustClaimRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CustClaimRequest.Unmarshal(m, b)
+}
+func (m *CustClaimRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CustClaimRequest.Marshal(b, m, deterministic)
+}
+func (m *CustClaimRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CustClaimRequest.Merge(m, src)
+}
+func (m *CustClaimRequest) XXX_Size() int {
+	return xxx_messageInfo_CustClaimRequest.Size(m)
+}
+func (m *CustClaimRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_CustClaimRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CustClaimRequest proto.InternalMessageInfo
+
+func (m *CustClaimRequest) GetEscrowTxid() string {
+	if m != nil {
+		return m.EscrowTxid
+	}
+	return ""
+}
+
+type CustClaimResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CustClaimResponse) Reset()         { *m = CustClaimResponse{} }
+func (m *CustClaimResponse) String() string { return proto.CompactTextString(m) }
+func (*CustClaimResponse) ProtoMessage()    {}
+func (*CustClaimResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{167}
+}
+
+func (m *CustClaimResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CustClaimResponse.Unmarshal(m, b)
+}
+func (m *CustClaimResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CustClaimResponse.Marshal(b, m, deterministic)
+}
+func (m *CustClaimResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CustClaimResponse.Merge(m, src)
+}
+func (m *CustClaimResponse) XXX_Size() int {
+	return xxx_messageInfo_CustClaimResponse.Size(m)
+}
+func (m *CustClaimResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_CustClaimResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CustClaimResponse proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterEnum("lnrpc.AddressType", AddressType_name, AddressType_value)
 	proto.RegisterEnum("lnrpc.CommitmentType", CommitmentType_name, CommitmentType_value)
@@ -12404,6 +12475,8 @@ func init() {
 	proto.RegisterType((*ListZkChannelsInfo)(nil), "lnrpc.ListZkChannelsInfo")
 	proto.RegisterType((*ListZkChannelsRequest)(nil), "lnrpc.ListZkChannelsRequest")
 	proto.RegisterType((*ListZkChannelsResponse)(nil), "lnrpc.ListZkChannelsResponse")
+	proto.RegisterType((*CustClaimRequest)(nil), "lnrpc.CustClaimRequest")
+	proto.RegisterType((*CustClaimResponse)(nil), "lnrpc.CustClaimResponse")
 }
 
 func init() { proto.RegisterFile("rpc.proto", fileDescriptor_77a6da22d6a3feb1) }
@@ -13502,8 +13575,11 @@ type LightningClient interface {
 	//ZkInfo returns information about this zklnd node.
 	ZkInfo(ctx context.Context, in *ZkInfoRequest, opts ...grpc.CallOption) (*ZkInfoResponse, error)
 	//* lncli: `listzkchannels`
-	//ZkInfo returns information about this zklnd node.
+	//ListZkChannels .
 	ListZkChannels(ctx context.Context, in *ListZkChannelsRequest, opts ...grpc.CallOption) (*ListZkChannelsResponse, error)
+	//* lncli: `cust_claim`
+	//CustClaim spends customer's outputs to own wallet.
+	CustClaim(ctx context.Context, in *CustClaimRequest, opts ...grpc.CallOption) (*CustClaimResponse, error)
 }
 
 type lightningClient struct {
@@ -14333,6 +14409,15 @@ func (c *lightningClient) ListZkChannels(ctx context.Context, in *ListZkChannels
 	return out, nil
 }
 
+func (c *lightningClient) CustClaim(ctx context.Context, in *CustClaimRequest, opts ...grpc.CallOption) (*CustClaimResponse, error) {
+	out := new(CustClaimResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/CustClaim", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LightningServer is the server API for Lightning service.
 type LightningServer interface {
 	// lncli: `walletbalance`
@@ -14680,8 +14765,11 @@ type LightningServer interface {
 	//ZkInfo returns information about this zklnd node.
 	ZkInfo(context.Context, *ZkInfoRequest) (*ZkInfoResponse, error)
 	//* lncli: `listzkchannels`
-	//ZkInfo returns information about this zklnd node.
+	//ListZkChannels .
 	ListZkChannels(context.Context, *ListZkChannelsRequest) (*ListZkChannelsResponse, error)
+	//* lncli: `cust_claim`
+	//CustClaim spends customer's outputs to own wallet.
+	CustClaim(context.Context, *CustClaimRequest) (*CustClaimResponse, error)
 }
 
 func RegisterLightningServer(s *grpc.Server, srv LightningServer) {
@@ -15870,6 +15958,24 @@ func _Lightning_ListZkChannels_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Lightning_CustClaim_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CustClaimRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).CustClaim(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/CustClaim",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).CustClaim(ctx, req.(*CustClaimRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Lightning_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "lnrpc.Lightning",
 	HandlerType: (*LightningServer)(nil),
@@ -16081,6 +16187,10 @@ var _Lightning_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListZkChannels",
 			Handler:    _Lightning_ListZkChannels_Handler,
+		},
+		{
+			MethodName: "CustClaim",
+			Handler:    _Lightning_CustClaim_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

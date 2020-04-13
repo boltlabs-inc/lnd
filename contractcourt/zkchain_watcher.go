@@ -448,11 +448,12 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			return
 		}
 
-		fmt.Printf("Spend from escrow detected\n")
+		log.Debug("Spend from escrow detected")
 
 		escrowTxid := commitSpend.SpentOutPoint.Hash
 		commitTxBroadcast := commitSpend.SpendingTx
 		closeTxid := *commitSpend.SpenderTxHash
+		spendHeight := commitSpend.SpendingHeight
 
 		numOutputs := len(commitTxBroadcast.TxOut)
 
@@ -462,7 +463,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 		// merchCloseTx has one output.
 		case numOutputs < 2 && isMerch:
-			fmt.Printf("Merch close detected\n")
+			log.Debug("Merch close detected")
 
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
 
@@ -516,7 +517,16 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			// there is nothing more to do.
 			if !isMerch {
 
-				err := c.zkDispatchCustClose(escrowTxid, closeTxid, ClosePkScript, revLock, custClosePk, amount)
+				log.Debug("signCustClaimTx")
+				// save custClose details so that it can be claimed manually with cli command
+				err := c.storeCustClaimTx(escrowTxid.String(), closeTxid.String(), ClosePkScript, revLock, custClosePk, amount, spendHeight)
+				if err != nil {
+					log.Errorf("Unable to store CustClaimTx for channel %v ",
+						escrowTxid, err)
+				}
+
+				log.Debug("zkDispatchCustClose")
+				err = c.zkDispatchCustClose(escrowTxid, closeTxid, ClosePkScript, revLock, custClosePk, amount)
 				// custClose is not the latest state. The customer has attempted to
 				// close on a previous state, possibly a double spend.
 
@@ -598,6 +608,95 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 	case <-c.quit:
 		return
 	}
+}
+
+// storeCustClaimTx creates a signed custClaimTx for the given closeTx
+func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid string, closePkScript []byte,
+	revLock string, custClosePk string, amount int64, spendHeight int32) error {
+
+	// Start watching the channel in order to respond to breach Txs
+	// TEMPORARY CODE TO FLIP BYTES
+	escrowTxidBigEn := ""
+	for i := 0; i < len(escrowTxidLittleEn)/2; i++ {
+		escrowTxidBigEn = escrowTxidLittleEn[i*2:i*2+2] + escrowTxidBigEn
+	}
+
+	log.Debugf("storeCustClaimTx inputs: ", escrowTxidBigEn, closeTxid, closePkScript,
+		revLock, custClosePk, amount, spendHeight)
+
+	channelName := c.cfg.CustChannelName
+
+	// Load the current custState and channelState so that it can be retrieved
+	// later when it is needed to sign the claim tx.
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(channelName)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	var custState libzkchannels.CustState
+	custStateBytes, err := zkchanneldb.GetCustState(zkCustDB, channelName)
+	if err != err {
+		log.Error(err)
+		return err
+	}
+
+	err = json.Unmarshal(custStateBytes, &custState)
+	if err != err {
+		log.Error(err)
+		return err
+	}
+
+	var channelState libzkchannels.ChannelState
+	channelStateBytes, err := zkchanneldb.GetCustField(zkCustDB, channelName, "channelStateKey")
+	if err != err {
+		log.Error(err)
+		return err
+	}
+	err = json.Unmarshal(channelStateBytes, &channelState)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	err = zkCustDB.Close()
+
+	toSelfDelay := "05cf"
+
+	// TODO: Generate a fresh outputPk for the claimed outputs. For now this is just
+	// reusing the custClosePk
+	outputPk := custClosePk
+
+	signedCustClaimTx, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, uint32(0), custState.CustBalance, toSelfDelay, outputPk, custState.RevLock, custClosePk, custState)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	log.Debugf("signedCustClaimTx: %#v", signedCustClaimTx)
+
+	// open the zkchanneldb to load custState.
+	// use escrowTxid as the bucket name
+	bucketEscrowTxid := escrowTxidBigEn
+
+	zkCustClaimDB, err := zkchanneldb.OpenZkClaimBucket(bucketEscrowTxid)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	signedCustClaimTxBytes, err := json.Marshal(signedCustClaimTx)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	err = zkchanneldb.AddCustField(zkCustClaimDB, bucketEscrowTxid, signedCustClaimTxBytes, "signedCustClaimTxKey")
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	zkCustClaimDB.Close()
+
+	return nil
 }
 
 // toSelfAmount takes a transaction and returns the sum of all outputs that pay

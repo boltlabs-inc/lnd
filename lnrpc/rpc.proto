@@ -729,11 +729,20 @@ service Lightning {
     }
 
     /** lncli: `listzkchannels`
-    ZkInfo returns information about this zklnd node.
+    ListZkChannels .
     */
     rpc ListZkChannels (ListZkChannelsRequest) returns (ListZkChannelsResponse) {
         option (google.api.http) = {
             get: "/v1/balance/listzkchannels"
+        };
+    }
+
+    /** lncli: `cust_claim`
+    CustClaim spends customer's outputs to own wallet.
+    */
+    rpc CustClaim (CustClaimRequest) returns (CustClaimResponse) {
+        option (google.api.http) = {
+            get: "/v1/balance/custclaim"
         };
     }
     // ########### ln-mpc end ###########
@@ -3697,6 +3706,14 @@ message ListZkChannelsRequest {
 message ListZkChannelsResponse {
     /// List of merchant's zkchannels
     repeated ListZkChannelsInfo zk_channel = 1 [json_name = "zk_channel"];
+}
+
+
+message CustClaimRequest {
+    /// The escrow txid of the closed channel
+    string escrow_txid = 1 [json_name = "close_txid"];
+}
+message CustClaimResponse {
 }
 
 // ########### ln-mpc end ###########

@@ -319,6 +319,7 @@ func main() {
 		totalReceivedCommand,
 		zkInfoCommand,
 		listZkChannelsCommand,
+		custClaimCommand,
 	}
 
 	// Add any extra commands determined by build flags.

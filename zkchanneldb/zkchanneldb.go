@@ -94,6 +94,28 @@ func OpenZkChannelBucket(zkChannelName string) (*bolt.DB, error) {
 	return db, nil
 }
 
+// OpenZkClaimBucket opens or creates the bucket for a zkchannel
+func OpenZkClaimBucket(escrowTxid string) (*bolt.DB, error) {
+	BucketName := []byte(escrowTxid)
+
+	db, err := bolt.Open("zkclaim.db", 0600, nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not open db, %v", err)
+	}
+	err = db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists(BucketName)
+		if err != nil {
+			return fmt.Errorf("could not create customer claim bucket: %v", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not set up zk cust claim buckets, %v", err)
+	}
+	return db, nil
+}
+
 // AddMerchState adds merchState to the zkMerchDB
 func AddMerchState(db *bolt.DB, merchStateBytes []byte) error {
 

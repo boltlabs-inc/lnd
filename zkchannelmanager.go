@@ -22,6 +22,8 @@ import (
 	"github.com/lightningnetwork/lnd/zkchanneldb"
 )
 
+const ToSelfDelay = "05cf"
+
 type ZkFundingInfo struct {
 	fundingOut      wire.OutPoint
 	pkScript        []byte
@@ -39,11 +41,13 @@ type zkChannelManager struct {
 	WatchNewZkChannel func(contractcourt.ZkChainWatcherConfig) error
 }
 
-func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changeScriptPK string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
+func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changePubKey string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) {
 
-	channelToken, custState, err := libzkchannels.InitCustomer(fmt.Sprintf("\"%v\"", merchPubKey), custBal, merchBal, "cust", custStateSk, custPayoutSk)
+	zkchLog.Debug("Variables going into InitCustomer :=> ", merchPubKey, custBal, merchBal, "cust", custStateSk, custPayoutSk)
+
+	channelToken, custState, err := libzkchannels.InitCustomer(merchPubKey, custBal, merchBal, "cust", custStateSk, custPayoutSk)
 	if err != nil {
-		zkchLog.Error(err)
+		zkchLog.Error("InitCustomer", err)
 	}
 
 	zkchLog.Debug("Generated channelToken and custState")
@@ -56,11 +60,11 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxid_LE stri
 
 	changePkIsHash := true
 
-	zkchLog.Debug("Variables going into FormEscrowTx :=> ", custUtxoTxid_LE, index, inputSats, custBal, custInputSk, custPk, merchPk, changeScriptPK, changePkIsHash)
+	zkchLog.Debug("Variables going into FormEscrowTx :=> ", custUtxoTxid_LE, index, inputSats, custBal, custInputSk, custPk, merchPk, changePubKey, changePkIsHash)
 
-	signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxid_LE, index, inputSats, custBal, custInputSk, custPk, merchPk, changeScriptPK, changePkIsHash)
+	signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxid_LE, index, inputSats, custBal, custInputSk, custPk, merchPk, changePubKey, changePkIsHash)
 	if err != nil {
-		zkchLog.Error(err)
+		zkchLog.Error("FormEscrowTx: ", err)
 	}
 
 	zkchLog.Info("escrow txid => ", escrowTxid)
@@ -126,9 +130,6 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxid_LE stri
 
 func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p lnpeer.Peer) {
 
-	// NOTE: For now, toSelfDelay is hardcoded
-	toSelfDelay := "05cf"
-
 	zkchLog.Debug("Just received ZkEstablishOpen")
 
 	// // Convert variables received
@@ -146,7 +147,7 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 		zkchLog.Error(err)
 	}
 
-	toSelfDelayBytes, _ := json.Marshal(toSelfDelay)
+	toSelfDelayBytes, _ := json.Marshal(ToSelfDelay)
 	zkchanneldb.AddMerchField(zkMerchDB, toSelfDelayBytes, "toSelfDelayKey")
 
 	zkMerchDB.Close()
@@ -171,7 +172,7 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 
 	// Convert fields into bytes
 	merchClosePkBytes := []byte(merchClosePk)
-	toSelfDelayBytes = []byte(toSelfDelay)
+	toSelfDelayBytes = []byte(ToSelfDelay)
 	channelStateBytes, _ = json.Marshal(channelState)
 
 	zkEstablishAccept := lnwire.ZkEstablishAccept{
@@ -203,38 +204,62 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName)
-
+	if err != nil {
+		zkchLog.Error(err)
+	}
 	var custState libzkchannels.CustState
 	custStateBytes, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
+	if err != nil {
+		zkchLog.Error(err)
+	}
 	err = json.Unmarshal(custStateBytes, &custState)
 
 	var merchPk string
 	merchPkBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "merchPkKey")
+	if err != nil {
+		zkchLog.Error(err)
+	}
 	err = json.Unmarshal(merchPkBytes, &merchPk)
 
 	var escrowTxid string
 	escrowTxidBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "escrowTxidKey")
+	if err != nil {
+		zkchLog.Error(err)
+	}
 	err = json.Unmarshal(escrowTxidBytes, &escrowTxid)
 
 	var custBal int64
 	custBalBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "custBalKey")
+	if err != nil {
+		zkchLog.Error(err)
+	}
 	err = json.Unmarshal(custBalBytes, &custBal)
 
 	var merchBal int64
 	merchBalBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "merchBalKey")
+	if err != nil {
+		zkchLog.Error(err)
+	}
 	err = json.Unmarshal(merchBalBytes, &merchBal)
 
 	var escrowPrevout string
 	escrowPrevoutBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "escrowPrevoutKey")
+	if err != nil {
+		zkchLog.Error(err)
+	}
 	err = json.Unmarshal(escrowPrevoutBytes, &escrowPrevout)
 
 	zkCustDB.Close()
 
-	custSk := fmt.Sprintf("\"%v\"", custState.SkC)
+	custSk := fmt.Sprintf("%v", custState.SkC)
 	custPk := fmt.Sprintf("%v", custState.PkC)
 	custClosePk := fmt.Sprintf("%v", custState.PayoutPk)
 
+	zkchLog.Debugf("variables going into FormMerchCloseTx: %#v", escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay)
 	merchTxPreimage, err := libzkchannels.FormMerchCloseTx(escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay)
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
 	zkchLog.Debug("merch TxPreimage => ", merchTxPreimage)
 
@@ -480,6 +505,10 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 	zkCustDB.Close()
 
 	initCustState, initHash, err := libzkchannels.CustomerGetInitialState(custState)
+	if err != nil {
+		zkchLog.Error("CustomerGetInitialState", err)
+		return
+	}
 
 	initCustStateBytes, _ := json.Marshal(initCustState)
 	initHashBytes := []byte(initHash)
@@ -801,7 +830,7 @@ func (z *zkChannelManager) waitForFundingConfirmation(notifier chainntnfs.ChainN
 	// }
 
 	// Print escrowTxid and pkScript
-	zkchLog.Debugf("Waiting for confirmations for escrow txid: %v with pkScript %x", escrowTxid, pkScript)
+	zkchLog.Debugf("Waiting for confirmations for txid: %v with pkScript %x", escrowTxid, pkScript)
 
 	var txid chainhash.Hash
 	chainhash.Decode(&txid, escrowTxid)
@@ -821,7 +850,7 @@ func (z *zkChannelManager) waitForFundingConfirmation(notifier chainntnfs.ChainN
 		return
 	}
 
-	zkchLog.Infof("Waiting for funding tx (%v) to reach %v confirmations",
+	zkchLog.Infof("Waiting for tx (%v) to reach %v confirmations",
 		txid, numConfs)
 
 	var confDetails *chainntnfs.TxConfirmation
@@ -1724,7 +1753,7 @@ func ZkChannelBalance(zkChannelName string) (string, int64, int64, error) {
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
 	if err != nil {
-		zkchLog.Error(err)
+		zkchLog.Error("OpenZkChannelBucket: ", err)
 		return "", 0, 0, err
 	}
 
@@ -1732,7 +1761,7 @@ func ZkChannelBalance(zkChannelName string) (string, int64, int64, error) {
 	custStateBytes, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
 	err = json.Unmarshal(custStateBytes, &custState)
 	if err != nil {
-		zkchLog.Error(err)
+		zkchLog.Error("GetCustState: ", err)
 		return "", 0, 0, err
 	}
 
@@ -1742,16 +1771,20 @@ func ZkChannelBalance(zkChannelName string) (string, int64, int64, error) {
 	var escrowTxid string
 	escrowTxidBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "escrowTxidKey")
 	if err != nil {
-		zkchLog.Error(err)
+		zkchLog.Error("GetCustField: ", err)
 		return "", 0, 0, err
 	}
 	err = json.Unmarshal(escrowTxidBytes, &escrowTxid)
 	if err != nil {
-		zkchLog.Error(err)
+		zkchLog.Error("Unmarshal: ", err)
 		return "", 0, 0, err
 	}
 
 	err = zkCustDB.Close()
+	if err != nil {
+		zkchLog.Error("Close: ", err)
+		return "", 0, 0, err
+	}
 
 	return escrowTxid, localBalance, remoteBalance, err
 }
@@ -1905,4 +1938,71 @@ func StringInSlice(a string, list []string) bool {
 func ChannelExists(zkChannelName string) bool {
 	zkChannelList := zkchanneldb.Buckets("zkcust.db")
 	return StringInSlice(zkChannelName, zkChannelList)
+}
+
+// CustClaim sweeps a customer's output from a close tx.
+func (z *zkChannelManager) CustClaim(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, escrowTxid string) error {
+
+	zkchLog.Debugf("zkChannelManager CustClaim inputs: ", escrowTxid)
+
+	// open the zkchanneldb to load custState
+	zkCustDB, err := zkchanneldb.OpenZkClaimBucket(escrowTxid)
+	if err != nil {
+		zkchLog.Error("OpenZkChannelBucket: ", err)
+		return nil
+	}
+
+	var signedCustClaimTx string
+	signedCustClaimTxBytes, err := zkchanneldb.GetCustField(zkCustDB, escrowTxid, "signedCustClaimTxKey")
+	if err != nil {
+		zkchLog.Error("GetCustField: ", err)
+		return nil
+	}
+
+	err = json.Unmarshal(signedCustClaimTxBytes, &signedCustClaimTx)
+	if err != nil {
+		zkchLog.Error("Unmarshal signedCustClaimTx: ", err)
+		return nil
+	}
+
+	err = zkCustDB.Close()
+
+	zkchLog.Debugf("signedCustClaimTx: %#v", signedCustClaimTx)
+
+	// Broadcast escrow tx on chain
+	serializedTx, err := hex.DecodeString(signedCustClaimTx)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+
+	var msgTx wire.MsgTx
+	err = msgTx.Deserialize(bytes.NewReader(serializedTx))
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+
+	zkchLog.Info("Broadcasting merch close transaction")
+	err = wallet.PublishTransaction(&msgTx)
+	if err != nil {
+		zkchLog.Infof("Couldn't publish transaction: %v", err)
+		return err
+	}
+
+	// // Start watching for on-chain notifications of merchClose
+	// pkScript := msgTx.TxOut[0].PkScript
+
+	// zkchLog.Debugf("\nwaitForFundingWithTimeout\npkScript: %#x\n\n", pkScript)
+
+	// confChannel, err := z.waitForFundingWithTimeout(notifier, merchTxid2, pkScript)
+	// if err != nil {
+	// 	zkchLog.Infof("error waiting for funding "+
+	// 		"confirmation: %v", err)
+	// 	return err
+	// }
+
+	// zkchLog.Debugf("\n%#v\n", confChannel)
+	// zkchLog.Infof("\nMerch close transaction has 3 confirmations\n")
+	return nil
 }

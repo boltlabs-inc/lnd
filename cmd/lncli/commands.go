@@ -3639,4 +3639,53 @@ func listZkChannels(ctx *cli.Context) error {
 	return nil
 }
 
+var custClaimCommand = cli.Command{
+	Name:     "cust_claim",
+	Category: "ZkChannels",
+	Usage:    "Spend a customer's zkchannel closure output to own wallet.",
+	Description: `
+	Claim the output of a zkchannel closure by spending it to an address 
+	from this wallet. In future versions this process will be automatic.`,
+	ArgsUsage: "channel_name",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "escrowtxid",
+			Usage: "the txid (in big endian) of the channel to be closed",
+		},
+	},
+	Action: actionDecorator(custClaim),
+}
+
+func custClaim(ctx *cli.Context) error {
+	isCustomer, err := lnd.DetermineIfCust()
+	if err != nil {
+		return err
+	}
+	if !isCustomer {
+		return fmt.Errorf("This command doesn't work for merchants. " +
+			"Use merch_claim instead.")
+	}
+
+	if !ctx.IsSet("escrowtxid") {
+		return fmt.Errorf("Enter the escrow txid closed channel ")
+	}
+	escrowtxid := ctx.String("escrowtxid")
+
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	req := &lnrpc.CustClaimRequest{
+		EscrowTxid: escrowtxid,
+	}
+
+	lnid, err := client.CustClaim(ctxb, req)
+	if err != nil {
+		return err
+	}
+
+	printRespJSON(lnid)
+	return nil
+}
+
 // ########### ln-mpc end ###########

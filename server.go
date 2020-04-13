@@ -3587,7 +3587,7 @@ func newSweepPkScriptGen(
 // OpenZkChannel sends the request to establish a zkchannel with a merchant.
 //
 // ########### ln-mpc start ###########
-func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changeScriptPK string, pubKey *btcec.PublicKey, merchPubKey string, zkChannelName string, custBalance int64, merchBalance int64) error {
+func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changePubKey string, pubKey *btcec.PublicKey, merchPubKey string, zkChannelName string, custBalance int64, merchBalance int64) error {
 	pubBytes := pubKey.SerializeCompressed()
 	pubStr := string(pubBytes)
 
@@ -3603,7 +3603,7 @@ func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index ui
 	}
 
 	// peer.server.zkchannelMgr.zkChannelName = zkChannelName
-	peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changeScriptPK, merchPubKey, zkChannelName, custBalance, merchBalance, peer)
+	peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, merchPubKey, zkChannelName, custBalance, merchBalance, peer)
 
 	return nil
 }
@@ -3654,9 +3654,13 @@ func (s *server) MerchClose(EscrowTxid string) error {
 }
 
 // ZkChannelBalance returns a list of zkchannels and their balances to the customer.
-func (s *server) ZkChannelBalance(zkChannelName string) (string, int64, int64) {
-	escrowTxid, custBalance, merchBalance, _ := ZkChannelBalance(zkChannelName)
-	return escrowTxid, custBalance, merchBalance
+func (s *server) ZkChannelBalance(zkChannelName string) (string, int64, int64, error) {
+	escrowTxid, custBalance, merchBalance, err := ZkChannelBalance(zkChannelName)
+	if err != nil {
+		zkchLog.Error("ZkChannelBalance: ", err)
+		return "", 0, 0, err
+	}
+	return escrowTxid, custBalance, merchBalance, nil
 }
 
 // TotalReceived sends the request to server to close the connection with peer
@@ -3676,6 +3680,16 @@ func (s *server) ZkInfo() string {
 func (s *server) ListZkChannels() ListOfZkChannels {
 	ListOfZkChannels, _ := ListZkChannels()
 	return ListOfZkChannels
+}
+
+// CustClaim sweeps a customers output from a close tx.
+func (s *server) CustClaim(escrowtxid string) error {
+	zkchLog.Infof("CustClaim initiated")
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.zkchannelMgr.CustClaim(s.cc.wallet, s.cc.chainNotifier, escrowtxid)
 }
 
 // ########### ln-mpc end ###########
