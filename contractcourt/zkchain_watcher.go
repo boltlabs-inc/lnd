@@ -693,6 +693,16 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 		log.Error(err)
 		return err
 	}
+	spendHeightBytes, err := json.Marshal(spendHeight)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	err = zkchanneldb.AddCustField(zkCustClaimDB, bucketEscrowTxid, spendHeightBytes, "spendHeightKey")
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 
 	zkCustClaimDB.Close()
 
