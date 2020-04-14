@@ -12144,10 +12144,8 @@ func (m *ChannelToken) GetMerchTxid() string {
 type ListZkChannelsInfo struct {
 	/// The channel ID
 	ZkChannelId string `protobuf:"bytes,1,opt,name=zk_channel_id,json=channel_id,proto3" json:"zk_channel_id,omitempty"`
-	/// The channel escrow txid
-	EscrowTxid string `protobuf:"bytes,2,opt,name=escrow_txid,proto3" json:"escrow_txid,omitempty"`
 	/// The channel Token
-	ChannelToken         *ChannelToken `protobuf:"bytes,3,opt,name=channel_token,proto3" json:"channel_token,omitempty"`
+	ChannelToken         *ChannelToken `protobuf:"bytes,2,opt,name=channel_token,proto3" json:"channel_token,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
 	XXX_unrecognized     []byte        `json:"-"`
 	XXX_sizecache        int32         `json:"-"`
@@ -12181,13 +12179,6 @@ var xxx_messageInfo_ListZkChannelsInfo proto.InternalMessageInfo
 func (m *ListZkChannelsInfo) GetZkChannelId() string {
 	if m != nil {
 		return m.ZkChannelId
-	}
-	return ""
-}
-
-func (m *ListZkChannelsInfo) GetEscrowTxid() string {
-	if m != nil {
-		return m.EscrowTxid
 	}
 	return ""
 }

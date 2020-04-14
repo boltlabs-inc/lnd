@@ -3705,10 +3705,8 @@ message ChannelToken {
 message ListZkChannelsInfo {
     /// The channel ID
     string zk_channel_id = 1 [json_name = "channel_id"];
-    /// The channel escrow txid
-    string escrow_txid = 2 [json_name = "escrow_txid"];
     /// The channel Token
-    ChannelToken channel_token = 3 [json_name = "channel_token"];
+    ChannelToken channel_token = 2 [json_name = "channel_token"];
 }
 
 
