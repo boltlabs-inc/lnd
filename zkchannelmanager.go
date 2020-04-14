@@ -627,19 +627,25 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 	}
 
 	// Wait for on chain confirmations of escrow transaction
+	z.wg.Add(1)
+	go z.advanceMerchantStateAfterConfirmations(notifier, escrowTxid, pkScript)
+
+}
+
+func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chainntnfs.ChainNotifier, escrowTxid string, pkScript []byte) {
 
 	zkchLog.Debugf("waitForFundingWithTimeout\npkScript: %#x\n", pkScript)
 
-	// ZKCHANNEL TODO: REFACTOR TO WRAP waitForFundingWithTimeout IN GO ROUTINE
-	// AND PASS REFERENCE TO A CHANNELDB
 	confChannel, err := z.waitForFundingWithTimeout(notifier, escrowTxid, pkScript)
 	if err != nil {
 		zkchLog.Infof("error waiting for funding "+
 			"confirmation: %v", err)
 	}
 
-	zkchLog.Debugf("%#v\n", confChannel)
+	zkchLog.Debugf("confChannel: %#v\n", confChannel)
 	zkchLog.Infof("\n\nEscrow transaction has 3 confirmations\n\n")
+
+	// TODO: Update status of channel state from pending to confirmed.
 
 }
 
@@ -713,8 +719,13 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 
 	pkScript := msgTx.TxOut[0].PkScript
 
-	// ZKCHANNEL TODO: REFACTOR TO WRAP waitForFundingWithTimeout IN GO ROUTINE
-	// AND PASS REFERENCE TO A CHANNELDB
+	z.wg.Add(1)
+	go z.advanceCustomerStateAfterConfirmations(notifier, escrowTxid, pkScript, zkChannelName, p)
+
+}
+
+func (z *zkChannelManager) advanceCustomerStateAfterConfirmations(notifier chainntnfs.ChainNotifier, escrowTxid string, pkScript []byte, zkChannelName string, p lnpeer.Peer) {
+
 	// Wait for confirmations
 	confChannel, err := z.waitForFundingWithTimeout(notifier, escrowTxid, pkScript)
 	if err != nil {
@@ -730,16 +741,16 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 		FundingLocked: fundingLockedBytes,
 	}
 
-	closeInitiated := false
-
 	// Add a flag to zkchannelsdb to say that closeChannel has not been initiated.
 	// This is used to prevent another payment being made
-	zkCustDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	closeInitiated := false
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
 	closeInitiatedBytes, _ := json.Marshal(closeInitiated)
 	zkchanneldb.AddCustField(zkCustDB, zkChannelName, closeInitiatedBytes, "closeInitiatedKey")
 	zkCustDB.Close()
 
 	p.SendMessage(false, &zkEstablishFundingLocked)
+
 }
 
 // waitForFundingWithTimeout is a wrapper around waitForFundingConfirmation and
@@ -966,6 +977,9 @@ func (z *zkChannelManager) waitForTimeout(notifier chainntnfs.ChainNotifier,
 func (z *zkChannelManager) processZkEstablishFundingLocked(msg *lnwire.ZkEstablishFundingLocked, p lnpeer.Peer) {
 
 	zkchLog.Debug("Just received FundingLocked: ", msg.FundingLocked)
+
+	// TODO: Check (local) channel status has gone from pending to confirmed.
+	// Use same channel state from advanceStateAfterConfirmations.
 
 	// TEMPORARY DUMMY MESSAGE
 	fundingConfirmedBytes := []byte("Funding Confirmed")
