@@ -3691,13 +3691,24 @@ message ZkInfoResponse {
     string merch_pubkey = 1 [json_name = "merch_pubkey"];
 }
 
+message ChannelToken {
+    /// Public Key Merchant
+    string pk_m = 1 [json_name = "pk_m"];
+    /// Public Key Customer
+    string pk_c = 2 [json_name = "pk_c"];
+    /// Escrow transaction ID
+    string escrow_txid = 3 [json_name = "escrow_txid"];
+    /// Merchant transaction ID
+    string merch_txid = 4 [json_name = "merch_txid"];
+}
+
 message ListZkChannelsInfo {
     /// The channel ID
     string zk_channel_id = 1 [json_name = "channel_id"];
     /// The channel escrow txid
     string escrow_txid = 2 [json_name = "escrow_txid"];
     /// The channel Token
-    string channel_token = 3 [json_name = "channel_token"];
+    ChannelToken channel_token = 3 [json_name = "channel_token"];
 }
 
 

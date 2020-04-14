@@ -3677,9 +3677,8 @@ func (s *server) ZkInfo() string {
 }
 
 // ListZkChannels returns the list of zkChannels for the merchant.
-func (s *server) ListZkChannels() ListOfZkChannels {
-	ListOfZkChannels, _ := ListZkChannels()
-	return ListOfZkChannels
+func (s *server) ListZkChannels() (ListOfZkChannels, error) {
+	return ListZkChannels()
 }
 
 // CustClaim sweeps a customers output from a close tx.

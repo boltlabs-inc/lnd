@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -550,8 +551,6 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 	pkScriptBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "pkScriptKey")
 	err = json.Unmarshal(pkScriptBytes, &pkScript)
 
-	zkMerchDB.Close()
-
 	isOk, merchState, err := libzkchannels.MerchantValidateInitialState(channelToken, initCustState, initHash, merchState)
 	if err != nil {
 		zkchLog.Error(err)
@@ -564,11 +563,27 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 		zkchLog.Info("Customer's initial state is invalid")
 	}
 
-	// Update merchState in zkchannelsdb
-	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
-
 	merchStateBytes, _ = json.Marshal(merchState)
 	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+
+	zkChannelsBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "zkChannelsKey")
+	zkchannels := make(map[string]libzkchannels.ChannelToken)
+	if zkChannelsBytes != nil && len(zkChannelsBytes) != 0 {
+		err = json.Unmarshal(zkChannelsBytes, &zkchannels)
+		if err != nil {
+			zkchLog.Error(err)
+		}
+	}
+
+	channelID, err := libzkchannels.GetChannelId(channelToken)
+	zkchLog.Debugf("ChannelID: %v", channelID)
+	zkchannels[channelID] = channelToken
+	zkChannelsBytes, err = json.Marshal(zkchannels)
+	zkchLog.Debug(string(zkChannelsBytes))
+	err = zkchanneldb.AddMerchField(zkMerchDB, zkChannelsBytes, "zkChannelsKey")
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
 	zkMerchDB.Close()
 
@@ -1010,13 +1025,8 @@ func (z *zkChannelManager) processZkEstablishFundingConfirmed(msg *lnwire.ZkEsta
 
 	zkchLog.Debug("ActivateCustomer, channelToken =>:", channelToken)
 
-	zkCustDB.Close()
-
 	state, custState, err := libzkchannels.ActivateCustomer(custState)
 	zkchLog.Debug("ActivateCustomer, state =>:", state)
-
-	// Add variables to zkchannelsdb
-	zkCustDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName)
 
 	custStateBytes, _ = json.Marshal(custState)
 	zkchanneldb.AddCustState(zkCustDB, zkChannelName, custStateBytes)
@@ -1054,12 +1064,7 @@ func (z *zkChannelManager) processZkEstablishCustActivated(msg *lnwire.ZkEstabli
 	merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
 	err = json.Unmarshal(merchStateBytes, &merchState)
 
-	zkMerchDB.Close()
-
 	payToken0, merchState, err := libzkchannels.ActivateMerchant(channelToken, state, merchState)
-
-	// Add variables to zkchannelsdb
-	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
 
 	merchStateBytes, _ = json.Marshal(merchState)
 	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
@@ -1858,7 +1863,7 @@ func ZkInfo() (string, error) {
 
 type ListOfZkChannels struct {
 	channelID    []string
-	channelToken []string
+	channelToken []libzkchannels.ChannelToken
 }
 
 // ListZkChannels returns a list of the merchant's zkchannels
@@ -1882,13 +1887,41 @@ func ListZkChannels() (ListOfZkChannels, error) {
 		return ListOfZkChannels{}, err
 	}
 
+	if merchState.CloseTxMap == nil {
+		return ListOfZkChannels{}, errors.New("Something went wrong retrieving Merchant State")
+	}
+
+	zkChannelsBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "zkChannelsKey")
+	zkchLog.Debug(string(zkChannelsBytes))
+	if string(zkChannelsBytes) == "" {
+		return ListOfZkChannels{}, nil
+	}
+	if err != nil {
+		zkchLog.Error(err)
+		return ListOfZkChannels{}, err
+	}
+	var zkChannels map[string]libzkchannels.ChannelToken
+	err = json.Unmarshal(zkChannelsBytes, &zkChannels)
+	if err != nil {
+		zkchLog.Debug(string(zkChannelsBytes))
+		zkchLog.Error(err)
+		return ListOfZkChannels{}, err
+	}
+
+	var channelIDs []string
+	var channelTokens []libzkchannels.ChannelToken
+	for channelID, channelToken := range zkChannels {
+		channelIDs = append(channelIDs, channelID)
+		channelTokens = append(channelTokens, channelToken)
+	}
+
+	ListOfZkChannels := ListOfZkChannels{
+		channelIDs,
+		channelTokens,
+	}
+
 	err = zkMerchDB.Close()
 
-	// TODO: Fill in ListOfZkChannels
-	ListOfZkChannels := ListOfZkChannels{
-		nil,
-		nil,
-	}
 	return ListOfZkChannels, err
 }
 

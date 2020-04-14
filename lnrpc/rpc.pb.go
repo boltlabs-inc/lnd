@@ -12074,23 +12074,90 @@ func (m *ZkInfoResponse) GetMerchPubkey() string {
 	return ""
 }
 
+type ChannelToken struct {
+	/// Public Key Merchant
+	PkM string `protobuf:"bytes,1,opt,name=pk_m,proto3" json:"pk_m,omitempty"`
+	/// Public Key Customer
+	PkC string `protobuf:"bytes,2,opt,name=pk_c,proto3" json:"pk_c,omitempty"`
+	/// Escrow transaction ID
+	EscrowTxid string `protobuf:"bytes,3,opt,name=escrow_txid,proto3" json:"escrow_txid,omitempty"`
+	/// Merchant transaction ID
+	MerchTxid            string   `protobuf:"bytes,4,opt,name=merch_txid,proto3" json:"merch_txid,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ChannelToken) Reset()         { *m = ChannelToken{} }
+func (m *ChannelToken) String() string { return proto.CompactTextString(m) }
+func (*ChannelToken) ProtoMessage()    {}
+func (*ChannelToken) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{163}
+}
+
+func (m *ChannelToken) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ChannelToken.Unmarshal(m, b)
+}
+func (m *ChannelToken) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ChannelToken.Marshal(b, m, deterministic)
+}
+func (m *ChannelToken) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ChannelToken.Merge(m, src)
+}
+func (m *ChannelToken) XXX_Size() int {
+	return xxx_messageInfo_ChannelToken.Size(m)
+}
+func (m *ChannelToken) XXX_DiscardUnknown() {
+	xxx_messageInfo_ChannelToken.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ChannelToken proto.InternalMessageInfo
+
+func (m *ChannelToken) GetPkM() string {
+	if m != nil {
+		return m.PkM
+	}
+	return ""
+}
+
+func (m *ChannelToken) GetPkC() string {
+	if m != nil {
+		return m.PkC
+	}
+	return ""
+}
+
+func (m *ChannelToken) GetEscrowTxid() string {
+	if m != nil {
+		return m.EscrowTxid
+	}
+	return ""
+}
+
+func (m *ChannelToken) GetMerchTxid() string {
+	if m != nil {
+		return m.MerchTxid
+	}
+	return ""
+}
+
 type ListZkChannelsInfo struct {
 	/// The channel ID
 	ZkChannelId string `protobuf:"bytes,1,opt,name=zk_channel_id,json=channel_id,proto3" json:"zk_channel_id,omitempty"`
 	/// The channel escrow txid
 	EscrowTxid string `protobuf:"bytes,2,opt,name=escrow_txid,proto3" json:"escrow_txid,omitempty"`
 	/// The channel Token
-	ChannelToken         string   `protobuf:"bytes,3,opt,name=channel_token,proto3" json:"channel_token,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	ChannelToken         *ChannelToken `protobuf:"bytes,3,opt,name=channel_token,proto3" json:"channel_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
+	XXX_unrecognized     []byte        `json:"-"`
+	XXX_sizecache        int32         `json:"-"`
 }
 
 func (m *ListZkChannelsInfo) Reset()         { *m = ListZkChannelsInfo{} }
 func (m *ListZkChannelsInfo) String() string { return proto.CompactTextString(m) }
 func (*ListZkChannelsInfo) ProtoMessage()    {}
 func (*ListZkChannelsInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{163}
+	return fileDescriptor_77a6da22d6a3feb1, []int{164}
 }
 
 func (m *ListZkChannelsInfo) XXX_Unmarshal(b []byte) error {
@@ -12125,11 +12192,11 @@ func (m *ListZkChannelsInfo) GetEscrowTxid() string {
 	return ""
 }
 
-func (m *ListZkChannelsInfo) GetChannelToken() string {
+func (m *ListZkChannelsInfo) GetChannelToken() *ChannelToken {
 	if m != nil {
 		return m.ChannelToken
 	}
-	return ""
+	return nil
 }
 
 type ListZkChannelsRequest struct {
@@ -12142,7 +12209,7 @@ func (m *ListZkChannelsRequest) Reset()         { *m = ListZkChannelsRequest{} }
 func (m *ListZkChannelsRequest) String() string { return proto.CompactTextString(m) }
 func (*ListZkChannelsRequest) ProtoMessage()    {}
 func (*ListZkChannelsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{164}
+	return fileDescriptor_77a6da22d6a3feb1, []int{165}
 }
 
 func (m *ListZkChannelsRequest) XXX_Unmarshal(b []byte) error {
@@ -12175,7 +12242,7 @@ func (m *ListZkChannelsResponse) Reset()         { *m = ListZkChannelsResponse{}
 func (m *ListZkChannelsResponse) String() string { return proto.CompactTextString(m) }
 func (*ListZkChannelsResponse) ProtoMessage()    {}
 func (*ListZkChannelsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{165}
+	return fileDescriptor_77a6da22d6a3feb1, []int{166}
 }
 
 func (m *ListZkChannelsResponse) XXX_Unmarshal(b []byte) error {
@@ -12215,7 +12282,7 @@ func (m *CustClaimRequest) Reset()         { *m = CustClaimRequest{} }
 func (m *CustClaimRequest) String() string { return proto.CompactTextString(m) }
 func (*CustClaimRequest) ProtoMessage()    {}
 func (*CustClaimRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{166}
+	return fileDescriptor_77a6da22d6a3feb1, []int{167}
 }
 
 func (m *CustClaimRequest) XXX_Unmarshal(b []byte) error {
@@ -12253,7 +12320,7 @@ func (m *CustClaimResponse) Reset()         { *m = CustClaimResponse{} }
 func (m *CustClaimResponse) String() string { return proto.CompactTextString(m) }
 func (*CustClaimResponse) ProtoMessage()    {}
 func (*CustClaimResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_77a6da22d6a3feb1, []int{167}
+	return fileDescriptor_77a6da22d6a3feb1, []int{168}
 }
 
 func (m *CustClaimResponse) XXX_Unmarshal(b []byte) error {
@@ -12472,6 +12539,7 @@ func init() {
 	proto.RegisterType((*TotalReceivedResponse)(nil), "lnrpc.TotalReceivedResponse")
 	proto.RegisterType((*ZkInfoRequest)(nil), "lnrpc.ZkInfoRequest")
 	proto.RegisterType((*ZkInfoResponse)(nil), "lnrpc.ZkInfoResponse")
+	proto.RegisterType((*ChannelToken)(nil), "lnrpc.ChannelToken")
 	proto.RegisterType((*ListZkChannelsInfo)(nil), "lnrpc.ListZkChannelsInfo")
 	proto.RegisterType((*ListZkChannelsRequest)(nil), "lnrpc.ListZkChannelsRequest")
 	proto.RegisterType((*ListZkChannelsResponse)(nil), "lnrpc.ListZkChannelsResponse")
