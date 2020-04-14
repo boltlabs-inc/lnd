@@ -153,7 +153,7 @@ Here is an example `lnd.conf` that can save us from re-specifying a bunch of com
 Now, when we start nodes, we only have to type
 
     alice$ lnd --rpclisten=localhost:10001 --listen=localhost:10011 --restlisten=localhost:8001
-    bob$ lnd --rpclisten=localhost:10002 --listen=localhost:10012 --restlisten=localhost:8002
+    bob$ lnd --rpclisten=localhost:10002 --listen=localhost:10012 --restlisten=localhost:8002 --zkmerchant
 
 etc.
 
