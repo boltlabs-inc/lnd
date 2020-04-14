@@ -146,11 +146,6 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 		zkchLog.Error(err)
 	}
 
-	zkMerchDB.Close()
-
-	// open the zkchanneldb to load merchState and channelState
-	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
-
 	var merchState libzkchannels.MerchState
 	merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
 	err = json.Unmarshal(merchStateBytes, &merchState)
@@ -331,8 +326,6 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	channelStateBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "channelStateKey")
 	err = json.Unmarshal(channelStateBytes, &channelState)
 
-	zkMerchDB.Close()
-
 	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
 
 	isOk, merchTxid, merchPrevout, merchState, err := libzkchannels.MerchantVerifyMerchCloseTx(escrowTxid, custPk, custBal, merchBal, toSelfDelay, custSig, merchState)
@@ -340,13 +333,8 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 		zkchLog.Error(err)
 	}
 
-	// Add update merchState in db
-	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
-
 	merchStateBytes, _ = json.Marshal(merchState)
 	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
-
-	zkMerchDB.Close()
 
 	switch isOk {
 	case true:
@@ -410,9 +398,6 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 
 	zkchLog.Debugf("multisigScript: %#x\n", multisigScript)
 	zkchLog.Debugf("pkScript: %#x\n", pkScript)
-
-	// Update merchState in zkMerchDB
-	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
 
 	escrowTxidBytes, _ := json.Marshal(escrowTxid)
 	zkchanneldb.AddMerchField(zkMerchDB, escrowTxidBytes, "escrowTxidKey")
@@ -1190,15 +1175,10 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 	channelStateBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "channelStateKey")
 	err = json.Unmarshal(channelStateBytes, &channelState)
 
-	zkMerchDB.Close()
-
 	payTokenMaskCom, merchState, err := libzkchannels.PreparePaymentMerchant(channelState, stateNonce, revLockCom, amount, merchState)
 	if err != nil {
 		zkchLog.Error(err)
 	}
-
-	// Add variables to zkchannelsdb
-	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
 
 	merchStateBytes, _ = json.Marshal(merchState)
 	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
@@ -1332,8 +1312,6 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	totalReceivedBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "totalReceivedKey")
 	err = json.Unmarshal(totalReceivedBytes, &totalReceived)
 
-	zkMerchDB.Close()
-
 	zkchLog.Debug("channelState MerchPayOutPk => ", *channelState.MerchPayOutPk)
 	zkchLog.Debug("channelState MerchDisputePk => ", *channelState.MerchDisputePk)
 	zkchLog.Debug("channelState MerchStatePkM => ", *merchState.PkM)
@@ -1350,9 +1328,6 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 
 	// TODO: Move this until after previous state has been revoked
 	totalReceived += amount
-
-	// Update merchState in zkMerchDB
-	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
 
 	merchStateBytes, _ = json.Marshal(merchState)
 	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
@@ -1491,15 +1466,10 @@ func (z *zkChannelManager) processZkPayRevoke(msg *lnwire.ZkPayRevoke, p lnpeer.
 	merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
 	err = json.Unmarshal(merchStateBytes, &merchState)
 
-	zkMerchDB.Close()
-
 	payTokenMask, payTokenMaskR, merchState, err := libzkchannels.PayValidateRevLockMerchant(revState, merchState)
 	if err != nil {
 		zkchLog.Error(err)
 	}
-
-	// Update merchState in zkMerchDB
-	zkMerchDB, err = zkchanneldb.SetupZkMerchDB()
 
 	merchStateBytes, _ = json.Marshal(merchState)
 	zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
