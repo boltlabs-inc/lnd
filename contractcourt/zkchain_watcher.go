@@ -661,7 +661,7 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 
 	err = zkCustDB.Close()
 
-	toSelfDelay := "05cf"
+	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
 
 	// TODO: Generate a fresh outputPk for the claimed outputs. For now this is just
 	// reusing the custClosePk

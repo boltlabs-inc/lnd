@@ -235,7 +235,10 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 
 				dbUrl := "redis://127.0.0.1/"
 
-				channelState, err := libzkchannels.ChannelSetup("channel", false)
+				// TODO: Make toSelfDelay an input argument
+				toSelfDelay := uint16(1487)
+
+				channelState, err := libzkchannels.ChannelSetup("channel", toSelfDelay, false)
 				zkchLog.Debugf("libzkchannels.ChannelSetup done")
 
 				channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")

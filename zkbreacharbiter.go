@@ -521,8 +521,6 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 
 	breachTxid := breachInfo.CloseTxid.String()
 	index := uint32(0)
-	// TODO: Read toSelfDelay from merchDB
-	toSelfDelay := "05cf"
 	// TODO: Generate outputPk from merchant's wallet
 	outputPk := "03df51984d6b8b8b1cc693e239491f77a36c9e9dfe4a486e9972a18e03610a0d22"
 	revLock := breachInfo.RevLock
@@ -532,14 +530,39 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 
 	// open the zkchanneldb to load merchState and channelState
 	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
 	var merchState libzkchannels.MerchState
 	merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
 	err = json.Unmarshal(merchStateBytes, &merchState)
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	var channelState libzkchannels.ChannelState
+	channelStateBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "channelStatekey")
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	err = json.Unmarshal(channelStateBytes, &channelState)
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
 	zkMerchDB.Close()
-
 	zkbaLog.Debugf("merchState %#v:", merchState)
+
+	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
 	// with all the info needed, create and sign the Dispute/Justice Tx.
 	finalTxStr, err := libzkchannels.MerchantSignDisputeTx(breachTxid, index, amount, toSelfDelay, outputPk,
@@ -636,17 +659,6 @@ func (b *zkBreachArbiter) exactZkCloseMerch(confChan *chainntnfs.ConfirmationEve
 	}
 
 	zkbaLog.Debugf("Merch Close transaction %v has been confirmed. ", breachInfo.CloseTxid)
-
-	// breachTxid := breachInfo.CloseTxid.String()
-	// index := uint32(0)
-	// // TODO: Read toSelfDelay from merchDB
-	// toSelfDelay := "05cf"
-	// // TODO: Generate outputPk from merchant's wallet
-	// outputPk := "03df51984d6b8b8b1cc693e239491f77a36c9e9dfe4a486e9972a18e03610a0d22"
-	// revLock := breachInfo.RevLock
-	// revSecret := breachInfo.RevSecret
-	// custClosePk := breachInfo.CustClosePk
-	// amount := breachInfo.Amount
 
 	closeFromEscrow := false
 	closeMerchTx, _, err := GetSignedCustCloseTxs(breachInfo.CustChannelName, closeFromEscrow)

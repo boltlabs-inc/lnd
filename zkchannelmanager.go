@@ -22,8 +22,6 @@ import (
 	"github.com/lightningnetwork/lnd/zkchanneldb"
 )
 
-const ToSelfDelay = "05cf"
-
 type ZkFundingInfo struct {
 	fundingOut      wire.OutPoint
 	pkScript        []byte
@@ -147,9 +145,6 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 		zkchLog.Error(err)
 	}
 
-	toSelfDelayBytes, _ := json.Marshal(ToSelfDelay)
-	zkchanneldb.AddMerchField(zkMerchDB, toSelfDelayBytes, "toSelfDelayKey")
-
 	zkMerchDB.Close()
 
 	// open the zkchanneldb to load merchState and channelState
@@ -169,10 +164,14 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 	zkchLog.Debug("channelState MerchDisputePk => ", *channelState.MerchDisputePk)
 
 	merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
+	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
 	// Convert fields into bytes
 	merchClosePkBytes := []byte(merchClosePk)
-	toSelfDelayBytes = []byte(ToSelfDelay)
+	toSelfDelayBytes := []byte(toSelfDelay)
 	channelStateBytes, _ = json.Marshal(channelState)
 
 	zkEstablishAccept := lnwire.ZkEstablishAccept{
@@ -327,11 +326,13 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
 	err = json.Unmarshal(merchStateBytes, &merchState)
 
-	var toSelfDelay string
-	toSelfDelayBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "toSelfDelayKey")
-	err = json.Unmarshal(toSelfDelayBytes, &toSelfDelay)
+	var channelState libzkchannels.ChannelState
+	channelStateBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "channelStateKey")
+	err = json.Unmarshal(channelStateBytes, &channelState)
 
 	zkMerchDB.Close()
+
+	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
 
 	isOk, merchTxid, merchPrevout, merchState, err := libzkchannels.MerchantVerifyMerchCloseTx(escrowTxid, custPk, custBal, merchBal, toSelfDelay, custSig, merchState)
 	if err != nil {

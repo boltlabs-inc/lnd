@@ -70,3 +70,4 @@ coverage.txt
 go.mod
 go.sum
 libzkchannels/
+make/
