@@ -1,7 +1,9 @@
 package zkchanneldb
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/lightningnetwork/lnd/libzkchannels"
 	"log"
 	"os"
 
@@ -117,9 +119,12 @@ func OpenZkClaimBucket(escrowTxid string) (*bolt.DB, error) {
 }
 
 // AddMerchState adds merchState to the zkMerchDB
-func AddMerchState(db *bolt.DB, merchStateBytes []byte) error {
-
-	err := db.Update(func(tx *bolt.Tx) error {
+func AddMerchState(db *bolt.DB, merchState libzkchannels.MerchState) error {
+	merchStateBytes, err := json.Marshal(merchState)
+	if err != nil {
+		return err
+	}
+	err = db.Update(func(tx *bolt.Tx) error {
 		err := tx.Bucket(MerchBucket).Put([]byte("merchStateKey"), merchStateBytes)
 		if err != nil {
 			return fmt.Errorf("could not insert entry: %v", err)
@@ -131,10 +136,14 @@ func AddMerchState(db *bolt.DB, merchStateBytes []byte) error {
 }
 
 // AddCustState adds custState to the zkCustDB
-func AddCustState(db *bolt.DB, zkChannelName string, custStateBytes []byte) error {
+func AddCustState(db *bolt.DB, zkChannelName string, custState libzkchannels.CustState) error {
+	custStateBytes, err := json.Marshal(custState)
+	if err != nil {
+		return err
+	}
 	BucketName := []byte(zkChannelName)
 
-	err := db.Update(func(tx *bolt.Tx) error {
+	err = db.Update(func(tx *bolt.Tx) error {
 		err := tx.Bucket(BucketName).Put([]byte("custStateKey"), custStateBytes)
 		if err != nil {
 			return fmt.Errorf("could not insert entry: %v", err)
@@ -160,10 +169,14 @@ func AddMerchField(db *bolt.DB, fieldBytes []byte, fieldName string) error {
 }
 
 // AddCustField adds arbitrary field to the zkCustDB
-func AddCustField(db *bolt.DB, zkChannelName string, fieldBytes []byte, fieldName string) error {
+func AddCustField(db *bolt.DB, zkChannelName string, field interface{}, fieldName string) error {
+	fieldBytes, err := json.Marshal(field)
+	if err != nil {
+		return err
+	}
 	BucketName := []byte(zkChannelName)
 
-	err := db.Update(func(tx *bolt.Tx) error {
+	err = db.Update(func(tx *bolt.Tx) error {
 		err := tx.Bucket(BucketName).Put([]byte(fieldName), fieldBytes)
 		if err != nil {
 			return fmt.Errorf("could not insert entry: %v", err)
@@ -175,7 +188,7 @@ func AddCustField(db *bolt.DB, zkChannelName string, fieldBytes []byte, fieldNam
 }
 
 // GetCustState custState from zkCustDB
-func GetCustState(db *bolt.DB, zkChannelName string) ([]byte, error) {
+func GetCustState(db *bolt.DB, zkChannelName string) (libzkchannels.CustState, error) {
 	BucketName := []byte(zkChannelName)
 	var fieldBytes []byte
 	err := db.View(func(tx *bolt.Tx) error {
@@ -187,11 +200,13 @@ func GetCustState(db *bolt.DB, zkChannelName string) ([]byte, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return fieldBytes, err
+	var custState libzkchannels.CustState
+	err = json.Unmarshal(fieldBytes, &custState)
+	return custState, err
 }
 
 // GetMerchState gets merchState from zkMerchDB
-func GetMerchState(db *bolt.DB) ([]byte, error) {
+func GetMerchState(db *bolt.DB) (libzkchannels.MerchState, error) {
 
 	var fieldBytes []byte
 	err := db.View(func(tx *bolt.Tx) error {
@@ -203,7 +218,9 @@ func GetMerchState(db *bolt.DB) ([]byte, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return fieldBytes, err
+	var merchState libzkchannels.MerchState
+	err = json.Unmarshal(fieldBytes, &merchState)
+	return merchState, err
 }
 
 // GetField gets a field from DB (works for zkCustDB and zkMerchDB)

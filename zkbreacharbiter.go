@@ -532,28 +532,26 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
 	if err != nil {
 		zkchLog.Error(err)
+		return
 	}
 
-	var merchState libzkchannels.MerchState
-	merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
+	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
 	if err != nil {
 		zkchLog.Error(err)
-	}
-
-	err = json.Unmarshal(merchStateBytes, &merchState)
-	if err != nil {
-		zkchLog.Error(err)
+		return
 	}
 
 	var channelState libzkchannels.ChannelState
 	channelStateBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "channelStatekey")
 	if err != nil {
 		zkchLog.Error(err)
+		return
 	}
 
 	err = json.Unmarshal(channelStateBytes, &channelState)
 	if err != nil {
 		zkchLog.Error(err)
+		return
 	}
 
 	zkMerchDB.Close()
@@ -562,6 +560,7 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
 	if err != nil {
 		zkchLog.Error(err)
+		return
 	}
 
 	// with all the info needed, create and sign the Dispute/Justice Tx.
@@ -577,12 +576,14 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	finalTxBytes, err := hex.DecodeString(finalTxStr)
 	if err != nil {
 		zkchLog.Error(err)
+		return
 	}
 
 	var finalTx wire.MsgTx
 	err = finalTx.Deserialize(bytes.NewReader(finalTxBytes))
 	if err != nil {
 		zkchLog.Error(err)
+		return
 	}
 
 	zkchLog.Debugf("Broadcasting dispute Tx: %#v\n", finalTx)
@@ -590,6 +591,7 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	err = b.cfg.PublishTransaction(&finalTx)
 	if err != nil {
 		zkchLog.Error(err)
+		return
 	}
 
 	// As a conclusionary step, we register for a notification to be

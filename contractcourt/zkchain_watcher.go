@@ -555,9 +555,11 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 				// open the zkchanneldb to load merchState and channelState
 				zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
-				var merchState libzkchannels.MerchState
-				merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
-				err = json.Unmarshal(merchStateBytes, &merchState)
+				merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
+				if err != nil {
+					log.Error(err)
+					return
+				}
 				zkMerchDB.Close()
 
 				isOldRevLock, revSecret, err := libzkchannels.MerchantCheckRevLock(revLock, merchState)
@@ -649,15 +651,8 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 		return err
 	}
 
-	var merchState libzkchannels.MerchState
-	merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
-	if err != err {
-		log.Error(err)
-		return err
-	}
-
-	err = json.Unmarshal(merchStateBytes, &merchState)
-	if err != err {
+	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
+	if err != nil {
 		log.Error(err)
 		return err
 	}
@@ -705,22 +700,12 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 		log.Error(err)
 		return err
 	}
-	signedMerchClaimTxBytes, err := json.Marshal(signedMerchClaimTx)
+	err = zkchanneldb.AddCustField(zkMerchClaimDB, bucketEscrowTxid, signedMerchClaimTx, "signedMerchClaimTxKey")
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	err = zkchanneldb.AddCustField(zkMerchClaimDB, bucketEscrowTxid, signedMerchClaimTxBytes, "signedMerchClaimTxKey")
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	spendHeightBytes, err := json.Marshal(spendHeight)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	err = zkchanneldb.AddCustField(zkMerchClaimDB, bucketEscrowTxid, spendHeightBytes, "spendHeightKey")
+	err = zkchanneldb.AddCustField(zkMerchClaimDB, bucketEscrowTxid, spendHeight, "spendHeightKey")
 	if err != nil {
 		log.Error(err)
 		return err
@@ -755,15 +740,8 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 		return err
 	}
 
-	var custState libzkchannels.CustState
-	custStateBytes, err := zkchanneldb.GetCustState(zkCustDB, channelName)
-	if err != err {
-		log.Error(err)
-		return err
-	}
-
-	err = json.Unmarshal(custStateBytes, &custState)
-	if err != err {
+	custState, err := zkchanneldb.GetCustState(zkCustDB, channelName)
+	if err != nil {
 		log.Error(err)
 		return err
 	}
@@ -804,22 +782,12 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 		log.Error(err)
 		return err
 	}
-	signedCustClaimTxBytes, err := json.Marshal(signedCustClaimTx)
+	err = zkchanneldb.AddCustField(zkCustClaimDB, bucketEscrowTxid, signedCustClaimTx, "signedCustClaimTxKey")
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	err = zkchanneldb.AddCustField(zkCustClaimDB, bucketEscrowTxid, signedCustClaimTxBytes, "signedCustClaimTxKey")
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	spendHeightBytes, err := json.Marshal(spendHeight)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	err = zkchanneldb.AddCustField(zkCustClaimDB, bucketEscrowTxid, spendHeightBytes, "spendHeightKey")
+	err = zkchanneldb.AddCustField(zkCustClaimDB, bucketEscrowTxid, spendHeight, "spendHeightKey")
 	if err != nil {
 		log.Error(err)
 		return err

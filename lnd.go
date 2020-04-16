@@ -251,11 +251,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 				}
 
 				// save merchStateBytes in zkMerchDB
-				merchStateBytes, err := json.Marshal(merchState)
-				if err != nil {
-					return err
-				}
-				err = zkchanneldb.AddMerchState(zkMerchDB, merchStateBytes)
+				err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
 				if err != nil {
 					return err
 				}
