@@ -633,18 +633,18 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 
 }
 
-func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chainntnfs.ChainNotifier, escrowTxid string, pkScript []byte) {
+func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chainntnfs.ChainNotifier, txid string, pkScript []byte) {
 
 	zkchLog.Debugf("waitForFundingWithTimeout\npkScript: %#x\n", pkScript)
 
-	confChannel, err := z.waitForFundingWithTimeout(notifier, escrowTxid, pkScript)
+	confChannel, err := z.waitForFundingWithTimeout(notifier, txid, pkScript)
 	if err != nil {
 		zkchLog.Infof("error waiting for funding "+
 			"confirmation: %v", err)
 	}
 
 	zkchLog.Debugf("confChannel: %#v\n", confChannel)
-	zkchLog.Infof("\n\nEscrow transaction has 3 confirmations\n\n")
+	zkchLog.Info("Transaction %v has 3 confirmations", txid)
 
 	// TODO: Update status of channel state from pending to confirmed.
 
@@ -1565,7 +1565,7 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 		return err
 	}
 
-	// Start watching for on-chain notifications of merchClose
+	// Start watching for on-chain notifications of  custClose
 	pkScript := msgTx.TxOut[0].PkScript
 
 	// TEMPORARY CODE TO FLIP BYTES
@@ -1723,17 +1723,10 @@ func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier
 	// Start watching for on-chain notifications of merchClose
 	pkScript := msgTx.TxOut[0].PkScript
 
-	zkchLog.Debugf("\nwaitForFundingWithTimeout\npkScript: %#x\n\n", pkScript)
+	// Wait for on chain confirmations of escrow transaction
+	z.wg.Add(1)
+	go z.advanceMerchantStateAfterConfirmations(notifier, merchTxid2, pkScript)
 
-	confChannel, err := z.waitForFundingWithTimeout(notifier, merchTxid2, pkScript)
-	if err != nil {
-		zkchLog.Infof("error waiting for funding "+
-			"confirmation: %v", err)
-		return err
-	}
-
-	zkchLog.Debugf("\n%#v\n", confChannel)
-	zkchLog.Infof("\nMerch close transaction has 3 confirmations\n")
 	return nil
 }
 
