@@ -648,7 +648,7 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 	}
 
 	var channelState libzkchannels.ChannelState
-	channelStateBytes, err := zkchanneldb.GetCustField(zkCustDB, channelName, "channelStateKey")
+	channelStateBytes, err := zkchanneldb.GetField(zkCustDB, channelName, "channelStateKey")
 	if err != err {
 		log.Error(err)
 		return err

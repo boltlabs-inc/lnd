@@ -206,9 +206,9 @@ func GetMerchState(db *bolt.DB) ([]byte, error) {
 	return fieldBytes, err
 }
 
-// GetCustField gets a field from zkCustDB
-func GetCustField(db *bolt.DB, zkChannelName string, fieldName string) ([]byte, error) {
-	BucketName := []byte(zkChannelName)
+// GetField gets a field from DB (works for zkCustDB and zkMerchDB)
+func GetField(db *bolt.DB, bucketName string, fieldName string) ([]byte, error) {
+	BucketName := []byte(bucketName)
 
 	var fieldBytes []byte
 	err := db.View(func(tx *bolt.Tx) error {

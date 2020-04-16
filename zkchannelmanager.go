@@ -210,35 +210,35 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 	err = json.Unmarshal(custStateBytes, &custState)
 
 	var merchPk string
-	merchPkBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "merchPkKey")
+	merchPkBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "merchPkKey")
 	if err != nil {
 		zkchLog.Error(err)
 	}
 	err = json.Unmarshal(merchPkBytes, &merchPk)
 
 	var escrowTxid string
-	escrowTxidBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "escrowTxidKey")
+	escrowTxidBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "escrowTxidKey")
 	if err != nil {
 		zkchLog.Error(err)
 	}
 	err = json.Unmarshal(escrowTxidBytes, &escrowTxid)
 
 	var custBal int64
-	custBalBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "custBalKey")
+	custBalBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "custBalKey")
 	if err != nil {
 		zkchLog.Error(err)
 	}
 	err = json.Unmarshal(custBalBytes, &custBal)
 
 	var merchBal int64
-	merchBalBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "merchBalKey")
+	merchBalBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "merchBalKey")
 	if err != nil {
 		zkchLog.Error(err)
 	}
 	err = json.Unmarshal(merchBalBytes, &merchBal)
 
 	var escrowPrevout string
-	escrowPrevoutBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "escrowPrevoutKey")
+	escrowPrevoutBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "escrowPrevoutKey")
 	if err != nil {
 		zkchLog.Error(err)
 	}
@@ -430,31 +430,31 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 	err = json.Unmarshal(custStateBytes, &custState)
 
 	var merchPk string
-	merchPkBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "merchPkKey")
+	merchPkBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "merchPkKey")
 	err = json.Unmarshal(merchPkBytes, &merchPk)
 
 	var escrowTxid string
-	escrowTxidBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "escrowTxidKey")
+	escrowTxidBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "escrowTxidKey")
 	err = json.Unmarshal(escrowTxidBytes, &escrowTxid)
 
 	var escrowPrevout string
-	escrowPrevoutBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "escrowPrevoutKey")
+	escrowPrevoutBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "escrowPrevoutKey")
 	err = json.Unmarshal(escrowPrevoutBytes, &escrowPrevout)
 
 	var channelState libzkchannels.ChannelState
-	channelStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelStateKey")
+	channelStateBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "channelStateKey")
 	err = json.Unmarshal(channelStateBytes, &channelState)
 
 	var channelToken libzkchannels.ChannelToken
-	channelTokenBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelTokenKey")
+	channelTokenBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "channelTokenKey")
 	err = json.Unmarshal(channelTokenBytes, &channelToken)
 
 	var custBal int64
-	custBalBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "custBalKey")
+	custBalBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "custBalKey")
 	err = json.Unmarshal(custBalBytes, &custBal)
 
 	var merchBal int64
-	merchBalBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "merchBalKey")
+	merchBalBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "merchBalKey")
 	err = json.Unmarshal(merchBalBytes, &merchBal)
 
 	zkCustDB.Close()
@@ -661,11 +661,11 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
 
 	var signedEscrowTx string
-	signedEscrowTxBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "signedEscrowTxKey")
+	signedEscrowTxBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "signedEscrowTxKey")
 	err = json.Unmarshal(signedEscrowTxBytes, &signedEscrowTx)
 
 	var escrowTxid string
-	escrowTxidBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "escrowTxidKey")
+	escrowTxidBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "escrowTxidKey")
 	err = json.Unmarshal(escrowTxidBytes, &escrowTxid)
 
 	zkCustDB.Close()
@@ -1005,7 +1005,7 @@ func (z *zkChannelManager) processZkEstablishFundingConfirmed(msg *lnwire.ZkEsta
 	err = json.Unmarshal(custStateBytes, &custState)
 
 	var channelToken libzkchannels.ChannelToken
-	channelTokenBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelTokenKey")
+	channelTokenBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "channelTokenKey")
 	err = json.Unmarshal(channelTokenBytes, &channelToken)
 
 	zkchLog.Debug("ActivateCustomer, channelToken =>:", channelToken)
@@ -1101,7 +1101,7 @@ func (z *zkChannelManager) InitZkPay(p lnpeer.Peer, zkChannelName string, Amount
 	err = json.Unmarshal(custStateBytes, &custState)
 
 	var channelState libzkchannels.ChannelState
-	channelStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelStateKey")
+	channelStateBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "channelStateKey")
 	err = json.Unmarshal(channelStateBytes, &channelState)
 
 	zkchLog.Debug("channelState MerchPayOutPk => ", *channelState.MerchPayOutPk)
@@ -1207,30 +1207,30 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 	err = json.Unmarshal(custStateBytes, &custState)
 
 	var channelState libzkchannels.ChannelState
-	channelStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelStateKey")
+	channelStateBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "channelStateKey")
 	err = json.Unmarshal(channelStateBytes, &channelState)
 
 	zkchLog.Debug("channelState MerchPayOutPk => ", *channelState.MerchPayOutPk)
 	zkchLog.Debug("channelState MerchDisputePk => ", *channelState.MerchDisputePk)
 
 	var newState libzkchannels.State
-	newStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "newStateKey")
+	newStateBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "newStateKey")
 	err = json.Unmarshal(newStateBytes, &newState)
 
 	var oldState libzkchannels.State
-	oldStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "oldStateKey")
+	oldStateBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "oldStateKey")
 	err = json.Unmarshal(oldStateBytes, &oldState)
 
 	var channelToken libzkchannels.ChannelToken
-	channelTokenBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelTokenKey")
+	channelTokenBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "channelTokenKey")
 	err = json.Unmarshal(channelTokenBytes, &channelToken)
 
 	var revState libzkchannels.RevokedState
-	revStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "revStateKey")
+	revStateBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "revStateKey")
 	err = json.Unmarshal(revStateBytes, &revState)
 
 	var amount int64
-	amountBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "amountKey")
+	amountBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "amountKey")
 	err = json.Unmarshal(amountBytes, &amount)
 
 	zkCustDB.Close()
@@ -1403,11 +1403,11 @@ func (z *zkChannelManager) processZkPayMaskedTxInputs(msg *lnwire.ZkPayMaskedTxI
 	err = json.Unmarshal(custStateBytes, &custState)
 
 	var channelState libzkchannels.ChannelState
-	channelStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelStateKey")
+	channelStateBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "channelStateKey")
 	err = json.Unmarshal(channelStateBytes, &channelState)
 
 	var channelToken libzkchannels.ChannelToken
-	channelTokenBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelTokenKey")
+	channelTokenBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "channelTokenKey")
 	err = json.Unmarshal(channelTokenBytes, &channelToken)
 
 	zkCustDB.Close()
@@ -1436,7 +1436,7 @@ func (z *zkChannelManager) processZkPayMaskedTxInputs(msg *lnwire.ZkPayMaskedTxI
 	zkCustDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName)
 
 	var revState libzkchannels.RevokedState
-	revStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "revStateKey")
+	revStateBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "revStateKey")
 	err = json.Unmarshal(revStateBytes, &revState)
 
 	zkCustDB.Close()
@@ -1621,7 +1621,7 @@ func GetSignedCustCloseTxs(zkChannelName string, closeEscrow bool) (CloseEscrowT
 		return "", "", err
 	}
 
-	channelStateBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelStateKey")
+	channelStateBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "channelStateKey")
 	if err != nil {
 		zkchLog.Error(err)
 		return "", "", err
@@ -1633,7 +1633,7 @@ func GetSignedCustCloseTxs(zkChannelName string, closeEscrow bool) (CloseEscrowT
 		return "", "", err
 	}
 
-	channelTokenBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "channelTokenKey")
+	channelTokenBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "channelTokenKey")
 	if err != nil {
 		zkchLog.Error(err)
 		return "", "", err
@@ -1759,9 +1759,9 @@ func ZkChannelBalance(zkChannelName string) (string, int64, int64, error) {
 	remoteBalance := custState.MerchBalance
 
 	var escrowTxid string
-	escrowTxidBytes, err := zkchanneldb.GetCustField(zkCustDB, zkChannelName, "escrowTxidKey")
+	escrowTxidBytes, err := zkchanneldb.GetField(zkCustDB, zkChannelName, "escrowTxidKey")
 	if err != nil {
-		zkchLog.Error("GetCustField: ", err)
+		zkchLog.Error("GetField: ", err)
 		return "", 0, 0, err
 	}
 	err = json.Unmarshal(escrowTxidBytes, &escrowTxid)
@@ -1971,9 +1971,9 @@ func (z *zkChannelManager) CustClaim(wallet *lnwallet.LightningWallet, notifier 
 	}
 
 	var signedCustClaimTx string
-	signedCustClaimTxBytes, err := zkchanneldb.GetCustField(zkCustDB, escrowTxid, "signedCustClaimTxKey")
+	signedCustClaimTxBytes, err := zkchanneldb.GetField(zkCustDB, escrowTxid, "signedCustClaimTxKey")
 	if err != nil {
-		zkchLog.Error("GetCustField: ", err)
+		zkchLog.Error("GetField: ", err)
 		return nil
 	}
 
