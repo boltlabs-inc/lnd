@@ -3601,11 +3601,12 @@ func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index ui
 	if err == ErrPeerNotConnected {
 		return fmt.Errorf("peer %x is not connected", pubBytes)
 	}
+	if err != nil {
+		return err
+	}
 
 	// peer.server.zkchannelMgr.zkChannelName = zkChannelName
-	peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, merchPubKey, zkChannelName, custBalance, merchBalance, peer)
-
-	return nil
+	return peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, merchPubKey, zkChannelName, custBalance, merchBalance, peer)
 }
 
 // ZkPay sends the request to server to close the connection with peer
@@ -3626,10 +3627,11 @@ func (s *server) ZkPay(pubKey *btcec.PublicKey, zkChannelName string, Amount int
 	if err == ErrPeerNotConnected {
 		return fmt.Errorf("peer %x is not connected", pubBytes)
 	}
+	if err != nil {
+		return err
+	}
 
-	peer.server.zkchannelMgr.InitZkPay(peer, zkChannelName, Amount)
-
-	return nil
+	return peer.server.zkchannelMgr.InitZkPay(peer, zkChannelName, Amount)
 }
 
 // CloseZkChannel sends the request to server to close the connection with peer
@@ -3665,15 +3667,13 @@ func (s *server) ZkChannelBalance(zkChannelName string) (string, int64, int64, e
 
 // TotalReceived sends the request to server to close the connection with peer
 // identified by public key.
-func (s *server) TotalReceived() int64 {
-	total, _ := TotalReceived()
-	return total
+func (s *server) TotalReceived() (int64, error) {
+	return TotalReceived()
 }
 
 // ZkInfo returns the merch's pubkey.
-func (s *server) ZkInfo() string {
-	merchPubKey, _ := ZkInfo()
-	return merchPubKey
+func (s *server) ZkInfo() (string, error) {
+	return ZkInfo()
 }
 
 // ListZkChannels returns the list of zkChannels for the merchant.

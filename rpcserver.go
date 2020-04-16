@@ -6551,8 +6551,6 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 	// being opened in parallel.
 	r.server.zkChannelName = in.ZkChannelName
 
-	// With all initial validation complete, we'll now request that the
-	// server disconnects from the peer.
 	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
 		return nil, fmt.Errorf("Could not open channel "+
 			"with peer: %v", err)
@@ -6676,22 +6674,22 @@ func (r *rpcServer) ZkChannelBalance(ctx context.Context,
 func (r *rpcServer) TotalReceived(ctx context.Context,
 	in *lnrpc.TotalReceivedRequest) (*lnrpc.TotalReceivedResponse, error) {
 
-	total := r.server.TotalReceived()
+	total, err := r.server.TotalReceived()
 
 	return &lnrpc.TotalReceivedResponse{
 		TotalReceived: int64(total),
-	}, nil
+	}, err
 }
 
 // ZkInfo returns information about this zklnd node.
 func (r *rpcServer) ZkInfo(ctx context.Context,
 	in *lnrpc.ZkInfoRequest) (*lnrpc.ZkInfoResponse, error) {
 
-	merch_pubkey := r.server.ZkInfo()
+	merch_pubkey, err := r.server.ZkInfo()
 
 	return &lnrpc.ZkInfoResponse{
 		MerchPubkey: merch_pubkey,
-	}, nil
+	}, err
 }
 
 // ListZkChannels lists all open channels for the merchant.
