@@ -2017,9 +2017,9 @@ func (z *zkChannelManager) MerchClaim(wallet *lnwallet.LightningWallet, notifier
 	}
 
 	var signedMerchClaimTx string
-	signedMerchClaimTxBytes, err := zkchanneldb.GetCustField(zkMerchClaimDB, escrowTxid, "signedMerchClaimTxKey")
+	signedMerchClaimTxBytes, err := zkchanneldb.GetField(zkMerchClaimDB, escrowTxid, "signedMerchClaimTxKey")
 	if err != nil {
-		zkchLog.Error("GetCustField: ", err)
+		zkchLog.Error("GetField: ", err)
 		return nil
 	}
 
