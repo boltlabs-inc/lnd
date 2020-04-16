@@ -155,9 +155,12 @@ func AddCustState(db *bolt.DB, zkChannelName string, custState libzkchannels.Cus
 }
 
 // AddMerchField adds arbitrary field to the zkMerchDB
-func AddMerchField(db *bolt.DB, fieldBytes []byte, fieldName string) error {
-
-	err := db.Update(func(tx *bolt.Tx) error {
+func AddMerchField(db *bolt.DB, field interface{}, fieldName string) error {
+	fieldBytes, err := json.Marshal(field)
+	if err != nil {
+		return err
+	}
+	err = db.Update(func(tx *bolt.Tx) error {
 		err := tx.Bucket(MerchBucket).Put([]byte(fieldName), fieldBytes)
 		if err != nil {
 			return fmt.Errorf("could not insert entry: %v", err)
@@ -224,7 +227,7 @@ func GetMerchState(db *bolt.DB) (libzkchannels.MerchState, error) {
 }
 
 // GetField gets a field from DB (works for zkCustDB and zkMerchDB)
-func GetField(db *bolt.DB, bucketName string, fieldName string) ([]byte, error) {
+func GetField(db *bolt.DB, bucketName string, fieldName string, out interface{}) error {
 	BucketName := []byte(bucketName)
 
 	var fieldBytes []byte
@@ -237,12 +240,11 @@ func GetField(db *bolt.DB, bucketName string, fieldName string) ([]byte, error) 
 	if err != nil {
 		log.Fatal(err)
 	}
-	return fieldBytes, err
+	return json.Unmarshal(fieldBytes, &out)
 }
 
 // GetMerchField gets a field from zkMerchDB
-func GetMerchField(db *bolt.DB, fieldName string) ([]byte, error) {
-
+func GetMerchField(db *bolt.DB, fieldName string, out interface{}) error {
 	var fieldBytes []byte
 	err := db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(MerchBucket).Cursor()
@@ -251,7 +253,7 @@ func GetMerchField(db *bolt.DB, fieldName string) ([]byte, error) {
 		return nil
 	})
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	return fieldBytes, err
+	return json.Unmarshal(fieldBytes, &out)
 }

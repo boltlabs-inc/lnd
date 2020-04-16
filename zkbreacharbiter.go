@@ -3,7 +3,6 @@ package lnd
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"sync"
 
@@ -542,19 +541,16 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	}
 
 	var channelState libzkchannels.ChannelState
-	channelStateBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "channelStatekey")
+	err = zkchanneldb.GetMerchField(zkMerchDB, "channelStatekey", &channelState)
 	if err != nil {
 		zkchLog.Error(err)
 		return
 	}
 
-	err = json.Unmarshal(channelStateBytes, &channelState)
+	err = zkMerchDB.Close()
 	if err != nil {
 		zkchLog.Error(err)
-		return
 	}
-
-	zkMerchDB.Close()
 	zkbaLog.Debugf("merchState %#v:", merchState)
 
 	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)

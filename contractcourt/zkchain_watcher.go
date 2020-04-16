@@ -2,7 +2,6 @@ package contractcourt
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -658,13 +657,8 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 	}
 
 	var channelState libzkchannels.ChannelState
-	channelStateBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "channelStateKey")
+	err = zkchanneldb.GetMerchField(zkMerchDB, "channelStateKey", &channelState)
 	if err != err {
-		log.Error(err)
-		return err
-	}
-	err = json.Unmarshal(channelStateBytes, &channelState)
-	if err != nil {
 		log.Error(err)
 		return err
 	}
@@ -747,13 +741,8 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 	}
 
 	var channelState libzkchannels.ChannelState
-	channelStateBytes, err := zkchanneldb.GetField(zkCustDB, channelName, "channelStateKey")
+	err = zkchanneldb.GetField(zkCustDB, channelName, "channelStateKey", &channelState)
 	if err != err {
-		log.Error(err)
-		return err
-	}
-	err = json.Unmarshal(channelStateBytes, &channelState)
-	if err != nil {
 		log.Error(err)
 		return err
 	}

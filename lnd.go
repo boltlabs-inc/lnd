@@ -7,7 +7,6 @@ package lnd
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -257,11 +256,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 				}
 
 				// save channelStateBytes in zkMerchDB
-				channelStateBytes, err := json.Marshal(channelState)
-				if err != nil {
-					return err
-				}
-				err = zkchanneldb.AddMerchField(zkMerchDB, channelStateBytes, "channelStateKey")
+				err = zkchanneldb.AddMerchField(zkMerchDB, channelState, "channelStateKey")
 				if err != nil {
 					return err
 				}
@@ -269,11 +264,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 				// save totalBalance in zkMerchDB.
 				// With no channels initially, the total balance starts off at 0
 				totalBalance := int64(0)
-				totalBalanceBytes, err := json.Marshal(totalBalance)
-				if err != nil {
-					return err
-				}
-				err = zkchanneldb.AddMerchField(zkMerchDB, totalBalanceBytes, "totalBalanceKey")
+				err = zkchanneldb.AddMerchField(zkMerchDB, totalBalance, "totalBalanceKey")
 				if err != nil {
 					return err
 				}
