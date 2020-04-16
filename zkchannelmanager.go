@@ -682,6 +682,8 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 		InitCustState: initCustStateBytes,
 		InitHash:      initHashBytes,
 	}
+	zkchLog.Info("zkEstablishInitialState", zkEstablishInitialState)
+
 	err = p.SendMessage(false, &zkEstablishInitialState)
 	if err != nil {
 		zkchLog.Error(err)
@@ -798,8 +800,8 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 		return
 	}
 
-	// Start watching the channel in order to respond to breach Txs
 	// TEMPORARY CODE TO FLIP BYTES
+	// This works because hex strings are of even size
 	s := ""
 	for i := 0; i < len(escrowTxid)/2; i++ {
 		s = escrowTxid[i*2:i*2+2] + s
@@ -1018,6 +1020,7 @@ func (z *zkChannelManager) waitForFundingWithTimeout(notifier chainntnfs.ChainNo
 	wg.Add(1)
 
 	// TEMPORARY CODE TO FLIP BYTES
+	// This works because hex strings are of even size
 	s := ""
 	for i := 0; i < len(escrowTxid)/2; i++ {
 		s = escrowTxid[i*2:i*2+2] + s
@@ -2065,7 +2068,6 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 	if dryRun {
 		zkchLog.Infof("DryRun: Not Broadcasting close transaction:",
 			closeEscrowTx)
-
 		return nil
 	}
 
@@ -2080,6 +2082,7 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 	pkScript := msgTx.TxOut[0].PkScript
 
 	// TEMPORARY CODE TO FLIP BYTES
+	// This works because hex strings are of even size
 	s := ""
 	for i := 0; i < len(closeEscrowTxid)/2; i++ {
 		s = closeEscrowTxid[i*2:i*2+2] + s
@@ -2418,14 +2421,20 @@ func (z *zkChannelManager) CustClaim(wallet *lnwallet.LightningWallet, notifier 
 	zkCustDB, err := zkchanneldb.OpenZkClaimBucket(escrowTxid)
 	if err != nil {
 		zkchLog.Error("OpenZkChannelBucket: ", err)
-		return nil
+		return err
 	}
 
 	var signedCustClaimTx string
 	err = zkchanneldb.GetField(zkCustDB, escrowTxid, "signedCustClaimTxKey", &signedCustClaimTx)
 	if err != nil {
 		zkchLog.Error("GetField: ", err)
-		return nil
+		return err
+	}
+
+	err = json.Unmarshal(signedCustClaimTxBytes, &signedCustClaimTx)
+	if err != nil {
+		zkchLog.Error("Unmarshal signedCustClaimTx: ", err)
+		return err
 	}
 
 	err = zkCustDB.Close()
@@ -2465,14 +2474,20 @@ func (z *zkChannelManager) MerchClaim(wallet *lnwallet.LightningWallet, notifier
 	zkMerchClaimDB, err := zkchanneldb.OpenZkClaimBucket(escrowTxid)
 	if err != nil {
 		zkchLog.Error("OpenZkChannelBucket: ", err)
-		return nil
+		return err
 	}
 
 	var signedMerchClaimTx string
 	err = zkchanneldb.GetField(zkMerchClaimDB, escrowTxid, "signedMerchClaimTxKey", &signedMerchClaimTx)
 	if err != nil {
 		zkchLog.Error("GetField: ", err)
-		return nil
+		return err
+	}
+
+	err = json.Unmarshal(signedMerchClaimTxBytes, &signedMerchClaimTx)
+	if err != nil {
+		zkchLog.Error("Unmarshal signedMerchClaimTx: ", err)
+		return err
 	}
 
 	err = zkMerchClaimDB.Close()

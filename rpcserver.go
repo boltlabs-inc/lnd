@@ -488,6 +488,10 @@ func mainRPCServerPermissions() map[string][]bakery.Op {
 			Entity: "info",
 			Action: "write",
 		}},
+		"/lnrpc.Lightning/MerchClaim": {{
+			Entity: "info",
+			Action: "write",
+		}},
 	}
 }
 
@@ -6712,7 +6716,7 @@ func (r *rpcServer) ListZkChannels(ctx context.Context,
 	for i := 0; i < numChannels; i++ {
 		channelToken := ListOfZkChannels.channelToken[i]
 		channelTokenResp := &lnrpc.ChannelToken{PkC: channelToken.PkC, PkM: channelToken.PkM,
-			EscrowTxid:channelToken.EscrowTxId, MerchTxid:channelToken.MerchTxId}
+			EscrowTxid: channelToken.EscrowTxId, MerchTxid: channelToken.MerchTxId}
 		listOfZkChannels := &lnrpc.ListZkChannelsInfo{
 			ZkChannelId:  ListOfZkChannels.channelID[i],
 			ChannelToken: channelTokenResp,

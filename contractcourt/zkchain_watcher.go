@@ -462,18 +462,31 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 		case numOutputs < 2 && isMerch:
 			log.Debug("Merch-close-tx detected")
 
+			// commitTxBroadcast.TxOut will always have at least one
+			// output since it was confirmed on chain.
 			closePkScript := commitTxBroadcast.TxOut[0].PkScript
 
-			// escrow script is the 4th item in the witness field
+			// escrow script is the 4th item in the witness field.
+			// Check that there are 4 items in the witness field
+			if len(commitTxBroadcast.TxIn[0].Witness) < 4 {
+				log.Error("Merch-close Witness field has less than 4 items")
+				return
+			}
 			escrowScript := commitTxBroadcast.TxIn[0].Witness[3]
 
 			// custPubkey starts on the 37th byte, and finishes on the
 			// 69th byte of the escrowScript
+			if len(escrowScript) != 114 {
+				log.Error("escrowScript in merch-close is shorter than expected." +
+					" custPubkey may not be in the expected position in the script")
+				return
+			}
 			custPubkey := hex.EncodeToString(escrowScript[36:69])
 			log.Debug("custPubkey read from merch-close-tx: ", custPubkey)
 
 			// save custClose details so that it can be claimed manually with cli command
-			err := c.storeMerchClaimTx(escrowTxid.String(), closeTxid.String(), custPubkey, amount, spendHeight)
+			err := c.storeMerchClaimTx(escrowTxid.String(), closeTxid.String(), custPubkey,
+				amount, spendHeight)
 			if err != nil {
 				log.Errorf("Unable to store CustClaimTx for channel %v ",
 					escrowTxid, err)
@@ -628,12 +641,14 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 	custClosePk string, amount int64, spendHeight int32) error {
 
 	// TEMPORARY CODE TO FLIP BYTES
+	// This works because hex strings are of even size
 	escrowTxidBigEn := ""
 	for i := 0; i < len(escrowTxidLittleEn)/2; i++ {
 		escrowTxidBigEn = escrowTxidLittleEn[i*2:i*2+2] + escrowTxidBigEn
 	}
 
 	// TEMPORARY CODE TO FLIP BYTES
+	// This works because hex strings are of even size
 	closeTxidBigEn := ""
 	for i := 0; i < len(closeTxidLittleEn)/2; i++ {
 		closeTxidBigEn = closeTxidLittleEn[i*2:i*2+2] + closeTxidBigEn
@@ -673,7 +688,7 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 	log.Debugf("channelState: %#v", channelState)
 	log.Debugf("toSelfDelay: %#v", toSelfDelay)
 
-	// TODO: Generate a fresh outputPk for the claimed outputs. For now this is just
+	// TODO: ZKLND-33 Generate a fresh outputPk for the claimed outputs. For now this is just
 	// reusing the merchant's public key
 	outputPk := *merchState.PkM
 	index := uint32(0)
@@ -714,8 +729,8 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid string,
 	revLock string, custClosePk string, amount int64, spendHeight int32) error {
 
-	// Start watching the channel in order to respond to breach Txs
 	// TEMPORARY CODE TO FLIP BYTES
+	// This works because hex strings are of even size
 	escrowTxidBigEn := ""
 	for i := 0; i < len(escrowTxidLittleEn)/2; i++ {
 		escrowTxidBigEn = escrowTxidLittleEn[i*2:i*2+2] + escrowTxidBigEn
@@ -751,7 +766,7 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 
 	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
 
-	// TODO: Generate a fresh outputPk for the claimed outputs. For now this is just
+	// TODO: ZKLND-33 Generate a fresh outputPk for the claimed outputs. For now this is just
 	// reusing the custClosePk
 	outputPk := custClosePk
 	index := uint32(0)
