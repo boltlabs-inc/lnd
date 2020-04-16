@@ -6726,7 +6726,7 @@ func (r *rpcServer) ListZkChannels(ctx context.Context,
 
 }
 
-// CustClaim sweeps a customers output from a close tx.
+// CustClaim sweeps a customer's output from a close tx.
 func (r *rpcServer) CustClaim(ctx context.Context,
 	in *lnrpc.CustClaimRequest) (*lnrpc.CustClaimResponse, error) {
 
@@ -6742,6 +6742,25 @@ func (r *rpcServer) CustClaim(ctx context.Context,
 	}
 
 	return &lnrpc.CustClaimResponse{}, nil
+
+}
+
+// MerchClaim sweeps a merchant's output from a close tx.
+func (r *rpcServer) MerchClaim(ctx context.Context,
+	in *lnrpc.MerchClaimRequest) (*lnrpc.MerchClaimResponse, error) {
+
+	zkchLog.Debugf("MerchClaim initiated for channel: %v", in.EscrowTxid)
+
+	if !r.server.Started() {
+		return nil, fmt.Errorf("chain backend is still syncing, server " +
+			"not active yet")
+	}
+
+	if err := r.server.MerchClaim(in.EscrowTxid); err != nil {
+		return nil, fmt.Errorf("could not close channel: %v", err)
+	}
+
+	return &lnrpc.MerchClaimResponse{}, nil
 
 }
 

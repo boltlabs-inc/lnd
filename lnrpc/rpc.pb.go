@@ -12263,7 +12263,7 @@ func (m *ListZkChannelsResponse) GetZkChannel() []*ListZkChannelsInfo {
 
 type CustClaimRequest struct {
 	/// The escrow txid of the closed channel
-	EscrowTxid           string   `protobuf:"bytes,1,opt,name=escrow_txid,json=close_txid,proto3" json:"escrow_txid,omitempty"`
+	EscrowTxid           string   `protobuf:"bytes,1,opt,name=escrow_txid,proto3" json:"escrow_txid,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -12331,6 +12331,77 @@ func (m *CustClaimResponse) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_CustClaimResponse proto.InternalMessageInfo
+
+type MerchClaimRequest struct {
+	/// The escrow txid of the closed channel
+	EscrowTxid           string   `protobuf:"bytes,1,opt,name=escrow_txid,proto3" json:"escrow_txid,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *MerchClaimRequest) Reset()         { *m = MerchClaimRequest{} }
+func (m *MerchClaimRequest) String() string { return proto.CompactTextString(m) }
+func (*MerchClaimRequest) ProtoMessage()    {}
+func (*MerchClaimRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{169}
+}
+
+func (m *MerchClaimRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MerchClaimRequest.Unmarshal(m, b)
+}
+func (m *MerchClaimRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MerchClaimRequest.Marshal(b, m, deterministic)
+}
+func (m *MerchClaimRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MerchClaimRequest.Merge(m, src)
+}
+func (m *MerchClaimRequest) XXX_Size() int {
+	return xxx_messageInfo_MerchClaimRequest.Size(m)
+}
+func (m *MerchClaimRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_MerchClaimRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MerchClaimRequest proto.InternalMessageInfo
+
+func (m *MerchClaimRequest) GetEscrowTxid() string {
+	if m != nil {
+		return m.EscrowTxid
+	}
+	return ""
+}
+
+type MerchClaimResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *MerchClaimResponse) Reset()         { *m = MerchClaimResponse{} }
+func (m *MerchClaimResponse) String() string { return proto.CompactTextString(m) }
+func (*MerchClaimResponse) ProtoMessage()    {}
+func (*MerchClaimResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_77a6da22d6a3feb1, []int{170}
+}
+
+func (m *MerchClaimResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MerchClaimResponse.Unmarshal(m, b)
+}
+func (m *MerchClaimResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MerchClaimResponse.Marshal(b, m, deterministic)
+}
+func (m *MerchClaimResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MerchClaimResponse.Merge(m, src)
+}
+func (m *MerchClaimResponse) XXX_Size() int {
+	return xxx_messageInfo_MerchClaimResponse.Size(m)
+}
+func (m *MerchClaimResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MerchClaimResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MerchClaimResponse proto.InternalMessageInfo
 
 func init() {
 	proto.RegisterEnum("lnrpc.AddressType", AddressType_name, AddressType_value)
@@ -12536,6 +12607,8 @@ func init() {
 	proto.RegisterType((*ListZkChannelsResponse)(nil), "lnrpc.ListZkChannelsResponse")
 	proto.RegisterType((*CustClaimRequest)(nil), "lnrpc.CustClaimRequest")
 	proto.RegisterType((*CustClaimResponse)(nil), "lnrpc.CustClaimResponse")
+	proto.RegisterType((*MerchClaimRequest)(nil), "lnrpc.MerchClaimRequest")
+	proto.RegisterType((*MerchClaimResponse)(nil), "lnrpc.MerchClaimResponse")
 }
 
 func init() { proto.RegisterFile("rpc.proto", fileDescriptor_77a6da22d6a3feb1) }
@@ -13639,6 +13712,9 @@ type LightningClient interface {
 	//* lncli: `cust_claim`
 	//CustClaim spends customer's outputs to own wallet.
 	CustClaim(ctx context.Context, in *CustClaimRequest, opts ...grpc.CallOption) (*CustClaimResponse, error)
+	//* lncli: `merch_claim`
+	//MerchClaim spends merchant's outputs to own wallet.
+	MerchClaim(ctx context.Context, in *MerchClaimRequest, opts ...grpc.CallOption) (*MerchClaimResponse, error)
 }
 
 type lightningClient struct {
@@ -14477,6 +14553,15 @@ func (c *lightningClient) CustClaim(ctx context.Context, in *CustClaimRequest, o
 	return out, nil
 }
 
+func (c *lightningClient) MerchClaim(ctx context.Context, in *MerchClaimRequest, opts ...grpc.CallOption) (*MerchClaimResponse, error) {
+	out := new(MerchClaimResponse)
+	err := c.cc.Invoke(ctx, "/lnrpc.Lightning/MerchClaim", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LightningServer is the server API for Lightning service.
 type LightningServer interface {
 	// lncli: `walletbalance`
@@ -14829,6 +14914,9 @@ type LightningServer interface {
 	//* lncli: `cust_claim`
 	//CustClaim spends customer's outputs to own wallet.
 	CustClaim(context.Context, *CustClaimRequest) (*CustClaimResponse, error)
+	//* lncli: `merch_claim`
+	//MerchClaim spends merchant's outputs to own wallet.
+	MerchClaim(context.Context, *MerchClaimRequest) (*MerchClaimResponse, error)
 }
 
 func RegisterLightningServer(s *grpc.Server, srv LightningServer) {
@@ -16035,6 +16123,24 @@ func _Lightning_CustClaim_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Lightning_MerchClaim_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MerchClaimRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LightningServer).MerchClaim(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/lnrpc.Lightning/MerchClaim",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LightningServer).MerchClaim(ctx, req.(*MerchClaimRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Lightning_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "lnrpc.Lightning",
 	HandlerType: (*LightningServer)(nil),
@@ -16250,6 +16356,10 @@ var _Lightning_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CustClaim",
 			Handler:    _Lightning_CustClaim_Handler,
+		},
+		{
+			MethodName: "MerchClaim",
+			Handler:    _Lightning_MerchClaim_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

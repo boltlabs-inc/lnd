@@ -2001,19 +2001,58 @@ func (z *zkChannelManager) CustClaim(wallet *lnwallet.LightningWallet, notifier 
 		return err
 	}
 
-	// // Start watching for on-chain notifications of merchClose
-	// pkScript := msgTx.TxOut[0].PkScript
+	return nil
+}
 
-	// zkchLog.Debugf("\nwaitForFundingWithTimeout\npkScript: %#x\n\n", pkScript)
+// MerchClaim sweeps a merchant's output from a close tx.
+func (z *zkChannelManager) MerchClaim(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, escrowTxid string) error {
 
-	// confChannel, err := z.waitForFundingWithTimeout(notifier, merchTxid2, pkScript)
-	// if err != nil {
-	// 	zkchLog.Infof("error waiting for funding "+
-	// 		"confirmation: %v", err)
-	// 	return err
-	// }
+	zkchLog.Debugf("zkChannelManager MerchClaim inputs: ", escrowTxid)
 
-	// zkchLog.Debugf("\n%#v\n", confChannel)
-	// zkchLog.Infof("\nMerch close transaction has 3 confirmations\n")
+	// open the zkchanneldb to load custState
+	zkMerchClaimDB, err := zkchanneldb.OpenZkClaimBucket(escrowTxid)
+	if err != nil {
+		zkchLog.Error("OpenZkChannelBucket: ", err)
+		return nil
+	}
+
+	var signedMerchClaimTx string
+	signedMerchClaimTxBytes, err := zkchanneldb.GetCustField(zkMerchClaimDB, escrowTxid, "signedMerchClaimTxKey")
+	if err != nil {
+		zkchLog.Error("GetCustField: ", err)
+		return nil
+	}
+
+	err = json.Unmarshal(signedMerchClaimTxBytes, &signedMerchClaimTx)
+	if err != nil {
+		zkchLog.Error("Unmarshal signedMerchClaimTx: ", err)
+		return nil
+	}
+
+	err = zkMerchClaimDB.Close()
+
+	zkchLog.Debugf("signedMerchClaimTx: %#v", signedMerchClaimTx)
+
+	// Broadcast escrow tx on chain
+	serializedTx, err := hex.DecodeString(signedMerchClaimTx)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+
+	var msgTx wire.MsgTx
+	err = msgTx.Deserialize(bytes.NewReader(serializedTx))
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+
+	zkchLog.Info("Broadcasting merch close transaction")
+	err = wallet.PublishTransaction(&msgTx)
+	if err != nil {
+		zkchLog.Infof("Couldn't publish transaction: %v", err)
+		return err
+	}
+
 	return nil
 }

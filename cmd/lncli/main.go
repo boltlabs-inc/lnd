@@ -320,6 +320,7 @@ func main() {
 		zkInfoCommand,
 		listZkChannelsCommand,
 		custClaimCommand,
+		merchClaimCommand,
 	}
 
 	// Add any extra commands determined by build flags.

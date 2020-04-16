@@ -268,7 +268,7 @@ type zkChainWatcher struct {
 // detect on chain events.
 func newZkChainWatcher(cfg ZkChainWatcherConfig) (*zkChainWatcher, error) {
 
-	fmt.Println("\nSetting up new zkChainWatcher\n")
+	log.Debug("Setting up new zkChainWatcher")
 	return &zkChainWatcher{
 		cfg:                 cfg,
 		quit:                make(chan struct{}),
@@ -279,14 +279,14 @@ func newZkChainWatcher(cfg ZkChainWatcherConfig) (*zkChainWatcher, error) {
 // Start starts all goroutines that the zkChainWatcher needs to perform its
 // duties.
 func (c *zkChainWatcher) Start() error {
-	fmt.Println("Starting new zkChainWatcher")
+	log.Debug("Starting new zkChainWatcher")
 
 	// // zkch TODO: What does this do? It is blocking
 	// if !atomic.CompareAndSwapInt32(&c.started, 0, 1) {
 	// 	return nil
 	// }
 
-	fmt.Printf("\nwatching for escrow: %#v\n", c.cfg.ZkFundingInfo.FundingOut.Hash.String())
+	log.Debugf("watching for escrow: %#v\n", c.cfg.ZkFundingInfo.FundingOut.Hash.String())
 
 	spendNtfn, err := c.cfg.Notifier.RegisterSpendNtfn(
 		&c.cfg.ZkFundingInfo.FundingOut,
@@ -294,10 +294,10 @@ func (c *zkChainWatcher) Start() error {
 		c.cfg.ZkFundingInfo.BroadcastHeight,
 	)
 	if err != nil {
-		fmt.Printf("\n\n zkchainwatcher err:", err)
+		log.Debug("zkchainwatcher err:", err)
 		return err
 	}
-	fmt.Printf("\nspend notifier finished\n")
+	log.Debug("spend notifier finished")
 
 	// With the spend notification obtained, we'll now dispatch the
 	// closeObserver which will properly react to any changes.
@@ -432,7 +432,7 @@ func (c *zkChainWatcher) SubscribeChannelEvents() *ZkChainEventSubscription {
 func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 	defer c.wg.Done()
 
-	fmt.Printf("zkCloseObserver is running\n")
+	log.Debug("zkCloseObserver is running")
 	// determine if this node is a merchant
 	isMerch := c.cfg.IsMerch
 
@@ -454,21 +454,33 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 		commitTxBroadcast := commitSpend.SpendingTx
 		closeTxid := *commitSpend.SpenderTxHash
 		spendHeight := commitSpend.SpendingHeight
-
 		numOutputs := len(commitTxBroadcast.TxOut)
-
 		amount := commitTxBroadcast.TxOut[0].Value
 
 		switch {
 
 		// merchCloseTx has one output.
 		case numOutputs < 2 && isMerch:
-			log.Debug("Merch close detected")
+			log.Debug("Merch-close-tx detected")
 
-			pkScript := commitTxBroadcast.TxOut[0].PkScript
+			closePkScript := commitTxBroadcast.TxOut[0].PkScript
 
-			err := c.zkDispatchMerchClose(escrowTxid, closeTxid, pkScript, amount)
+			// escrow script is the 4th item in the witness field
+			escrowScript := commitTxBroadcast.TxIn[0].Witness[3]
 
+			// custPubkey starts on the 37th byte, and finishes on the
+			// 69th byte of the escrowScript
+			custPubkey := hex.EncodeToString(escrowScript[36:69])
+			log.Debug("custPubkey read from merch-close-tx: ", custPubkey)
+
+			// save custClose details so that it can be claimed manually with cli command
+			err := c.storeMerchClaimTx(escrowTxid.String(), closeTxid.String(), custPubkey, amount, spendHeight)
+			if err != nil {
+				log.Errorf("Unable to store CustClaimTx for channel %v ",
+					escrowTxid, err)
+			}
+
+			err = c.zkDispatchMerchClose(escrowTxid, closeTxid, closePkScript, amount)
 			if err != nil {
 				log.Errorf("unable to handle remote "+
 					"close for channel=%v",
@@ -477,7 +489,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 		// merchCloseTx has one output.
 		case numOutputs < 2 && !isMerch:
-			fmt.Printf("Merch close detected\n")
+			log.Debug("Merch-close-tx detected")
 
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
 
@@ -517,9 +529,9 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			// there is nothing more to do.
 			if !isMerch {
 
-				log.Debug("signCustClaimTx")
+				log.Debug("storeCustClaimTx")
 				// save custClose details so that it can be claimed manually with cli command
-				err := c.storeCustClaimTx(escrowTxid.String(), closeTxid.String(), ClosePkScript, revLock, custClosePk, amount, spendHeight)
+				err := c.storeCustClaimTx(escrowTxid.String(), closeTxid.String(), revLock, custClosePk, amount, spendHeight)
 				if err != nil {
 					log.Errorf("Unable to store CustClaimTx for channel %v ",
 						escrowTxid, err)
@@ -554,7 +566,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 				// state. We must send the relevant transaction information
 				// to the breachArbiter to broadcast the dispute/justice tx.
 				if isOldRevLock {
-					fmt.Printf("Revoked Cust close detected\n")
+					log.Debug("Revoked Cust-close-tx detected")
 
 					zkBreachInfo := ZkBreachInfo{
 						IsMerchClose:  false,
@@ -579,7 +591,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					// store the Revocation Lock to prevent a customer making
 					// a payment with it.
 				} else {
-					fmt.Printf("Latest Cust close detected\n")
+					log.Debug("Latest Cust-close-tx detected")
 
 					// custClose is not the latest state. The customer has attempted to
 					// close on a previous state, possibly a double spend.
@@ -610,8 +622,117 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 	}
 }
 
+// storeMerchClaimTx creates a signed merchClaimTx for the given closeTx
+func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidLittleEn string,
+	custClosePk string, amount int64, spendHeight int32) error {
+
+	// TEMPORARY CODE TO FLIP BYTES
+	escrowTxidBigEn := ""
+	for i := 0; i < len(escrowTxidLittleEn)/2; i++ {
+		escrowTxidBigEn = escrowTxidLittleEn[i*2:i*2+2] + escrowTxidBigEn
+	}
+
+	// TEMPORARY CODE TO FLIP BYTES
+	closeTxidBigEn := ""
+	for i := 0; i < len(closeTxidLittleEn)/2; i++ {
+		closeTxidBigEn = closeTxidLittleEn[i*2:i*2+2] + closeTxidBigEn
+	}
+
+	log.Debugf("storeMerchClaimTx inputs: ", escrowTxidBigEn, closeTxidLittleEn,
+		custClosePk, amount, spendHeight)
+
+	// Load the current merchState and channelState so that it can be retrieved
+	// later when it is needed to sign the claim tx.
+	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	var merchState libzkchannels.MerchState
+	merchStateBytes, err := zkchanneldb.GetMerchState(zkMerchDB)
+	if err != err {
+		log.Error(err)
+		return err
+	}
+
+	err = json.Unmarshal(merchStateBytes, &merchState)
+	if err != err {
+		log.Error(err)
+		return err
+	}
+
+	var channelState libzkchannels.ChannelState
+	channelStateBytes, err := zkchanneldb.GetMerchField(zkMerchDB, "channelStateKey")
+	if err != err {
+		log.Error(err)
+		return err
+	}
+	err = json.Unmarshal(channelStateBytes, &channelState)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	err = zkMerchDB.Close()
+
+	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	log.Debugf("channelState: %#v", channelState)
+	log.Debugf("toSelfDelay: %#v", toSelfDelay)
+
+	// TODO: Generate a fresh outputPk for the claimed outputs. For now this is just
+	// reusing the merchant's public key
+	outputPk := *merchState.PkM
+	index := uint32(0)
+
+	signedMerchClaimTx, err := libzkchannels.MerchantSignMerchClaimTx(closeTxidBigEn, index, amount, toSelfDelay, custClosePk, outputPk, merchState)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	log.Debugf("signedMerchClaimTx: %#v", signedMerchClaimTx)
+
+	// use escrowTxid as the bucket name
+	bucketEscrowTxid := escrowTxidBigEn
+
+	zkMerchClaimDB, err := zkchanneldb.OpenZkClaimBucket(bucketEscrowTxid)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	signedMerchClaimTxBytes, err := json.Marshal(signedMerchClaimTx)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	err = zkchanneldb.AddCustField(zkMerchClaimDB, bucketEscrowTxid, signedMerchClaimTxBytes, "signedMerchClaimTxKey")
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	spendHeightBytes, err := json.Marshal(spendHeight)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	err = zkchanneldb.AddCustField(zkMerchClaimDB, bucketEscrowTxid, spendHeightBytes, "spendHeightKey")
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	zkMerchClaimDB.Close()
+
+	return nil
+}
+
 // storeCustClaimTx creates a signed custClaimTx for the given closeTx
-func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid string, closePkScript []byte,
+func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid string,
 	revLock string, custClosePk string, amount int64, spendHeight int32) error {
 
 	// Start watching the channel in order to respond to breach Txs
@@ -621,7 +742,7 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 		escrowTxidBigEn = escrowTxidLittleEn[i*2:i*2+2] + escrowTxidBigEn
 	}
 
-	log.Debugf("storeCustClaimTx inputs: ", escrowTxidBigEn, closeTxid, closePkScript,
+	log.Debugf("storeCustClaimTx inputs: ", escrowTxidBigEn, closeTxid,
 		revLock, custClosePk, amount, spendHeight)
 
 	channelName := c.cfg.CustChannelName
@@ -666,15 +787,15 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 	// TODO: Generate a fresh outputPk for the claimed outputs. For now this is just
 	// reusing the custClosePk
 	outputPk := custClosePk
+	index := uint32(0)
 
-	signedCustClaimTx, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, uint32(0), custState.CustBalance, toSelfDelay, outputPk, custState.RevLock, custClosePk, custState)
+	signedCustClaimTx, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, index, custState.CustBalance, toSelfDelay, outputPk, custState.RevLock, custClosePk, custState)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 	log.Debugf("signedCustClaimTx: %#v", signedCustClaimTx)
 
-	// open the zkchanneldb to load custState.
 	// use escrowTxid as the bucket name
 	bucketEscrowTxid := escrowTxidBigEn
 
@@ -933,8 +1054,7 @@ func (c *zkChainWatcher) zkDispatchCustClose(escrowTxid chainhash.Hash,
 // It will return the escrowTxid,closeTxid, the ClosePkScript,
 // the revLock, and custClosePk.
 func (c *zkChainWatcher) zkDispatchBreach(zkBreachInfo ZkBreachInfo) error {
-
-	fmt.Printf("zkDispatchCustBreach, zkBreachInfo %#v:\n", zkBreachInfo)
+	log.Debug("zkDispatchCustBreach, zkBreachInfo %#v:", zkBreachInfo)
 	// Hand the retribution info over to the breach arbiter.
 	if err := c.cfg.zkContractBreach(&zkBreachInfo); err != nil {
 		log.Errorf("unable to hand breached contract off to "+

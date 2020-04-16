@@ -3646,7 +3646,7 @@ var custClaimCommand = cli.Command{
 	Description: `
 	Claim the output of a zkchannel closure by spending it to an address 
 	from this wallet. In future versions this process will be automatic.`,
-	ArgsUsage: "channel_name",
+	ArgsUsage: "escrowtxid",
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "escrowtxid",
@@ -3667,7 +3667,7 @@ func custClaim(ctx *cli.Context) error {
 	}
 
 	if !ctx.IsSet("escrowtxid") {
-		return fmt.Errorf("Enter the escrow txid closed channel ")
+		return fmt.Errorf("Enter the escrow txid of the closed channel ")
 	}
 	escrowtxid := ctx.String("escrowtxid")
 
@@ -3680,6 +3680,55 @@ func custClaim(ctx *cli.Context) error {
 	}
 
 	lnid, err := client.CustClaim(ctxb, req)
+	if err != nil {
+		return err
+	}
+
+	printRespJSON(lnid)
+	return nil
+}
+
+var merchClaimCommand = cli.Command{
+	Name:     "merch_claim",
+	Category: "ZkChannels",
+	Usage:    "Spend a merchant's zkchannel closure output to own wallet.",
+	Description: `
+	Claim the output of a zkchannel closure by spending it to an address 
+	from this wallet. In future versions this process will be automatic.`,
+	ArgsUsage: "escrowtxid",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "escrowtxid",
+			Usage: "the txid (in big endian) of the channel to be closed",
+		},
+	},
+	Action: actionDecorator(merchClaim),
+}
+
+func merchClaim(ctx *cli.Context) error {
+	isMerch, err := lnd.DetermineIfMerch()
+	if err != nil {
+		return err
+	}
+	if !isMerch {
+		return fmt.Errorf("This command doesn't work for customers. " +
+			"Use cust_claim instead.")
+	}
+
+	if !ctx.IsSet("escrowtxid") {
+		return fmt.Errorf("Enter the escrow txid of the closed channel ")
+	}
+	escrowtxid := ctx.String("escrowtxid")
+
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	req := &lnrpc.MerchClaimRequest{
+		EscrowTxid: escrowtxid,
+	}
+
+	lnid, err := client.MerchClaim(ctxb, req)
 	if err != nil {
 		return err
 	}

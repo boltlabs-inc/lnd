@@ -745,6 +745,15 @@ service Lightning {
             get: "/v1/balance/custclaim"
         };
     }
+
+    /** lncli: `merch_claim`
+    MerchClaim spends merchant's outputs to own wallet.
+    */
+    rpc MerchClaim (MerchClaimRequest) returns (MerchClaimResponse) {
+        option (google.api.http) = {
+            get: "/v1/balance/merchclaim"
+        };
+    }
     // ########### ln-mpc end ###########
 }
 
@@ -3709,7 +3718,6 @@ message ListZkChannelsInfo {
     ChannelToken channel_token = 2 [json_name = "channel_token"];
 }
 
-
 message ListZkChannelsRequest {
 }
 message ListZkChannelsResponse {
@@ -3717,12 +3725,18 @@ message ListZkChannelsResponse {
     repeated ListZkChannelsInfo zk_channel = 1 [json_name = "zk_channel"];
 }
 
-
 message CustClaimRequest {
     /// The escrow txid of the closed channel
-    string escrow_txid = 1 [json_name = "close_txid"];
+    string escrow_txid = 1 [json_name = "escrow_txid"];
 }
 message CustClaimResponse {
+}
+
+message MerchClaimRequest {
+    /// The escrow txid of the closed channel
+    string escrow_txid = 1 [json_name = "escrow_txid"];
+}
+message MerchClaimResponse {
 }
 
 // ########### ln-mpc end ###########

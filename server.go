@@ -3691,4 +3691,14 @@ func (s *server) CustClaim(escrowtxid string) error {
 	return s.zkchannelMgr.CustClaim(s.cc.wallet, s.cc.chainNotifier, escrowtxid)
 }
 
+// MerchClaim sweeps a customers output from a close tx.
+func (s *server) MerchClaim(escrowtxid string) error {
+	zkchLog.Infof("MerchClaim initiated")
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.zkchannelMgr.MerchClaim(s.cc.wallet, s.cc.chainNotifier, escrowtxid)
+}
+
 // ########### ln-mpc end ###########
