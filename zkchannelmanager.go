@@ -81,14 +81,6 @@ func (z *zkChannelManager) failZkPayFlow(peer lnpeer.Peer,
 
 func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changePubKey string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, p lnpeer.Peer) error {
 
-	// Check that custStateSk and custPayoutSk hex strings have an even length
-	if len(custStateSk)%2 != 0 {
-		custStateSk = "0" + custStateSk
-	}
-	if len(custPayoutSk)%2 != 0 {
-		custPayoutSk = "0" + custPayoutSk
-	}
-
 	zkchLog.Debug("Variables going into InitCustomer :=> ", merchPubKey, custBal, merchBal, "cust", custStateSk, custPayoutSk)
 
 	channelToken, custState, err := libzkchannels.InitCustomer(merchPubKey, custBal, merchBal, "cust", custStateSk, custPayoutSk)

@@ -3,6 +3,7 @@ package btcwallet
 import (
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -116,7 +117,15 @@ func (b *BtcWallet) FetchOutputPrivKey(outputScript []byte) (string, error) {
 		return "", err
 	}
 
-	return privKey.D.Text(16), nil
+	privKeyString := privKey.D.Text(16)
+
+	// Manually add leading 0s that might have got lost when converting to text
+	if len(privKeyString) < 32 {
+		zeros := strings.Repeat("0", 32-len(privKeyString))
+		privKeyString = zeros + privKeyString
+	}
+
+	return privKeyString, nil
 }
 
 // NewPrivKey returns a new private key.

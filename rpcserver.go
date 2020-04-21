@@ -6516,11 +6516,10 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 		return nil, fmt.Errorf("Insufficient funds to open zkchannel.")
 	}
 
-	custInputSkRaw, err := r.server.cc.wallet.FetchOutputPrivKey(pkScript)
+	custInputSk, err := r.server.cc.wallet.FetchOutputPrivKey(pkScript)
 	if err != nil {
 		return nil, err
 	}
-	custInputSk := fmt.Sprintf("%v", custInputSkRaw)
 	// fmt.Println("Using this SK: ", custInputSk)
 
 	// changeAddrRaw, err := r.server.cc.wallet.NewAddress(lnwallet.WitnessPubKey, true)
