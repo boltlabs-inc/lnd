@@ -120,7 +120,7 @@ func (b *BtcWallet) FetchOutputPrivKey(outputScript []byte) (string, error) {
 	privKeyString := privKey.D.Text(16)
 
 	// Manually add leading 0s that might have got lost when converting to text
-	if len(privKeyString) < 32 {
+	if len(privKeyString) < 64 {
 		zeros := strings.Repeat("0", 32-len(privKeyString))
 		privKeyString = zeros + privKeyString
 	}
