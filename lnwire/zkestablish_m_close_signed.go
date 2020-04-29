@@ -13,6 +13,10 @@ type ZkEstablishMCloseSigned struct {
 	CustSig       ZkMsgType
 	CustClosePk   ZkMsgType
 	RevLock       ZkMsgType
+	FeeCC         ZkMsgType
+	FeeMC         ZkMsgType
+	MinFee        ZkMsgType
+	MaxFee        ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -31,7 +35,12 @@ func (p *ZkEstablishMCloseSigned) Decode(r io.Reader, pver uint32) error {
 		&p.CustPk,
 		&p.CustSig,
 		&p.CustClosePk,
-		&p.RevLock)
+		&p.RevLock,
+		&p.FeeCC,
+		&p.FeeMC,
+		&p.MinFee,
+		&p.MaxFee,
+	)
 }
 
 // Encode serializes the target Ping into the passed io.Writer observing the
@@ -47,7 +56,12 @@ func (p *ZkEstablishMCloseSigned) Encode(w io.Writer, pver uint32) error {
 		p.CustPk,
 		p.CustSig,
 		p.CustClosePk,
-		p.RevLock)
+		p.RevLock,
+		p.FeeCC,
+		p.FeeMC,
+		p.MinFee,
+		p.MaxFee,
+	)
 }
 
 // MsgType returns the integer uniquely identifying this message type on the

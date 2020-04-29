@@ -3587,7 +3587,7 @@ func newSweepPkScriptGen(
 // OpenZkChannel sends the request to establish a zkchannel with a merchant.
 //
 // ########### ln-mpc start ###########
-func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changePubKey string, pubKey *btcec.PublicKey, merchPubKey string, zkChannelName string, custBalance int64, merchBalance int64) error {
+func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changePubKey string, pubKey *btcec.PublicKey, merchPubKey string, zkChannelName string, custBalance int64, merchBalance int64, feeCC int64, feeMC int64, minFee int64, maxFee int64) error {
 	pubBytes := pubKey.SerializeCompressed()
 	pubStr := string(pubBytes)
 
@@ -3606,12 +3606,12 @@ func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index ui
 	}
 
 	// peer.server.zkchannelMgr.zkChannelName = zkChannelName
-	return peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, merchPubKey, zkChannelName, custBalance, merchBalance, peer)
+	return peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, merchPubKey, zkChannelName, custBalance, merchBalance, feeCC, feeMC, minFee, maxFee, peer)
 }
 
 // ZkPay sends the request to server to close the connection with peer
 // identified by public key.
-func (s *server) ZkPay(pubKey *btcec.PublicKey, zkChannelName string, Amount int64) error {
+func (s *server) ZkPay(pubKey *btcec.PublicKey, zkChannelName string, amount int64) error {
 	zkchLog.Infof("zkPay initiated")
 
 	pubBytes := pubKey.SerializeCompressed()
@@ -3631,7 +3631,7 @@ func (s *server) ZkPay(pubKey *btcec.PublicKey, zkChannelName string, Amount int
 		return err
 	}
 
-	return peer.server.zkchannelMgr.InitZkPay(peer, zkChannelName, Amount)
+	return peer.server.zkchannelMgr.InitZkPay(peer, zkChannelName, amount)
 }
 
 // CloseZkChannel sends the request to server to close the connection with peer

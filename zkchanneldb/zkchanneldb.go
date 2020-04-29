@@ -255,5 +255,8 @@ func GetMerchField(db *bolt.DB, fieldName string, out interface{}) error {
 	if err != nil {
 		return err
 	}
+	if len(fieldBytes) == 0 {
+		return nil
+	}
 	return json.Unmarshal(fieldBytes, &out)
 }

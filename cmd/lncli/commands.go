@@ -3225,6 +3225,22 @@ var openZkChannelCommand = cli.Command{
 				"channel and sending the remote party funds, " +
 				"but done all in one step",
 		},
+		cli.IntFlag{
+			Name:  "fee_cc",
+			Usage: "the number of satoshis to pay as fee on customer close",
+		},
+		cli.IntFlag{
+			Name:  "fee_mc",
+			Usage: "the number of satoshis to pay as fee on merchant close",
+		},
+		cli.IntFlag{
+			Name:  "min_fee",
+			Usage: "the number of satoshis that defines the minimum fee",
+		},
+		cli.IntFlag{
+			Name:  "max_fee",
+			Usage: "the number of satoshis that defines the maximum fee",
+		},
 	},
 	Action: actionDecorator(openZkChannel),
 }
@@ -3284,12 +3300,45 @@ func openZkChannel(ctx *cli.Context) error {
 	} else {
 		merchBalance = ctx.Int64("merch_balance")
 	}
+
+	var feeCC int64
+	if !ctx.IsSet("fee_cc") {
+		feeCC = 0
+	} else {
+		feeCC = ctx.Int64("fee_cc")
+	}
+
+	var feeMC int64
+	if !ctx.IsSet("fee_mc") {
+		feeMC = 0
+	} else {
+		feeMC = ctx.Int64("fee_mc")
+	}
+
+	var minFee int64
+	if !ctx.IsSet("min_fee") {
+		minFee = 0
+	} else {
+		minFee = ctx.Int64("min_fee")
+	}
+
+	var maxFee int64
+	if !ctx.IsSet("max_fee") {
+		maxFee = 0
+	} else {
+		maxFee = ctx.Int64("max_fee")
+	}
+
 	req := &lnrpc.OpenZkChannelRequest{
 		PubKey:        pubKey,
 		MerchPubKey:   merchPubKey,
 		ZkChannelName: zkChannelName,
 		CustBalance:   custBalance,
 		MerchBalance:  merchBalance,
+		FeeCc:         feeCC,
+		FeeMc:         feeMC,
+		MinFee:        minFee,
+		MaxFee:        maxFee,
 	}
 
 	lnid, err := client.OpenZkChannel(ctxb, req)

@@ -6554,7 +6554,7 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 	// being opened in parallel.
 	r.server.zkChannelName = in.ZkChannelName
 
-	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance); err != nil {
+	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance, in.FeeCc, in.FeeMc, in.MinFee, in.MaxFee); err != nil {
 		return nil, fmt.Errorf("Could not open channel "+
 			"with peer: %v", err)
 	}

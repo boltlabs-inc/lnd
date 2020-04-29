@@ -11457,7 +11457,15 @@ type OpenZkChannelRequest struct {
 	/// Customer balance
 	CustBalance int64 `protobuf:"varint,4,opt,name=cust_balance,proto3" json:"cust_balance,omitempty"`
 	/// Merchant balance
-	MerchBalance         int64    `protobuf:"varint,5,opt,name=merch_balance,proto3" json:"merch_balance,omitempty"`
+	MerchBalance int64 `protobuf:"varint,5,opt,name=merch_balance,proto3" json:"merch_balance,omitempty"`
+	/// Fee customer close
+	FeeCc int64 `protobuf:"varint,6,opt,name=fee_cc,proto3" json:"fee_cc,omitempty"`
+	/// Fee merchant close
+	FeeMc int64 `protobuf:"varint,7,opt,name=fee_mc,proto3" json:"fee_mc,omitempty"`
+	/// minimum fee
+	MinFee int64 `protobuf:"varint,8,opt,name=min_fee,proto3" json:"min_fee,omitempty"`
+	/// maximum fee
+	MaxFee               int64    `protobuf:"varint,9,opt,name=max_fee,proto3" json:"max_fee,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -11519,6 +11527,34 @@ func (m *OpenZkChannelRequest) GetCustBalance() int64 {
 func (m *OpenZkChannelRequest) GetMerchBalance() int64 {
 	if m != nil {
 		return m.MerchBalance
+	}
+	return 0
+}
+
+func (m *OpenZkChannelRequest) GetFeeCc() int64 {
+	if m != nil {
+		return m.FeeCc
+	}
+	return 0
+}
+
+func (m *OpenZkChannelRequest) GetFeeMc() int64 {
+	if m != nil {
+		return m.FeeMc
+	}
+	return 0
+}
+
+func (m *OpenZkChannelRequest) GetMinFee() int64 {
+	if m != nil {
+		return m.MinFee
+	}
+	return 0
+}
+
+func (m *OpenZkChannelRequest) GetMaxFee() int64 {
+	if m != nil {
+		return m.MaxFee
 	}
 	return 0
 }

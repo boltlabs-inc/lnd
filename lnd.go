@@ -236,8 +236,9 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 
 				// TODO: Make toSelfDelay an input argument
 				toSelfDelay := uint16(1487)
+				dustLimit := int64(546)
 
-				channelState, err := libzkchannels.ChannelSetup("channel", toSelfDelay, false)
+				channelState, err := libzkchannels.ChannelSetup("channel", toSelfDelay, dustLimit, false)
 				zkchLog.Debugf("libzkchannels.ChannelSetup done")
 
 				channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")
