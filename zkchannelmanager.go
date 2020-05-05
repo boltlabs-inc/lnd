@@ -105,7 +105,7 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 
 	zkchLog.Debug("Variables going into FormEscrowTx :=> ", custUtxoTxIdLe, index, inputSats, custBal, custInputSk, custPk, merchPk, changePubKey, changePkIsHash)
 
-	signedEscrowTx, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxIdLe, index, inputSats, custBal, custInputSk, custPk, merchPk, changePubKey, changePkIsHash)
+	signedEscrowTx, _, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxIdLe, index, inputSats, custBal, custInputSk, custPk, merchPk, changePubKey, changePkIsHash)
 	if err != nil {
 		zkchLog.Error("FormEscrowTx: ", err)
 		return err
@@ -512,7 +512,7 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 		return
 	}
 
-	isOk, merchTxid, merchPrevout, merchState, err := libzkchannels.MerchantVerifyMerchCloseTx(escrowTxid, custPk, custBal, merchBal, toSelfDelay, custSig, merchState)
+	isOk, merchTxid_BE, merchTxid, merchPrevout, merchState, err := libzkchannels.MerchantVerifyMerchCloseTx(escrowTxid, custPk, custBal, merchBal, toSelfDelay, custSig, merchState)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -534,11 +534,19 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	zkchLog.Info("Merch close txid = ", merchTxid)
 	zkchLog.Debug("merch prevout = ", merchPrevout)
 
+	// TEMPORARY CODE TO FLIP BYTES
+	// This works because hex strings are of even size
+	s := ""
+	for i := 0; i < len(escrowTxid)/2; i++ {
+		s = escrowTxid[i*2:i*2+2] + s
+	}
+	escrowTxid_BE := s
+
 	// MERCH SIGN CUST CLOSE
 	txInfo := libzkchannels.FundingTxInfo{
-		EscrowTxId:    escrowTxid,
+		EscrowTxId:    escrowTxid_BE,
 		EscrowPrevout: escrowPrevout,
-		MerchTxId:     merchTxid,
+		MerchTxId:     merchTxid_BE,
 		MerchPrevout:  merchPrevout,
 		InitCustBal:   custBal,
 		InitMerchBal:  merchBal,
@@ -720,10 +728,26 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 		return
 	}
 
+	// TEMPORARY CODE TO FLIP BYTES
+	// This works because hex strings are of even size
+	s := ""
+	for i := 0; i < len(escrowTxid)/2; i++ {
+		s = escrowTxid[i*2:i*2+2] + s
+	}
+	escrowTxid_BE := s
+
+	// TEMPORARY CODE TO FLIP BYTES
+	// This works because hex strings are of even size
+	s2 := ""
+	for i := 0; i < len(merchTxid)/2; i++ {
+		s2 = merchTxid[i*2:i*2+2] + s2
+	}
+	merchTxid_BE := s2
+
 	txInfo := libzkchannels.FundingTxInfo{
-		EscrowTxId:    escrowTxid,
+		EscrowTxId:    escrowTxid_BE,
 		EscrowPrevout: escrowPrevout,
-		MerchTxId:     merchTxid,
+		MerchTxId:     merchTxid_BE,
 		MerchPrevout:  merchPrevout,
 		InitCustBal:   custBal,
 		InitMerchBal:  merchBal,
@@ -903,16 +927,8 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 		return
 	}
 
-	// TEMPORARY CODE TO FLIP BYTES
-	// This works because hex strings are of even size
-	s := ""
-	for i := 0; i < len(escrowTxid)/2; i++ {
-		s = escrowTxid[i*2:i*2+2] + s
-	}
-	escrowTxidLittleEn := s
-
 	var escrowTxidHash chainhash.Hash
-	err = chainhash.Decode(&escrowTxidHash, escrowTxidLittleEn)
+	err = chainhash.Decode(&escrowTxidHash, escrowTxid)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -1121,14 +1137,6 @@ func (z *zkChannelManager) waitForFundingWithTimeout(notifier chainntnfs.ChainNo
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-
-	// TEMPORARY CODE TO FLIP BYTES
-	// This works because hex strings are of even size
-	s := ""
-	for i := 0; i < len(escrowTxid)/2; i++ {
-		s = escrowTxid[i*2:i*2+2] + s
-	}
-	escrowTxid = s
 
 	go z.waitForFundingConfirmation(notifier, cancelChan, confChan, wg, escrowTxid, pkScript)
 
@@ -2195,14 +2203,6 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 	// Start watching for on-chain notifications of  custClose
 	pkScript := msgTx.TxOut[0].PkScript
 
-	// TEMPORARY CODE TO FLIP BYTES
-	// This works because hex strings are of even size
-	s := ""
-	for i := 0; i < len(closeEscrowTxid)/2; i++ {
-		s = closeEscrowTxid[i*2:i*2+2] + s
-	}
-	closeEscrowTxid = s
-
 	// ZKCHANNEL TODO: REFACTOR TO WRAP waitForFundingWithTimeout IN GO ROUTINE
 	// AND PASS REFERENCE TO A CHANNELDB
 	confChannel, err := z.waitForFundingWithTimeout(notifier, closeEscrowTxid, pkScript)
@@ -2299,7 +2299,7 @@ func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier
 	zkchLog.Debugf("\n\nmerchState =>:%+v", merchState)
 	zkchLog.Debugf("\n\nCloseTxMap =>:%+v", merchState.CloseTxMap)
 
-	signedMerchCloseTx, merchTxid2, err := libzkchannels.MerchantCloseTx(EscrowTxid, merchState)
+	signedMerchCloseTx, _, merchTxid2, err := libzkchannels.MerchantCloseTx(EscrowTxid, merchState)
 	if err != nil {
 		zkchLog.Error(err)
 		return err
