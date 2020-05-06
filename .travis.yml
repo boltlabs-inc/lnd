@@ -34,6 +34,8 @@ addons:
 before_script:
   - bash ./scripts/install_travis_proto.sh
   - bash ./scripts/install_bitcoind.sh
+  - bash ./scripts/install_libzkchannels.sh .
+
 
 jobs:
   include:
