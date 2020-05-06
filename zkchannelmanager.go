@@ -2522,7 +2522,11 @@ func StringInSlice(a string, list []string) bool {
 
 // ChannelExists checks if a channel with that name has been established
 func ChannelExists(zkChannelName string) bool {
-	zkChannelList := zkchanneldb.Buckets("zkcust.db")
+	zkChannelList, err := zkchanneldb.Buckets("zkcust.db")
+	if err != nil {
+		zkchLog.Error("error opening zkcust.db ", err)
+		return false
+	}
 	return StringInSlice(zkChannelName, zkChannelList)
 }
 

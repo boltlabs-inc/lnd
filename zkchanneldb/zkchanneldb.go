@@ -3,9 +3,10 @@ package zkchanneldb
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/lightningnetwork/lnd/libzkchannels"
 	"log"
 	"os"
+
+	"github.com/lightningnetwork/lnd/libzkchannels"
 
 	"github.com/boltdb/bolt"
 )
@@ -46,16 +47,16 @@ func SetupZkCustDB() (*bolt.DB, error) {
 }
 
 // Buckets returns a list of all buckets.
-func Buckets(path string) []string {
+func Buckets(path string) ([]string, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		fmt.Println(err)
-		return nil
+		return nil, err
 	}
 
 	db, err := bolt.Open(path, 0600, nil)
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return nil, err
 	}
 	defer db.Close()
 
@@ -69,9 +70,9 @@ func Buckets(path string) []string {
 	})
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return nil, err
 	}
-	return bucketList
+	return bucketList, err
 }
 
 // OpenZkChannelBucket opens or creates the bucket for a zkchannel

@@ -44,6 +44,8 @@ github.com/boltlabs-inc/libzkchannels v0.0.0-20200430045247-61c6dc512310 h1:8NZD
 github.com/boltlabs-inc/libzkchannels v0.0.0-20200430045247-61c6dc512310/go.mod h1:snbVlMdYXR27iNdTBYJQSyNM+ifBSSCWg3UszAr891M=
 github.com/boltlabs-inc/libzkchannels v0.0.0-20200505074648-423ca3ae79d3 h1:35jANHdEw5+5DK40eRO8zvfNq+TKMSTxXFhE8bG01hI=
 github.com/boltlabs-inc/libzkchannels v0.0.0-20200505074648-423ca3ae79d3/go.mod h1:snbVlMdYXR27iNdTBYJQSyNM+ifBSSCWg3UszAr891M=
+github.com/boltlabs-inc/libzkchannels v0.0.0-20200506042727-f3024295a89a h1:I9L8+vuf223aQp7QbNixLfbeTlh/ylkS9POcH37Hm3A=
+github.com/boltlabs-inc/libzkchannels v0.0.0-20200506042727-f3024295a89a/go.mod h1:snbVlMdYXR27iNdTBYJQSyNM+ifBSSCWg3UszAr891M=
 github.com/btcsuite/btcd v0.0.0-20190629003639-c26ffa870fd8/go.mod h1:3J08xEfcugPacsc34/LKRU2yO7YmuT8yt28J8k2+rrI=
 github.com/btcsuite/btcd v0.0.0-20190824003749-130ea5bddde3/go.mod h1:3J08xEfcugPacsc34/LKRU2yO7YmuT8yt28J8k2+rrI=
 github.com/btcsuite/btcd v0.20.1-beta h1:Ik4hyJqN8Jfyv3S4AGBOmyouMsYE3EdYODkMbQjwPGw=

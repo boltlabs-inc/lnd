@@ -6640,11 +6640,11 @@ func (r *rpcServer) MerchClose(ctx context.Context,
 func (r *rpcServer) ZkChannelBalance(ctx context.Context,
 	in *lnrpc.ZkChannelBalanceRequest) (*lnrpc.ZkChannelBalanceResponse, error) {
 
-	zkChannelList := zkchanneldb.Buckets("zkcust.db")
+	zkChannelList, err := zkchanneldb.Buckets("zkcust.db")
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve zkcust.db: %v", err)
+	}
 	zkchLog.Info("zkChannelList:", zkChannelList)
-
-	zkClaimList := zkchanneldb.Buckets("zkclaim.db")
-	zkchLog.Info("zkClaimList:", zkClaimList)
 
 	resp := &lnrpc.ZkChannelBalanceResponse{
 		ZkChannel: make([]*lnrpc.ZkChannelInfo, 0, len(zkChannelList)),
