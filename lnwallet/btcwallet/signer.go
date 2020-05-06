@@ -152,7 +152,15 @@ func (b *BtcWallet) NewPrivKey() (string, error) {
 		return "", err
 	}
 
-	return privKey.D.Text(16), nil
+	privKeyString := privKey.D.Text(16)
+
+	// Manually add leading 0s that might have got lost when converting to text
+	if len(privKeyString) < 64 {
+		zeros := strings.Repeat("0", 64-len(privKeyString))
+		privKeyString = zeros + privKeyString
+	}
+
+	return privKeyString, nil
 }
 
 // NewPubKey returns a new public key.

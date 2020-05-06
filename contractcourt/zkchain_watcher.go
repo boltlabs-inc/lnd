@@ -640,20 +640,6 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidLittleEn string,
 	custClosePk string, amount int64, spendHeight int32) error {
 
-	// // TEMPORARY CODE TO FLIP BYTES
-	// // This works because hex strings are of even size
-	// escrowTxidBigEn := ""
-	// for i := 0; i < len(escrowTxidLittleEn)/2; i++ {
-	// 	escrowTxidBigEn = escrowTxidLittleEn[i*2:i*2+2] + escrowTxidBigEn
-	// }
-
-	// // TEMPORARY CODE TO FLIP BYTES
-	// // This works because hex strings are of even size
-	// closeTxidBigEn := ""
-	// for i := 0; i < len(closeTxidLittleEn)/2; i++ {
-	// 	closeTxidBigEn = closeTxidLittleEn[i*2:i*2+2] + closeTxidBigEn
-	// }
-
 	log.Debugf("storeMerchClaimTx inputs: ", escrowTxidLittleEn, closeTxidLittleEn,
 		custClosePk, amount, spendHeight)
 
@@ -728,13 +714,6 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 // storeCustClaimTx creates a signed custClaimTx for the given closeTx
 func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid string,
 	revLock string, custClosePk string, amount int64, spendHeight int32) error {
-
-	// // TEMPORARY CODE TO FLIP BYTES
-	// // This works because hex strings are of even size
-	// escrowTxidBigEn := ""
-	// for i := 0; i < len(escrowTxidLittleEn)/2; i++ {
-	// 	escrowTxidBigEn = escrowTxidLittleEn[i*2:i*2+2] + escrowTxidBigEn
-	// }
 
 	log.Debugf("storeCustClaimTx inputs: ", escrowTxidLittleEn, closeTxid,
 		revLock, custClosePk, amount, spendHeight)
