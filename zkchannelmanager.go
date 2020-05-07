@@ -87,7 +87,7 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 
 	zkchLog.Debug("Variables going into InitCustomer :=> ", merchPubKey, custBal, merchBal, "cust", custStateSk, custPayoutSk)
 
-	channelToken, custState, err := libzkchannels.InitCustomer(merchPubKey, custBal, merchBal, feeCC, "cust", custStateSk, custPayoutSk)
+	channelToken, custState, err := libzkchannels.InitCustomer(merchPubKey, custBal, merchBal, feeCC, minFee, maxFee, feeMC, "cust", custStateSk, custPayoutSk)
 	if err != nil {
 		zkchLog.Error("InitCustomer", err)
 		return err
@@ -137,13 +137,13 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 		return err
 	}
 
-	err = zkchanneldb.AddCustField(zkCustDB, zkChannelName, custBal, "custBalKey")
+	err = zkchanneldb.AddCustField(zkCustDB, zkChannelName, custState.CustBalance, "custBalKey")
 	if err != nil {
 		zkchLog.Error(err)
 		return err
 	}
 
-	err = zkchanneldb.AddCustField(zkCustDB, zkChannelName, merchBal, "merchBalKey")
+	err = zkchanneldb.AddCustField(zkCustDB, zkChannelName, custState.MerchBalance, "merchBalKey")
 	if err != nil {
 		zkchLog.Error(err)
 		return err
@@ -206,10 +206,10 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 	revLockBytes := []byte(revLock)
 
 	custBalBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(custBalBytes, uint64(custBal))
+	binary.LittleEndian.PutUint64(custBalBytes, uint64(custState.CustBalance))
 
 	merchBalBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(merchBalBytes, uint64(merchBal))
+	binary.LittleEndian.PutUint64(merchBalBytes, uint64(custState.MerchBalance))
 
 	zkEstablishOpen := lnwire.ZkEstablishOpen{
 		EscrowTxid:    escrowTxidBytes,
@@ -399,7 +399,7 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 	custClosePk := fmt.Sprintf("%v", custState.PayoutPk)
 
 	zkchLog.Debugf("variables going into FormMerchCloseTx: %#v", escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay)
-	merchTxPreimage, err := libzkchannels.FormMerchCloseTx(escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay)
+	merchTxPreimage, err := libzkchannels.FormMerchCloseTx(escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, feeMC, toSelfDelay)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -512,7 +512,7 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 		return
 	}
 
-	isOk, merchTxid_BE, merchTxid, merchPrevout, merchState, err := libzkchannels.MerchantVerifyMerchCloseTx(escrowTxid, custPk, custBal, merchBal, toSelfDelay, custSig, merchState)
+	isOk, merchTxid_BE, merchTxid, merchPrevout, merchState, err := libzkchannels.MerchantVerifyMerchCloseTx(escrowTxid, custPk, custBal, merchBal, feeMC, toSelfDelay, custSig, merchState)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
