@@ -476,9 +476,9 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 			// custPubkey starts on the 37th byte, and finishes on the
 			// 69th byte of the escrowScript
-			if len(escrowScript) != 114 {
-				log.Error("escrowScript in merch-close is shorter than expected." +
-					" custPubkey may not be in the expected position in the script")
+			if len(escrowScript) != 71 {
+				log.Errorf("escrowScript in merch-close is not 71 bytes as expected."+
+					"escrowScript: %x", escrowScript)
 				return
 			}
 			custPubkey := hex.EncodeToString(escrowScript[36:69])
@@ -488,7 +488,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			err := c.storeMerchClaimTx(escrowTxid.String(), closeTxid.String(), custPubkey,
 				amount, spendHeight)
 			if err != nil {
-				log.Errorf("Unable to store CustClaimTx for channel %v ",
+				log.Errorf("Unable to store MerchClaimTx for channel %v ",
 					escrowTxid, err)
 			}
 
@@ -679,9 +679,17 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 	outputPk := *merchState.PkM
 	index := uint32(0)
 
+	log.Debugf("closeTxidLittleEn: %#v", closeTxidLittleEn)
+	log.Debugf("index: %#v", index)
+	log.Debugf("amount: %#v", amount)
+	log.Debugf("toSelfDelay: %#v", toSelfDelay)
+	log.Debugf("custClosePk: %#v", custClosePk)
+	log.Debugf("outputPk: %#v", outputPk)
+	log.Debugf("merchState: %#v", merchState)
+
 	signedMerchClaimTx, err := libzkchannels.MerchantSignMerchClaimTx(closeTxidLittleEn, index, amount, toSelfDelay, custClosePk, outputPk, merchState)
 	if err != nil {
-		log.Error(err)
+		log.Errorf("libzkchannels.MerchantSignMerchClaimTx: ", err)
 		return err
 	}
 
