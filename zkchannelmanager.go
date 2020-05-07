@@ -2595,8 +2595,7 @@ func (z *zkChannelManager) MerchClaim(wallet *lnwallet.LightningWallet, notifier
 		return err
 	}
 
-	var signedMerchClaimTx string
-	err = zkchanneldb.GetField(zkMerchClaimDB, escrowTxid, "signedMerchClaimTxKey", &signedMerchClaimTx)
+	signedMerchClaimTx, err := zkchanneldb.GetStringField(zkMerchClaimDB, escrowTxid, "signedMerchClaimTxKey")
 	if err != nil {
 		zkchLog.Error("GetField: ", err)
 		return err

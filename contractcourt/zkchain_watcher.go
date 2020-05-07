@@ -458,8 +458,8 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 		switch {
 
-		// merchCloseTx has one output.
-		case numOutputs < 2 && isMerch:
+		// merchCloseTx has two outputs.
+		case numOutputs < 3 && isMerch:
 			log.Debug("Merch-close-tx detected")
 
 			// commitTxBroadcast.TxOut will always have at least one
@@ -499,8 +499,8 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					escrowTxid, err)
 			}
 
-		// merchCloseTx has one output.
-		case numOutputs < 2 && !isMerch:
+		// merchCloseTx has two outputs.
+		case numOutputs < 3 && !isMerch:
 			log.Debug("Merch-close-tx detected")
 
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
@@ -525,8 +525,8 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					escrowTxid, err)
 			}
 
-		// custCloseTx has 3 outputs.
-		case numOutputs > 2:
+		// custCloseTx has 4 outputs.
+		case numOutputs > 3:
 
 			ClosePkScript := commitTxBroadcast.TxOut[0].PkScript
 
@@ -695,7 +695,7 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 		log.Error(err)
 		return err
 	}
-	err = zkchanneldb.AddCustField(zkMerchClaimDB, bucketEscrowTxid, signedMerchClaimTx, "signedMerchClaimTxKey")
+	err = zkchanneldb.AddStringField(zkMerchClaimDB, bucketEscrowTxid, signedMerchClaimTx, "signedMerchClaimTxKey")
 	if err != nil {
 		log.Error(err)
 		return err

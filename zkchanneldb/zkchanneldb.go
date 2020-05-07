@@ -191,6 +191,21 @@ func AddCustField(db *bolt.DB, zkChannelName string, field interface{}, fieldNam
 	return err
 }
 
+// AddCustField adds arbitrary field to the zkCustDB
+func AddStringField(db *bolt.DB, zkChannelName string, field string, fieldName string) error {
+	BucketName := []byte(zkChannelName)
+
+	err := db.Update(func(tx *bolt.Tx) error {
+		err := tx.Bucket(BucketName).Put([]byte(fieldName), []byte(field))
+		if err != nil {
+			return fmt.Errorf("could not insert entry: %v", err)
+		}
+
+		return nil
+	})
+	return err
+}
+
 // GetCustState custState from zkCustDB
 func GetCustState(db *bolt.DB, zkChannelName string) (libzkchannels.CustState, error) {
 	BucketName := []byte(zkChannelName)
@@ -242,6 +257,23 @@ func GetField(db *bolt.DB, bucketName string, fieldName string, out interface{})
 		log.Fatal(err)
 	}
 	return json.Unmarshal(fieldBytes, &out)
+}
+
+// GetField gets a field from DB (works for zkCustDB and zkMerchDB)
+func GetStringField(db *bolt.DB, bucketName string, fieldName string) (string, error) {
+	BucketName := []byte(bucketName)
+
+	var fieldBytes []byte
+	err := db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(BucketName).Cursor()
+		_, v := c.Seek([]byte(fieldName))
+		fieldBytes = v
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	return string(fieldBytes), err
 }
 
 // GetMerchField gets a field from zkMerchDB
