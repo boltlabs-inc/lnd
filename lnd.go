@@ -203,119 +203,6 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 		build.Version(), build.Commit, build.Deployment,
 		build.LoggingType)
 
-	// ################## ln-mpc start ##################
-	// If we are starting LND in standard LN mode (not zkchannel mode), then skip zkchannel steps
-	if !cfg.LNMode {
-		// Do merchant initialization if merchant flag was set
-		if cfg.ZkMerchant {
-
-			isCust, err := DetermineIfCust()
-			if err != nil {
-				return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
-			}
-			if isCust {
-				return fmt.Errorf("Current directory has already been set up with zk customer DB. " +
-					"Delete zkcust.db and try again to run zklnd as a merchant.")
-			}
-
-			// If there is already a zkmerch.db set up, skip the initialization step
-			isMerch, err := DetermineIfMerch()
-			if err != nil {
-				return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
-			}
-			if !isMerch {
-
-				zkchLog.Infof("Initializing merchant setup")
-
-				merchName := cfg.Alias
-				if merchName == "" {
-					merchName = "Merchant"
-				}
-
-				dbUrl := "redis://127.0.0.1/"
-
-				// TODO ZKLND-19: Make toSelfDelay an input argument and add to config file
-				toSelfDelay := uint16(1487)
-				// TODO ZKLND-37: Make sure dust limit is set to finalized value
-				dustLimit := int64(546)
-
-				channelState, err := libzkchannels.ChannelSetup("channel", toSelfDelay, dustLimit, false)
-				zkchLog.Debugf("libzkchannels.ChannelSetup done")
-
-				channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")
-				zkchLog.Debugf("libzkchannels.InitMerchant done")
-
-				// TODO ZKLND-38: Get privatekeys from btc wallet
-				skM := "e6e0c5310bb03809e1b2a1595a349f002125fa557d481e51f401ddaf3287e6ae"
-				payoutSkM := "5611111111111111111111111111111100000000000000000000000000000000"
-				disputeSkM := "5711111111111111111111111111111100000000000000000000000000000000"
-				channelState, merchState, err = libzkchannels.LoadMerchantWallet(merchState, channelState, skM, payoutSkM, disputeSkM)
-
-				// zkDB add merchState & channelState
-				zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
-				if err != nil {
-					return err
-				}
-
-				// save merchStateBytes in zkMerchDB
-				err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
-				if err != nil {
-					return err
-				}
-
-				// save channelStateBytes in zkMerchDB
-				err = zkchanneldb.AddMerchField(zkMerchDB, channelState, "channelStateKey")
-				if err != nil {
-					return err
-				}
-
-				// save totalBalance in zkMerchDB.
-				// With no channels initially, the total balance starts off at 0
-				totalBalance := int64(0)
-				err = zkchanneldb.AddMerchField(zkMerchDB, totalBalance, "totalBalanceKey")
-				if err != nil {
-					return err
-				}
-
-				err = zkMerchDB.Close()
-				if err != nil {
-					return err
-				}
-				zkchLog.Info("Merchant initialization complete")
-				zkchLog.Info("Merchant Public Key:", *merchState.PkM)
-			}
-
-		} else { // if not zk merchant, then create customer db.
-
-			isMerch, err := DetermineIfMerch()
-			if err != nil {
-				return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
-			}
-			if isMerch {
-				return fmt.Errorf("Current directory has already been set up with zk merchant DB. " +
-					"Delete zkmerch.db and try again to run zklnd as a customer.")
-			}
-
-			isCust, err := DetermineIfCust()
-			if err != nil {
-				return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
-			}
-			if !isCust {
-
-				zkchLog.Infof("Creating customer zkchannel db")
-
-				zkCustDB, err := zkchanneldb.SetupZkCustDB()
-				if err != nil {
-					return err
-				}
-				err = zkCustDB.Close()
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-
 	// ################## ln-mpc end ##################
 	var network string
 	switch {
@@ -872,6 +759,131 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 			return err
 		}
 		defer tower.Stop()
+	}
+
+	// ################## ln-mpc start ##################
+	// If we are starting LND in standard LN mode (not zkchannel mode), then skip zkchannel steps
+	if !cfg.LNMode {
+		// Do merchant initialization if merchant flag was set
+		if cfg.ZkMerchant {
+
+			isCust, err := DetermineIfCust()
+			if err != nil {
+				return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
+			}
+			if isCust {
+				return fmt.Errorf("Current directory has already been set up with zk customer DB. " +
+					"Delete zkcust.db and try again to run zklnd as a merchant.")
+			}
+
+			// If there is already a zkmerch.db set up, skip the initialization step
+			isMerch, err := DetermineIfMerch()
+			if err != nil {
+				return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
+			}
+			if !isMerch {
+
+				zkchLog.Infof("Initializing merchant setup")
+
+				merchName := cfg.Alias
+				if merchName == "" {
+					merchName = "Merchant"
+				}
+
+				dbUrl := "redis://127.0.0.1/"
+
+				// TODO ZKLND-19: Make toSelfDelay an input argument and add to config file
+				toSelfDelay := uint16(1487)
+				// TODO ZKLND-37: Make sure dust limit is set to finalized value
+				dustLimit := int64(546)
+
+				channelState, err := libzkchannels.ChannelSetup("channel", toSelfDelay, dustLimit, false)
+				zkchLog.Debugf("libzkchannels.ChannelSetup done")
+
+				channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")
+				zkchLog.Debugf("libzkchannels.InitMerchant done")
+
+				skM, err := server.cc.wallet.NewPrivKey()
+				if err != nil {
+					ltndLog.Errorf("unable to generate privkey skM: %v", err)
+					return err
+				}
+				payoutSkM, err := server.cc.wallet.NewPrivKey()
+				if err != nil {
+					ltndLog.Errorf("unable to generate privkey payoutSkM: %v", err)
+					return err
+				}
+				disputeSkM, err := server.cc.wallet.NewPrivKey()
+				if err != nil {
+					ltndLog.Errorf("unable to generate privkey disputeSkM: %v", err)
+					return err
+				}
+
+				channelState, merchState, err = libzkchannels.LoadMerchantWallet(merchState, channelState, skM, payoutSkM, disputeSkM)
+
+				// zkDB add merchState & channelState
+				zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+				if err != nil {
+					return err
+				}
+
+				// save merchStateBytes in zkMerchDB
+				err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
+				if err != nil {
+					return err
+				}
+
+				// save channelStateBytes in zkMerchDB
+				err = zkchanneldb.AddMerchField(zkMerchDB, channelState, "channelStateKey")
+				if err != nil {
+					return err
+				}
+
+				// save totalBalance in zkMerchDB.
+				// With no channels initially, the total balance starts off at 0
+				totalBalance := int64(0)
+				err = zkchanneldb.AddMerchField(zkMerchDB, totalBalance, "totalBalanceKey")
+				if err != nil {
+					return err
+				}
+
+				err = zkMerchDB.Close()
+				if err != nil {
+					return err
+				}
+				zkchLog.Info("Merchant initialization complete")
+				zkchLog.Info("Merchant Public Key:", *merchState.PkM)
+			}
+
+		} else { // if not zk merchant, then create customer db.
+
+			isMerch, err := DetermineIfMerch()
+			if err != nil {
+				return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
+			}
+			if isMerch {
+				return fmt.Errorf("Current directory has already been set up with zk merchant DB. " +
+					"Delete zkmerch.db and try again to run zklnd as a customer.")
+			}
+
+			isCust, err := DetermineIfCust()
+			if err != nil {
+				return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
+			}
+			if !isCust {
+
+				zkchLog.Infof("Creating customer zkchannel db")
+
+				zkCustDB, err := zkchanneldb.SetupZkCustDB()
+				if err != nil {
+					return err
+				}
+				err = zkCustDB.Close()
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	// Wait for shutdown signal from either a graceful server stop or from
