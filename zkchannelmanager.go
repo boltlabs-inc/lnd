@@ -87,7 +87,10 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 
 	zkchLog.Debug("Variables going into InitCustomer :=> ", merchPubKey, custBal, merchBal, "cust", custStateSk, custPayoutSk)
 
-	channelToken, custState, err := libzkchannels.InitCustomer(merchPubKey, custBal, merchBal, feeCC, minFee, maxFee, feeMC, "cust", custStateSk, custPayoutSk)
+	channelToken, custState, err := libzkchannels.InitCustomer(merchPubKey, custBal, merchBal, feeCC, minFee, maxFee, feeMC, "cust")
+
+	channelToken, custState, err = libzkchannels.LoadCustomerWallet(custState, channelToken, custStateSk, custPayoutSk)
+
 	if err != nil {
 		zkchLog.Error("InitCustomer", err)
 		return err

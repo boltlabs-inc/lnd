@@ -234,8 +234,9 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 
 				dbUrl := "redis://127.0.0.1/"
 
-				// TODO: Make toSelfDelay an input argument
+				// TODO ZKLND-19: Make toSelfDelay an input argument and add to config file
 				toSelfDelay := uint16(1487)
+				// TODO ZKLND-37: Make sure dust limit is set to finalized value
 				dustLimit := int64(546)
 
 				channelState, err := libzkchannels.ChannelSetup("channel", toSelfDelay, dustLimit, false)
@@ -243,6 +244,12 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 
 				channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")
 				zkchLog.Debugf("libzkchannels.InitMerchant done")
+
+				// TODO ZKLND-38: Get privatekeys from btc wallet
+				skM := "e6e0c5310bb03809e1b2a1595a349f002125fa557d481e51f401ddaf3287e6ae"
+				payoutSkM := "5611111111111111111111111111111100000000000000000000000000000000"
+				disputeSkM := "5711111111111111111111111111111100000000000000000000000000000000"
+				channelState, merchState, err = libzkchannels.LoadMerchantWallet(merchState, channelState, skM, payoutSkM, disputeSkM)
 
 				// zkDB add merchState & channelState
 				zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
