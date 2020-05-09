@@ -108,7 +108,8 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 
 	zkchLog.Debug("Variables going into FormEscrowTx :=> ", custUtxoTxIdLe, index, inputSats, custBal, custInputSk, custPk, merchPk, changePubKey, changePkIsHash)
 
-	signedEscrowTx, _, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxIdLe, index, inputSats, custBal, custInputSk, custPk, merchPk, changePubKey, changePkIsHash)
+	outputSats := custBal + merchBal
+	signedEscrowTx, _, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxIdLe, index, inputSats, outputSats, custInputSk, custPk, merchPk, changePubKey, changePkIsHash)
 	if err != nil {
 		zkchLog.Error("FormEscrowTx: ", err)
 		return err
