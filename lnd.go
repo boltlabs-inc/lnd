@@ -793,11 +793,12 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 				dbUrl := "redis://127.0.0.1/"
 
 				// TODO ZKLND-19: Make toSelfDelay an input argument and add to config file
-				toSelfDelay := uint16(1487)
+				// currently not configurable in MPC
+				// toSelfDelay := uint16(1487)
 				// TODO ZKLND-37: Make sure dust limit is set to finalized value
 				dustLimit := int64(546)
 
-				channelState, err := libzkchannels.ChannelSetup("channel", toSelfDelay, dustLimit, false)
+				channelState, err := libzkchannels.ChannelSetup("channel", dustLimit, false)
 				zkchLog.Debugf("libzkchannels.ChannelSetup done")
 
 				channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")

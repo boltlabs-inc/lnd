@@ -321,7 +321,10 @@ func CreateTestZkChannels(tweaklessCommits bool) (
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	alicePool.Start()
+	err = alicePool.Start()
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	obfuscator := createStateHintObfuscator(aliceChannelState)
 
@@ -332,7 +335,10 @@ func CreateTestZkChannels(tweaklessCommits bool) (
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	bobPool.Start()
+	err = bobPool.Start()
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	err = SetStateNumHint(
 		aliceCommitTx, 0, obfuscator,
@@ -368,8 +374,8 @@ func CreateTestZkChannels(tweaklessCommits bool) (
 		os.RemoveAll(bobPath)
 		os.RemoveAll(alicePath)
 
-		alicePool.Stop()
-		bobPool.Stop()
+		err = alicePool.Stop()
+		err = bobPool.Stop()
 	}
 
 	// Now that the channel are open, simulate the start of a session by

@@ -30,14 +30,20 @@ export PATH=$ZK_DEPS_INSTALL/bin:$PATH
 
 make distclean
 ./deps/install_packages.sh
-sudo dpkg -i ./deps/emp-sh2pc/libcrypto++9v5*.deb
-sudo dpkg -i ./deps/emp-sh2pc/libcrypto++-dev*.deb
+if [[ $TRAVIS = "true" && $TRAVIS_OS_NAME = "linux" ]]; then
+   sudo dpkg -i ./deps/emp-sh2pc/libcrypto++9v5*.deb
+   sudo dpkg -i ./deps/emp-sh2pc/libcrypto++-dev*.deb
+fi
+
 make deps
-redis-server --daemonize yes
-redis-cli ping
-curl https://build.travis-ci.org/files/rustup-init.sh -sSf | sh -s -- -y --default-toolchain stable --profile minimal
-export PATH=$HOME/.cargo/bin:$PATH
-rustup default stable
+
+if [[ $TRAVIS = "true" && $TRAVIS_OS_NAME = "linux" ]]; then
+   redis-server --daemonize yes
+   redis-cli ping
+   curl https://build.travis-ci.org/files/rustup-init.sh -sSf | sh -s -- -y --default-toolchain stable --profile minimal
+   export PATH=$HOME/.cargo/bin:$PATH
+   rustup default stable
+fi
 set +e
 
 cargo build --release --manifest-path ./Cargo.toml
