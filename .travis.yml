@@ -41,6 +41,8 @@ jobs:
   include:
     - stage: Build
       script:
+        - . ./libzkchannels/libzkchannels.mk
+        - env
         - make rpc-check
         - make unit pkg=... case=_NONE_
         - make lint workers=1
