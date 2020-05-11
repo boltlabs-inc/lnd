@@ -35,15 +35,19 @@ sudo dpkg -i ./deps/emp-sh2pc/libcrypto++-dev*.deb
 make deps
 redis-server --daemonize yes
 redis-cli ping
+curl https://build.travis-ci.org/files/rustup-init.sh -sSf | sh -s -- -y --default-toolchain stable --profile minimal
+export PATH=$HOME/.cargo/bin:$PATH
+rustup default stable
 set +e
 
 cargo build --release --manifest-path ./Cargo.toml
 
 echo "export CGO_LDFLAGS=\"-L$(pwd)/target/release\"" > libzkchannels.mk
-echo "export LD_LIBRARY_PATH=\"$(pwd)/target/release\"" >> libzkchannels.mk
+echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/target/release:$(pwd)/deps/root/lib" >> libzkchannels.mk
 
 if [ $FOUND_LND -eq 1 ]; then
-   echo "Save libzkchannels build config to $LND_PATH/make"
-   cp -v libzkchannels.mk $LND_PATH/make/
+   echo "$PWD/libzkchannels.mk"
 fi
+. ./libzkchannels.mk
+go test -v libzkchannels.go libzkchannels_test.go
 cd ..
