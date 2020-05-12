@@ -865,11 +865,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 
 				zkchLog.Infof("Creating customer zkchannel db")
 
-				zkCustDB, err := zkchanneldb.SetupDB(server.zkchannelMgr.dbPath)
-				if err != nil {
-					return err
-				}
-				err = zkCustDB.Close()
+				err := zkchanneldb.InitDB(server.zkchannelMgr.dbPath)
 				if err != nil {
 					return err
 				}

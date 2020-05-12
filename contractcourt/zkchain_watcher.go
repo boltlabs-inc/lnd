@@ -701,7 +701,7 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 	// use escrowTxid as the bucket name
 	bucketEscrowTxid := escrowTxidLittleEn
 
-	zkMerchClaimDB, err := zkchanneldb.OpenZkClaimBucket(bucketEscrowTxid)
+	zkMerchClaimDB, err := zkchanneldb.OpenZkClaimBucket(bucketEscrowTxid, "zkclaim.db")
 	if err != nil {
 		log.Error(err)
 		return err
@@ -711,7 +711,7 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 		log.Error(err)
 		return err
 	}
-	err = zkchanneldb.AddCustField(zkMerchClaimDB, bucketEscrowTxid, spendHeight, "spendHeightKey")
+	err = zkchanneldb.AddField(zkMerchClaimDB, bucketEscrowTxid, spendHeight, "spendHeightKey")
 	if err != nil {
 		log.Error(err)
 		return err
@@ -775,17 +775,17 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 	// use escrowTxid as the bucket name
 	bucketEscrowTxid := escrowTxidLittleEn
 
-	zkCustClaimDB, err := zkchanneldb.OpenZkClaimBucket(bucketEscrowTxid)
+	zkCustClaimDB, err := zkchanneldb.OpenZkClaimBucket(bucketEscrowTxid, "zkclaim.db")
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	err = zkchanneldb.AddCustField(zkCustClaimDB, bucketEscrowTxid, signedCustClaimTx, "signedCustClaimTxKey")
+	err = zkchanneldb.AddField(zkCustClaimDB, bucketEscrowTxid, signedCustClaimTx, "signedCustClaimTxKey")
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	err = zkchanneldb.AddCustField(zkCustClaimDB, bucketEscrowTxid, spendHeight, "spendHeightKey")
+	err = zkchanneldb.AddField(zkCustClaimDB, bucketEscrowTxid, spendHeight, "spendHeightKey")
 	if err != nil {
 		log.Error(err)
 		return err
