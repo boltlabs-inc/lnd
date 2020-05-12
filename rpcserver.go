@@ -6680,7 +6680,7 @@ func (r *rpcServer) TotalReceived(ctx context.Context,
 	total, err := r.server.TotalReceived()
 
 	return &lnrpc.TotalReceivedResponse{
-		TotalReceived: int64(total),
+		TotalReceived: total,
 	}, err
 }
 

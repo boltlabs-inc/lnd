@@ -23,16 +23,16 @@ import (
 	"github.com/lightningnetwork/lnd/zkchanneldb"
 )
 
-type ZkFundingInfo struct {
-	fundingOut      wire.OutPoint
-	pkScript        []byte
-	broadcastHeight uint32
-}
+// type ZkFundingInfo struct {
+// 	fundingOut      wire.OutPoint
+// 	pkScript        []byte
+// 	broadcastHeight uint32
+// }
 
 type zkChannelManager struct {
-	zkChannelName string
-	Notifier      chainntnfs.ChainNotifier
-	wg            sync.WaitGroup
+	// zkChannelName string
+	Notifier chainntnfs.ChainNotifier
+	wg       sync.WaitGroup
 	// WatchNewZkChannel is to be called once a new zkchannel enters the final
 	// funding stage: waiting for on-chain confirmation. This method sends
 	// the channel to the ChainArbitrator so it can watch for any on-chain
@@ -2174,8 +2174,8 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 		return err
 	}
 
-	zkchLog.Debug("Signed CloseEscrowTx =>:", closeEscrowTx)
-	zkchLog.Debug("CloseEscrowTx =>:", closeEscrowTxid)
+	zkchLog.Debug("Signed closeEscrowTx =>:", closeEscrowTx)
+	zkchLog.Debug("closeEscrowTx =>:", closeEscrowTxid)
 
 	// Broadcast escrow tx on chain
 	serializedTx, err := hex.DecodeString(closeEscrowTx)
@@ -2224,7 +2224,7 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 
 // GetSignedCustCloseTxs gets the custCloseTx and also sets closeInitiated to true
 // to signal that no further payments should be made with this channel.
-func GetSignedCustCloseTxs(zkChannelName string, closeEscrow bool) (CloseEscrowTx string, CloseEscrowTxid string, err error) {
+func GetSignedCustCloseTxs(zkChannelName string, closeEscrow bool) (closeEscrowTx string, closeEscrowTxid string, err error) {
 	// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
 	// This is used to prevent another payment being made
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
@@ -2266,7 +2266,7 @@ func GetSignedCustCloseTxs(zkChannelName string, closeEscrow bool) (CloseEscrowT
 		return "", "", err
 	}
 
-	closeEscrowTx, closeEscrowTxid, err := libzkchannels.CustomerCloseTx(channelState, channelToken, closeEscrow, custState)
+	closeEscrowTx, closeEscrowTxid, err = libzkchannels.CustomerCloseTx(channelState, channelToken, closeEscrow, custState)
 	if err != nil {
 		zkchLog.Error(err)
 		return "", "", err
@@ -2277,7 +2277,7 @@ func GetSignedCustCloseTxs(zkChannelName string, closeEscrow bool) (CloseEscrowT
 }
 
 // MerchClose broadcasts a close transaction for a given escrow txid
-func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, EscrowTxid string) error {
+func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, escrowTxid string) error {
 
 	// open the zkchanneldb to create signedMerchCloseTx
 	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
@@ -2298,12 +2298,12 @@ func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier
 		return err
 	}
 
-	zkchLog.Debug("EscrowTxid to close =>:", EscrowTxid)
+	zkchLog.Debug("escrowTxid to close =>:", escrowTxid)
 
 	zkchLog.Debugf("\n\nmerchState =>:%+v", merchState)
 	zkchLog.Debugf("\n\nCloseTxMap =>:%+v", merchState.CloseTxMap)
 
-	signedMerchCloseTx, _, merchTxid2, err := libzkchannels.MerchantCloseTx(EscrowTxid, merchState)
+	signedMerchCloseTx, _, merchTxid2, err := libzkchannels.MerchantCloseTx(escrowTxid, merchState)
 	if err != nil {
 		zkchLog.Error(err)
 		return err

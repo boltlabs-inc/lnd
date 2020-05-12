@@ -33,7 +33,10 @@ func TestZkChainWatcherMerchClose(t *testing.T) {
 
 	// Populate fields of ZkFundingInfo.
 	var escrowTxidHash chainhash.Hash
-	chainhash.Decode(&escrowTxidHash, escrowTxid)
+	err := chainhash.Decode(&escrowTxidHash, escrowTxid)
+	if err != nil {
+		t.Error(err)
+	}
 
 	fundingOut := &wire.OutPoint{
 		Hash:  escrowTxidHash,
@@ -85,7 +88,10 @@ func TestZkChainWatcherMerchClose(t *testing.T) {
 	chanEvents := custChainWatcher.SubscribeChannelEvents()
 
 	var merchCloseTxidHash chainhash.Hash
-	chainhash.Decode(&merchCloseTxidHash, merchCloseTxid)
+	err = chainhash.Decode(&merchCloseTxidHash, merchCloseTxid)
+	if err != nil {
+		t.Error(err)
+	}
 
 	serializedMerchCTx, err := hex.DecodeString(merchCloseTx)
 	if err != nil {
@@ -129,7 +135,10 @@ func TestZkChainWatcherCustClose(t *testing.T) {
 
 	// Populate fields of ZkFundingInfo.
 	var escrowTxidHash chainhash.Hash
-	chainhash.Decode(&escrowTxidHash, escrowTxid)
+	err := chainhash.Decode(&escrowTxidHash, escrowTxid)
+	if err != nil {
+		t.Error(err)
+	}
 
 	fundingOut := &wire.OutPoint{
 		Hash:  escrowTxidHash,
@@ -181,7 +190,10 @@ func TestZkChainWatcherCustClose(t *testing.T) {
 	chanEvents := custChainWatcher.SubscribeChannelEvents()
 
 	var closeTxidHash chainhash.Hash
-	chainhash.Decode(&closeTxidHash, closeTxid)
+	err = chainhash.Decode(&closeTxidHash, closeTxid)
+	if err != nil {
+		t.Error(err)
+	}
 
 	serializedCustCTx, err := hex.DecodeString(custCloseTx)
 	if err != nil {

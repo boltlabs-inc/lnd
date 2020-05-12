@@ -254,6 +254,9 @@ type Config struct {
 	// with the daemon.
 	registeredChains *chainRegistry
 
+	// ########### ln-mpc ###########
+	lnMode bool `long:"lnmode" description:"If true, the node will load as a standard Lightning Mode."`
+
 	ZkMerchant bool `long:"zkmerchant" description:"If true, the node initialize as a merchant. Otherwise it'll initialize as a customer"`
 	// ########### ln-mpc ###########
 

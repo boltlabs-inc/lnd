@@ -3256,7 +3256,7 @@ func openZkChannel(ctx *cli.Context) error {
 	}
 
 	if isMerch {
-		return fmt.Errorf("You are a operating as a merchant, only customers can make payments")
+		return fmt.Errorf("you are operating as a merchant, only customers can make payments")
 	}
 
 	var pubKey string
@@ -3291,8 +3291,7 @@ func openZkChannel(ctx *cli.Context) error {
 	if !ctx.IsSet("cust_balance") {
 		return fmt.Errorf("must specify amount of satoshis for customer balance")
 	}
-	var custBalance int64
-	custBalance = ctx.Int64("cust_balance")
+	custBalance := ctx.Int64("cust_balance")
 
 	var merchBalance int64
 	if !ctx.IsSet("merch_balance") {
@@ -3391,7 +3390,7 @@ func zkPay(ctx *cli.Context) error {
 	}
 
 	if isMerch {
-		return fmt.Errorf("You are a operating as a merchant, only customers can make payments")
+		return fmt.Errorf("you are a operating as a merchant, only customers can make payments")
 	}
 
 	ctxb := context.Background()
@@ -3473,7 +3472,7 @@ func closeZkChannel(ctx *cli.Context) error {
 		return err
 	}
 	if !isCustomer {
-		return fmt.Errorf("This command doesn't work for merchants. " +
+		return fmt.Errorf("this command doesn't work for merchants. " +
 			"TODO: make a command to close channel by channelID that merch can use too")
 	}
 
@@ -3530,7 +3529,7 @@ func merchClose(ctx *cli.Context) error {
 		return err
 	}
 	if !isMerch {
-		return fmt.Errorf("This command doesn't work for customers. " +
+		return fmt.Errorf("this command doesn't work for customers. " +
 			"Instead, use closezkchannel to close a zk channel.")
 	}
 
@@ -3574,7 +3573,7 @@ func zkChannelBalance(ctx *cli.Context) error {
 	}
 
 	if !isCustomer {
-		return fmt.Errorf("You are a operating as a merchant, " +
+		return fmt.Errorf("you are operating as a merchant, " +
 			"use totalreceived to view how many payments you have received")
 	}
 
@@ -3607,7 +3606,7 @@ func totalReceived(ctx *cli.Context) error {
 	}
 
 	if !isMerchant {
-		return fmt.Errorf("You are a operating as a customer and are not receiving payments, " +
+		return fmt.Errorf("you are operating as a customer and are not receiving payments, " +
 			"use 'zkchannelbalance' to view your balance instead.")
 	}
 
@@ -3674,7 +3673,7 @@ func listZkChannels(ctx *cli.Context) error {
 	}
 
 	if !isMerchant {
-		return fmt.Errorf("This command is for merchants only. " +
+		return fmt.Errorf("this command is for merchants only. " +
 			"Use zkchannelbalance command instead")
 	}
 
@@ -3715,7 +3714,7 @@ func custClaim(ctx *cli.Context) error {
 		return err
 	}
 	if !isCustomer {
-		return fmt.Errorf("This command doesn't work for merchants. " +
+		return fmt.Errorf("this command doesn't work for merchants. " +
 			"Use merch_claim instead.")
 	}
 
@@ -3764,7 +3763,7 @@ func merchClaim(ctx *cli.Context) error {
 		return err
 	}
 	if !isMerch {
-		return fmt.Errorf("This command doesn't work for customers. " +
+		return fmt.Errorf("this command doesn't work for customers. " +
 			"Use cust_claim instead.")
 	}
 

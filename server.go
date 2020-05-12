@@ -334,7 +334,7 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 	nodeKeyDesc *keychain.KeyDescriptor,
 	chansToRestore walletunlocker.ChannelsToRecover,
 	chanPredicate chanacceptor.ChannelAcceptor,
-	torController *tor.Controller, LNMode bool) (*server, error) {
+	torController *tor.Controller, lnMode bool) (*server, error) {
 
 	var (
 		err           error
@@ -989,7 +989,7 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 		Clock:                         clock.NewDefaultClock(),
 	}, chanDB)
 
-	if LNMode {
+	if lnMode {
 		s.breachArbiter = newBreachArbiter(&BreachConfig{
 			CloseLink:          closeLink,
 			DB:                 chanDB,
@@ -1310,7 +1310,7 @@ func (s *server) Started() bool {
 // Start starts the main daemon server, all requested listeners, and any helper
 // goroutines.
 // NOTE: This function is safe for concurrent access.
-func (s *server) Start(LNMode bool) error {
+func (s *server) Start(lnMode bool) error {
 	var startErr error
 	s.start.Do(func() {
 		if s.torController != nil {
@@ -1384,7 +1384,7 @@ func (s *server) Start(LNMode bool) error {
 			startErr = err
 			return
 		}
-		if LNMode {
+		if lnMode {
 			if err := s.breachArbiter.Start(); err != nil {
 				startErr = err
 				return
@@ -1507,7 +1507,7 @@ func (s *server) Start(LNMode bool) error {
 // any active goroutines, or helper objects to exit, then blocks until they've
 // all successfully exited. Additionally, any/all listeners are closed.
 // NOTE: This function is safe for concurrent access.
-func (s *server) Stop(LNMode bool) error {
+func (s *server) Stop(lnMode bool) error {
 	s.stop.Do(func() {
 		atomic.StoreInt32(&s.stopping, 1)
 
@@ -1520,7 +1520,7 @@ func (s *server) Stop(LNMode bool) error {
 		s.htlcSwitch.Stop()
 		s.sphinx.Stop()
 		s.utxoNursery.Stop()
-		if LNMode {
+		if lnMode {
 			s.breachArbiter.Stop()
 		} else {
 			s.zkBreachArbiter.Stop()
@@ -3646,13 +3646,13 @@ func (s *server) CloseZkChannel(zkChannelName string, dryRun bool) error {
 }
 
 // MerchClose closes a channel with a given escrowTxid for the merchant
-func (s *server) MerchClose(EscrowTxid string) error {
+func (s *server) MerchClose(escrowTxid string) error {
 	zkchLog.Infof("MerchClose initiated")
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.zkchannelMgr.MerchClose(s.cc.wallet, s.cc.chainNotifier, EscrowTxid)
+	return s.zkchannelMgr.MerchClose(s.cc.wallet, s.cc.chainNotifier, escrowTxid)
 }
 
 // ZkChannelBalance returns a list of zkchannels and their balances to the customer.
