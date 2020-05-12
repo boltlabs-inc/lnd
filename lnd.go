@@ -614,10 +614,10 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 
 	// Set up the core server which will listen for incoming peer
 	// connections.
-	server, err := newServer(cfg, cfg.LNMode,
+	server, err := newServer(cfg,
 		cfg.Listeners, chanDB, towerClientDB, activeChainControl,
 		&idKeyDesc, walletInitParams.ChansToRestore, chainedAcceptor,
-		torController,
+		torController, cfg.lnMode, cfg.ZkMerchant,
 	)
 	if err != nil {
 		err := fmt.Errorf("unable to create server: %v", err)
@@ -765,17 +765,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 	// If we are starting LND in standard LN mode (not zkchannel mode), then skip zkchannel steps
 	if !cfg.lnMode {
 		// Do merchant initialization if merchant flag was set
-		if cfg.ZkMerchant {
-
-			isCust, err := DetermineIfCust()
-			if err != nil {
-				return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
-			}
-			if isCust {
-				return fmt.Errorf("Current directory has already been set up with zk customer DB. " +
-					"Delete zkcust.db and try again to run zklnd as a merchant.")
-			}
-
+		if server.zkchannelMgr.isMerchant {
 			// If there is already a zkmerch.db set up, skip the initialization step
 			isMerch, err := DetermineIfMerch()
 			if err != nil {
@@ -823,7 +813,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 				channelState, merchState, err = libzkchannels.LoadMerchantWallet(merchState, channelState, skM, payoutSkM, disputeSkM)
 
 				// zkDB add merchState & channelState
-				zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+				zkMerchDB, err := zkchanneldb.SetupDB(server.zkchannelMgr.dbPath)
 				if err != nil {
 					return err
 				}
@@ -875,7 +865,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 
 				zkchLog.Infof("Creating customer zkchannel db")
 
-				zkCustDB, err := zkchanneldb.SetupZkCustDB()
+				zkCustDB, err := zkchanneldb.SetupDB(server.zkchannelMgr.dbPath)
 				if err != nil {
 					return err
 				}

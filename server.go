@@ -334,7 +334,7 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 	nodeKeyDesc *keychain.KeyDescriptor,
 	chansToRestore walletunlocker.ChannelsToRecover,
 	chanPredicate chanacceptor.ChannelAcceptor,
-	torController *tor.Controller, lnMode bool) (*server, error) {
+	torController *tor.Controller, lnMode bool, isZkMerchant bool) (*server, error) {
 
 	var (
 		err           error
@@ -1036,10 +1036,12 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 		return nil, err
 	}
 
-	s.zkchannelMgr = &zkChannelManager{
-		WatchNewZkChannel: func(z contractcourt.ZkChainWatcherConfig) error {
-			return s.chainArb.WatchNewZkChannel(z)
-		},
+	zkChainWatcher := func(z contractcourt.ZkChainWatcherConfig) error {
+		return s.chainArb.WatchNewZkChannel(z)
+	}
+	s.zkchannelMgr, err = newZkChannelManager(isZkMerchant, zkChainWatcher)
+	if err != nil {
+		return nil, err
 	}
 
 	s.fundingMgr, err = newFundingManager(fundingConfig{
@@ -3657,7 +3659,7 @@ func (s *server) MerchClose(escrowTxid string) error {
 
 // ZkChannelBalance returns a list of zkchannels and their balances to the customer.
 func (s *server) ZkChannelBalance(zkChannelName string) (string, int64, int64, error) {
-	escrowTxid, custBalance, merchBalance, err := ZkChannelBalance(zkChannelName)
+	escrowTxid, custBalance, merchBalance, err := s.zkchannelMgr.ZkChannelBalance(zkChannelName)
 	if err != nil {
 		zkchLog.Error("ZkChannelBalance: ", err)
 		return "", 0, 0, err
@@ -3668,17 +3670,17 @@ func (s *server) ZkChannelBalance(zkChannelName string) (string, int64, int64, e
 // TotalReceived sends the request to server to close the connection with peer
 // identified by public key.
 func (s *server) TotalReceived() (int64, error) {
-	return TotalReceived()
+	return s.zkchannelMgr.TotalReceived()
 }
 
 // ZkInfo returns the merch's pubkey.
 func (s *server) ZkInfo() (string, error) {
-	return ZkInfo()
+	return s.zkchannelMgr.ZkInfo()
 }
 
 // ListZkChannels returns the list of zkChannels for the merchant.
 func (s *server) ListZkChannels() (ListOfZkChannels, error) {
-	return ListZkChannels()
+	return s.zkchannelMgr.ListZkChannels()
 }
 
 // CustClaim sweeps a customers output from a close tx.

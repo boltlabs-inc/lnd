@@ -31,17 +31,41 @@ import (
 
 type zkChannelManager struct {
 	// zkChannelName string
-	Notifier chainntnfs.ChainNotifier
-	wg       sync.WaitGroup
+	Notifier   chainntnfs.ChainNotifier
+	wg         sync.WaitGroup
+	isMerchant bool
 	// WatchNewZkChannel is to be called once a new zkchannel enters the final
 	// funding stage: waiting for on-chain confirmation. This method sends
 	// the channel to the ChainArbitrator so it can watch for any on-chain
 	// events related to the channel.
 	WatchNewZkChannel func(contractcourt.ZkChainWatcherConfig) error
+	dbPath            string
 }
 
 type Total struct {
 	amount int64
+}
+
+func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error) (*zkChannelManager, error) {
+	var dbPath string
+	if isZkMerchant {
+		isCust, err := DetermineIfCust()
+		if err != nil {
+			return nil, fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
+		}
+		if isCust {
+			return nil, fmt.Errorf("Current directory has already been set up with zk customer DB. " +
+				"Delete zkcust.db and try again to run zklnd as a merchant.")
+		}
+		dbPath = "zkmerch.db"
+	} else {
+		dbPath = "zkcust.db"
+	}
+	return &zkChannelManager{
+		WatchNewZkChannel: zkChainWatcher,
+		isMerchant: isZkMerchant,
+		dbPath: dbPath,
+	}, nil
 }
 
 func (z *zkChannelManager) failEstablishFlow(peer lnpeer.Peer,
@@ -121,7 +145,7 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 	zkchLog.Info("storing new zkchannel variables for:", zkChannelName)
 	// TODO: Write a function to handle the storing of variables in zkchanneldb
 	// Add variables to zkchannelsdb
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 
 	err = zkchanneldb.AddCustState(zkCustDB, zkChannelName, custState)
 	if err != nil {
@@ -241,7 +265,7 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 	// merchBal := int64(binary.LittleEndian.Uint64(msg.MerchBal))
 
 	// Add variables to zkchannelsdb
-	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -312,7 +336,7 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 
 	// TODO: Might not have to convert back and forth between bytes here
 	// Add variables to zkchannelsdb
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -491,7 +515,7 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	custClosePk := string(msg.CustClosePk)
 
 	// open the zkchanneldb to load merchState
-	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -650,7 +674,7 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 	zkchLog.Debug("merch sig: ", merchSig)
 
 	// open the zkchanneldb to load custState
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -843,7 +867,7 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 	initHash := string(msg.InitHash)
 
 	// open the zkchanneldb to load merchState
-	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -999,7 +1023,7 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 	// Add alternative path for when isOk is false
 
 	// open the zkchanneldb to load custState
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		zkchLog.Error(err)
 		return
@@ -1101,7 +1125,7 @@ func (z *zkChannelManager) advanceCustomerStateAfterConfirmations(notifier chain
 
 	// Add a flag to zkchannelsdb to say that closeChannel has not been initiated.
 	// This is used to prevent another payment being made
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		zkchLog.Error(err)
 		return
@@ -1367,7 +1391,7 @@ func (z *zkChannelManager) processZkEstablishFundingConfirmed(msg *lnwire.ZkEsta
 	zkchLog.Debugf("Just received FundingConfirmed for %v", zkChannelName)
 
 	// open the zkchanneldb to load custState
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		zkchLog.Error(err)
 		return
@@ -1454,7 +1478,7 @@ func (z *zkChannelManager) processZkEstablishCustActivated(msg *lnwire.ZkEstabli
 	zkchLog.Debug("Just received ActivateCustomer, channelToken =>:", channelToken)
 
 	// open the zkchanneldb to load merchState
-	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -1501,7 +1525,7 @@ func (z *zkChannelManager) processZkEstablishPayToken(msg *lnwire.ZkEstablishPay
 	zkchLog.Debugf("Just received PayToken0 for %v: ", zkChannelName, payToken0)
 
 	// open the zkchanneldb to load custState
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -1533,7 +1557,7 @@ func (z *zkChannelManager) processZkEstablishPayToken(msg *lnwire.ZkEstablishPay
 
 func (z *zkChannelManager) InitZkPay(p lnpeer.Peer, zkChannelName string, amount int64) error {
 
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		zkchLog.Error(err)
 		return err
@@ -1574,7 +1598,7 @@ func (z *zkChannelManager) InitZkPay(p lnpeer.Peer, zkChannelName string, amount
 	}
 
 	// Add variables to zkchannelsdb
-	zkCustDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		zkchLog.Error(err)
 		return err
@@ -1643,7 +1667,7 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 	zkchLog.Debug("Just received ZkPayNonce")
 
 	// open the zkchanneldb to load merchState
-	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
@@ -1698,7 +1722,7 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 	zkchLog.Debug("Just received ZkPayMaskCom")
 
 	// open the zkchanneldb to load custState
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
@@ -1839,7 +1863,7 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	zkchLog.Debug("Just received ZkPayMPC")
 
 	// open the zkchanneldb to load merchState
-	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
 		zkchLog.Debug("1")
 		z.failZkPayFlow(p, err)
@@ -1928,7 +1952,7 @@ func (z *zkChannelManager) processZkPayMPCResult(msg *lnwire.ZkPayMPCResult, p l
 	if isOk {
 
 		// open the zkchanneldb to load merchState
-		zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+		zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 		if err != nil {
 			z.failZkPayFlow(p, err)
 			return
@@ -1989,7 +2013,7 @@ func (z *zkChannelManager) processZkPayMaskedTxInputs(msg *lnwire.ZkPayMaskedTxI
 	zkchLog.Debugf("Just received ZkPayMaskedTxInputs: %#v\n", maskedTxInputs)
 
 	// open the zkchanneldb to load custState
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
@@ -2076,7 +2100,7 @@ func (z *zkChannelManager) processZkPayRevoke(msg *lnwire.ZkPayRevoke, p lnpeer.
 	zkchLog.Info("Just received ZkPayRevoke: ", revState)
 
 	// open the zkchanneldb to load merchState
-	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
@@ -2126,7 +2150,7 @@ func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p l
 	zkchLog.Info("Just received PayTokenMask and PayTokenMaskR: ", payTokenMask, payTokenMaskR)
 
 	// open the zkchanneldb to load custState
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
@@ -2227,7 +2251,7 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 func GetSignedCustCloseTxs(zkChannelName string, closeEscrow bool) (closeEscrowTx string, closeEscrowTxid string, err error) {
 	// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
 	// This is used to prevent another payment being made
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, "zkcust.db")
 	if err != nil {
 		zkchLog.Error(err)
 		return "", "", err
@@ -2280,7 +2304,7 @@ func GetSignedCustCloseTxs(zkChannelName string, closeEscrow bool) (closeEscrowT
 func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, escrowTxid string) error {
 
 	// open the zkchanneldb to create signedMerchCloseTx
-	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
 		zkchLog.Error(err)
 		return err
@@ -2344,10 +2368,10 @@ func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier
 }
 
 // ZkChannelBalance returns the balance on the customer's zkchannel
-func ZkChannelBalance(zkChannelName string) (string, int64, int64, error) {
+func (z *zkChannelManager) ZkChannelBalance(zkChannelName string) (string, int64, int64, error) {
 
 	// open the zkchanneldb to load custState
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		zkchLog.Error("OpenZkChannelBucket: ", err)
 		return "", 0, 0, err
@@ -2379,9 +2403,9 @@ func ZkChannelBalance(zkChannelName string) (string, int64, int64, error) {
 }
 
 // TotalReceived returns the balance on the customer's zkchannel
-func TotalReceived() (int64, error) {
+func (z *zkChannelManager) TotalReceived() (int64, error) {
 
-	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
 		zkchLog.Error(err)
 		return 0, err
@@ -2400,9 +2424,9 @@ func TotalReceived() (int64, error) {
 }
 
 // ZkInfo returns info about this zklnd node
-func ZkInfo() (string, error) {
+func (z *zkChannelManager) ZkInfo() (string, error) {
 
-	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
 		zkchLog.Error(err)
 		return "", err
@@ -2425,9 +2449,9 @@ type ListOfZkChannels struct {
 }
 
 // ListZkChannels returns a list of the merchant's zkchannels
-func ListZkChannels() (ListOfZkChannels, error) {
+func (z *zkChannelManager) ListZkChannels() (ListOfZkChannels, error) {
 
-	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
 		zkchLog.Error(err)
 		return ListOfZkChannels{}, err

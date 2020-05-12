@@ -16,9 +16,9 @@ var (
 	MerchBucket = []byte("merch-bucket")
 )
 
-// SetupZkMerchDB creates the zkchanneldb for the merchant
-func SetupZkMerchDB() (*bolt.DB, error) {
-	db, err := bolt.Open("zkmerch.db", 0600, nil)
+// SetupDB creates the zkchanneldb for the merchant
+func SetupDB(path string) (*bolt.DB, error) {
+	db, err := bolt.Open(path, 0600, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not open db, %v", err)
 	}
@@ -32,17 +32,6 @@ func SetupZkMerchDB() (*bolt.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not set up zk merch buckets, %v", err)
 	}
-	return db, nil
-}
-
-// SetupZkCustDB creates the zkchanneldb for the customer
-func SetupZkCustDB() (*bolt.DB, error) {
-
-	db, err := bolt.Open("zkcust.db", 0600, nil)
-	if err != nil {
-		return nil, fmt.Errorf("could not open db, %v", err)
-	}
-
 	return db, nil
 }
 
@@ -76,10 +65,10 @@ func Buckets(path string) ([]string, error) {
 }
 
 // OpenZkChannelBucket opens or creates the bucket for a zkchannel
-func OpenZkChannelBucket(zkChannelName string) (*bolt.DB, error) {
+func OpenZkChannelBucket(zkChannelName string, dbPath string) (*bolt.DB, error) {
 	BucketName := []byte(zkChannelName)
 
-	db, err := bolt.Open("zkcust.db", 0600, nil)
+	db, err := bolt.Open(dbPath, 0600, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not open db, %v", err)
 	}

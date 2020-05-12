@@ -528,7 +528,7 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	amount := breachInfo.Amount
 
 	// open the zkchanneldb to load merchState and channelState
-	zkMerchDB, err := zkchanneldb.SetupZkMerchDB()
+	zkMerchDB, err := zkchanneldb.SetupDB("zkmerch.db")
 	if err != nil {
 		zkchLog.Error(err)
 		return
