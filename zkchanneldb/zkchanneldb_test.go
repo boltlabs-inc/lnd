@@ -26,8 +26,9 @@ func setupTestDB(t *testing.T, filename string, bucketName string) *bolt.DB {
 }
 
 func tearDownTestDB(db *bolt.DB) {
+	path := db.Path()
 	db.Close()
-	os.RemoveAll(db.Path())
+	os.RemoveAll(path)
 }
 
 func TestSetupDB(t *testing.T) {
@@ -48,7 +49,7 @@ func TestOpenZkChannelBucket(t *testing.T) {
 	assert.Equal(t, dbPath, db.Path())
 
 	db.Close()
-	os.RemoveAll(db.Path())
+	os.RemoveAll(dbPath)
 }
 
 func TestOpenZkClaimBucket(t *testing.T) {
@@ -72,7 +73,7 @@ func TestOpenZkClaimBucket(t *testing.T) {
 	assert.Equal(t, "txid", buckets[0])
 
 	db.Close()
-	os.RemoveAll(db.Path())
+	os.RemoveAll(dbPath)
 }
 
 func TestInitDB(t *testing.T) {
@@ -92,6 +93,7 @@ func TestInitDB(t *testing.T) {
 	}
 	assert.Equal(t, dbPath, db.Path())
 	db.Close()
+	os.RemoveAll(dbPath)
 }
 
 func TestAddField(t *testing.T) {

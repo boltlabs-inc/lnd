@@ -6535,6 +6535,7 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 	// fmt.Printf("changeScriptPK: %v\n", changeScriptPK)
 
 	changePubKey, err := r.server.cc.wallet.NewPubKey()
+	ltndLog.Debugf("changePubKey: %v", changePubKey)
 	if err != nil {
 		return nil, err
 	}

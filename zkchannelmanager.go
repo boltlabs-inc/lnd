@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"sync"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -46,26 +47,18 @@ type Total struct {
 	amount int64
 }
 
-func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error) (*zkChannelManager, error) {
+func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string) *zkChannelManager {
 	var dbPath string
 	if isZkMerchant {
-		isCust, err := DetermineIfCust()
-		if err != nil {
-			return nil, fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
-		}
-		if isCust {
-			return nil, fmt.Errorf("Current directory has already been set up with zk customer DB. " +
-				"Delete zkcust.db and try again to run zklnd as a merchant.")
-		}
-		dbPath = "zkmerch.db"
+		dbPath = path.Join(dbDirPath, "zkmerch.db")
 	} else {
-		dbPath = "zkcust.db"
+		dbPath = path.Join(dbDirPath, "zkcust.db")
 	}
 	return &zkChannelManager{
 		WatchNewZkChannel: zkChainWatcher,
 		isMerchant: isZkMerchant,
 		dbPath: dbPath,
-	}, nil
+	}
 }
 
 func (z *zkChannelManager) failEstablishFlow(peer lnpeer.Peer,
@@ -105,6 +98,106 @@ func (z *zkChannelManager) failZkPayFlow(peer lnpeer.Peer,
 	if err := peer.SendMessage(false, errMsg); err != nil {
 		zkchLog.Errorf("unable to send error message to peer %v", err)
 	}
+}
+
+func (z *zkChannelManager) initCustomer() error {
+	isMerch, err := DetermineIfMerch()
+	if err != nil {
+		return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
+	}
+	if isMerch {
+		return fmt.Errorf("Current directory has already been set up with zk merchant DB. " +
+			"Delete zkmerch.db and try again to run zklnd as a customer.")
+	}
+
+	isCust, err := DetermineIfCust()
+	if err != nil {
+		return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
+	}
+	if !isCust {
+
+		zkchLog.Infof("Creating customer zkchannel db")
+
+		err := zkchanneldb.InitDB(z.dbPath)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (z *zkChannelManager) initMerchant(merchName, skM, payoutSkM, disputeSkM string) error {
+	isCust, err := DetermineIfCust()
+	if err != nil {
+		return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
+	}
+	if isCust {
+		return fmt.Errorf("Current directory has already been set up with zk customer DB. " +
+			"Delete zkcust.db and try again to run zklnd as a merchant.")
+	}
+	// If there is already a zkmerch.db set up, skip the initialization step
+	isMerch, err := DetermineIfMerch()
+	if err != nil {
+		return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
+	}
+	if !isMerch {
+
+		zkchLog.Infof("Initializing merchant setup")
+
+		if merchName == "" {
+			merchName = "Merchant"
+		}
+
+		dbUrl := "redis://127.0.0.1/"
+
+		// TODO ZKLND-19: Make toSelfDelay an input argument and add to config file
+		// currently not configurable in MPC
+		// toSelfDelay := uint16(1487)
+		// TODO ZKLND-37: Make sure dust limit is set to finalized value
+		dustLimit := int64(546)
+
+		channelState, err := libzkchannels.ChannelSetup("channel", dustLimit, false)
+		zkchLog.Debugf("libzkchannels.ChannelSetup done")
+
+		channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")
+		zkchLog.Debugf("libzkchannels.InitMerchant done")
+
+		channelState, merchState, err = libzkchannels.LoadMerchantWallet(merchState, channelState, skM, payoutSkM, disputeSkM)
+
+		// zkDB add merchState & channelState
+		zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
+		if err != nil {
+			return err
+		}
+
+		// save merchStateBytes in zkMerchDB
+		err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
+		if err != nil {
+			return err
+		}
+
+		// save channelStateBytes in zkMerchDB
+		err = zkchanneldb.AddMerchField(zkMerchDB, channelState, "channelStateKey")
+		if err != nil {
+			return err
+		}
+
+		// save totalBalance in zkMerchDB.
+		// With no channels initially, the total balance starts off at 0
+		totalBalance := int64(0)
+		err = zkchanneldb.AddMerchField(zkMerchDB, totalBalance, "totalBalanceKey")
+		if err != nil {
+			return err
+		}
+
+		err = zkMerchDB.Close()
+		if err != nil {
+			return err
+		}
+		zkchLog.Info("Merchant initialization complete")
+		zkchLog.Info("Merchant Public Key:", *merchState.PkM)
+	}
+	return nil
 }
 
 func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changePubKey string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, feeCC int64, feeMC int64, minFee int64, maxFee int64, p lnpeer.Peer) error {

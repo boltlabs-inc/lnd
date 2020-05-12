@@ -1039,7 +1039,7 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 	zkChainWatcher := func(z contractcourt.ZkChainWatcherConfig) error {
 		return s.chainArb.WatchNewZkChannel(z)
 	}
-	s.zkchannelMgr, err = newZkChannelManager(isZkMerchant, zkChainWatcher)
+	s.zkchannelMgr = newZkChannelManager(isZkMerchant, zkChainWatcher, "")
 	if err != nil {
 		return nil, err
 	}
