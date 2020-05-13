@@ -1004,11 +1004,21 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 
 		s.zkBreachArbiter = nil
 	} else {
+
+		zkChainWatcherFunc := func(z contractcourt.ZkChainWatcherConfig) error {
+			return s.chainArb.WatchNewZkChannel(z)
+		}
+		s.zkchannelMgr = newZkChannelManager(isZkMerchant, zkChainWatcherFunc, "")
+		if err != nil {
+			return nil, err
+		}
+
 		s.breachArbiter = nil
 
 		srvrLog.Infof("Starting up zkBreachArbiter")
 		s.zkBreachArbiter = newZkBreachArbiter(&ZkBreachConfig{
 			CloseLink:            closeLink,
+			DBPath:               s.zkchannelMgr.dbPath,
 			DB:                   chanDB,
 			Estimator:            s.cc.feeEstimator,
 			GenSweepScript:       newSweepPkScriptGen(cc.wallet),
@@ -1033,14 +1043,6 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 
 	var chanIDSeed [32]byte
 	if _, err := rand.Read(chanIDSeed[:]); err != nil {
-		return nil, err
-	}
-
-	zkChainWatcher := func(z contractcourt.ZkChainWatcherConfig) error {
-		return s.chainArb.WatchNewZkChannel(z)
-	}
-	s.zkchannelMgr = newZkChannelManager(isZkMerchant, zkChainWatcher, "")
-	if err != nil {
 		return nil, err
 	}
 
