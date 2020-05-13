@@ -42,23 +42,28 @@ jobs:
     - stage: Build
       script:
         - . ./libzkchannels/libzkchannels.mk
-        - env
         - make rpc-check
         - make unit pkg=... case=_NONE_
         - make lint workers=1
         - make btcd
         - make release sys=windows-amd64
     - stage: Test
-      script: make travis-cover
+      script: 
+        - . ./libzkchannels/libzkchannels.mk
+        - make travis-cover
       name: Unit Cover
-    - script: make travis-race
+    - script:
+        - . ./libzkchannels/libzkchannels.mk
+        -  make travis-race
       name: Unit Race
-    - script: make itest
+    - script: 
+        - . ./libzkchannels/libzkchannels.mk
+        - make itest
       name: Btcd Integration
-    - script: make itest backend=bitcoind
-      name: Bitcoind Integration
-    - script: make itest backend=neutrino
-      name: Neutrino Integration
+      #- script: make itest backend=bitcoind
+      #name: Bitcoind Integration
+      #- script: make itest backend=neutrino
+      #name: Neutrino Integration
 
 after_script:
   - LOG_FILES=./lntest/itest/*.log
