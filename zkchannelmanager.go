@@ -226,13 +226,15 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 	zkchLog.Debug("Variables going into FormEscrowTx :=> ", custUtxoTxIdLe, index, inputSats, custBal, custInputSk, custPk, merchPk, changePubKey, changePkIsHash)
 
 	outputSats := custBal + merchBal
-	signedEscrowTx, _, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxIdLe, index, inputSats, outputSats, custInputSk, custPk, merchPk, changePubKey, changePkIsHash)
+	_, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxIdLe, index, custInputSk, inputSats, outputSats, custPk, merchPk, changePubKey, changePkIsHash)
 	if err != nil {
 		zkchLog.Error("FormEscrowTx: ", err)
 		return err
 	}
 
 	zkchLog.Info("escrow txid => ", escrowTxid)
+	// TODO: move escrow signing to a later in establish
+	signedEscrowTx, _, _, _, err := libzkchannels.SignEscrowTx(custUtxoTxIdLe, index, custInputSk, inputSats, outputSats, custPk, merchPk, changePubKey, changePkIsHash)
 	zkchLog.Info("signedEscrowTx => ", signedEscrowTx)
 
 	zkchLog.Info("storing new zkchannel variables for:", zkChannelName)
