@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/btcsuite/btcd/wire"
@@ -502,7 +501,6 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 
 	// TODO(roasbeef): state needs to be checkpointed here
 	var breachConfHeight uint32
-	fmt.Println("before select")
 	select {
 	case breachConf, ok := <-confChan.Confirmed:
 		// If the second value is !ok, then the channel has been closed
@@ -519,14 +517,13 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	case <-b.quit:
 		return
 	}
-	fmt.Println("after select")
 
 	zkbaLog.Debugf("Breach transaction %v has been confirmed, sweeping "+
 		"revoked funds", breachInfo.CloseTxid)
 
 	breachTxid := breachInfo.CloseTxid.String()
 	index := uint32(0)
-	// TODO: Generate outputPk from merchant's wallet
+	// TODO ZKLND-33: Generate outputPk from merchant's wallet
 	outputPk := "03df51984d6b8b8b1cc693e239491f77a36c9e9dfe4a486e9972a18e03610a0d22"
 	revLock := breachInfo.RevLock
 	revSecret := breachInfo.RevSecret
@@ -542,7 +539,6 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 
 	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
 	if err != nil {
-		fmt.Println("Getting merch state")
 		zkchLog.Error(err)
 		return
 	}
@@ -573,6 +569,7 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 		zkchLog.Error(err)
 		return
 	}
+
 	// Dummy finalTxStr for zkBreachArbiter Test
 	// finalTxStr := "0200000000010120827352e391fe0c6cbaee2d07679ec67e30119448e4183b7818ff29171f489a0000000000ffffffff0106270000000000001600141d2cc47e2a0d77927a333a2165fe2d343b79eefc04483045022100e95687eb9aec340a662d57e29e80efe23bd013ce4b9a2e0383cd3c5f3370a526022063b260ddc1b9a251ca5f6be6fc9d6a30b29402d7e66959985487b7b61530ad3001200d4a4cf5b18a70f5e9f6a677924d0b2450f3d0561402a42338fd08da905112a101017063a8203ae763fc25bc086f73836f21aa05d387cd3adac5a93d5345e782128133cb03e4882102f9e7281167132a13b2326cea57d789b9fd2ea4440c9e9b78e6402e722a1e5c526702cf05b27521027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddb68ac00000000"
 
