@@ -281,8 +281,8 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 	// // Calculate appropriate minimum tx fee and check it is large enough
 	// expectedWeight := blockchain.GetTransactionWeight(btcutil.NewTx(tx))
 
-	// // a minRelayTxFee of 1 satoshi per vbyte is equal to 0.25 satoshi per weight unit
-	// minTxFee := int64(math.Ceil(float64(expectedWeight) * 0.25))
+	// // a minRelayTxFee of 1 satoshi per vbyte is equal to 0.253 satoshi per weight unit
+	// minTxFee := int64(math.Ceil(float64(expectedWeight) * 0.253))
 
 	// disputeTxFee := ZkCustBreachInfo.Amount - tx.TxOut[0].Value
 	// if disputeTxFee < minTxFee {
