@@ -80,6 +80,10 @@ const (
 
 	defaultAlias = ""
 	defaultColor = "#3399FF"
+
+	// defaultZkMode is whether we start zkLND as a regular LND node, or as
+	// a zkLND mode running zkChannels.
+	defaultZkMode = true
 )
 
 var (
@@ -255,7 +259,7 @@ type Config struct {
 	registeredChains *chainRegistry
 
 	// ########### ln-mpc ###########
-	lnMode bool `long:"lnmode" description:"If true, the node will load as a standard Lightning Mode."`
+	zkMode bool `long:"zkmode" description:"If true, the node will load as a zkLND Node. If false, it'll run as a regular LND node."`
 
 	ZkMerchant bool `long:"zkmerchant" description:"If true, the node initialize as a merchant. Otherwise it'll initialize as a customer"`
 	// ########### ln-mpc ###########
@@ -368,6 +372,7 @@ func DefaultConfig() Config {
 		MaxChannelFeeAllocation: htlcswitch.DefaultMaxLinkFeeAllocation,
 		DB:                      lncfg.DefaultDB(),
 		registeredChains:        newChainRegistry(),
+		ZkMode:                  defaultZkMode,
 	}
 }
 

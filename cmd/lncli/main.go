@@ -252,7 +252,7 @@ func main() {
 			Usage: "if set, lock macaroon to specific IP address",
 		},
 		cli.BoolFlag{
-			Name:  "lnmode",
+			Name:  "zkmode",
 			Usage: "if set, skip zkchannel initialization",
 		},
 		cli.BoolFlag{

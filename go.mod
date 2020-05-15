@@ -6,8 +6,8 @@ require (
 	github.com/NebulousLabs/go-upnp v0.0.0-20180202185039-29b680b06c82
 	github.com/Yawning/aez v0.0.0-20180114000226-4dad034d9db2
 	github.com/boltdb/bolt v1.3.1
-	github.com/boltlabs-inc/libbolt-go v0.0.0-20191123131922-7e764bc1c794
-	github.com/boltlabs-inc/libzkchannels v0.0.0-20200509051056-ebd082fe93c5
+	github.com/boltlabs-inc/libbolt-go v0.0.0-20191123131922-7e764bc1c794 // indirect
+	github.com/boltlabs-inc/libzkchannels v0.0.0-20200515070552-66cc8cea0527 // indirect
 	github.com/btcsuite/btcd v0.20.1-beta.0.20200513120220-b470eee47728
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
 	github.com/btcsuite/btcutil v1.0.2
@@ -17,8 +17,7 @@ require (
 	github.com/btcsuite/btcwallet/wallet/txrules v1.0.0
 	github.com/btcsuite/btcwallet/walletdb v1.3.1
 	github.com/btcsuite/btcwallet/wtxmgr v1.1.1-0.20200515224913-e0e62245ecbe
-	github.com/btcsuite/fastsha256 v0.0.0-20160815193821-637e65642941
-	github.com/coreos/bbolt v1.3.3
+	github.com/btcsuite/fastsha256 v0.0.0-20160815193821-637e65642941 // indirect
 	github.com/coreos/etcd v3.3.18+incompatible
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd v0.0.0-00010101000000-000000000000 // indirect
@@ -26,7 +25,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/getlantern/context v0.0.0-20190109183933-c447772a6520 // indirect
-	github.com/getlantern/errors v0.0.0-20190325191628-abdb3e3e36f7
+	github.com/getlantern/errors v0.0.0-20190325191628-abdb3e3e36f7 // indirect
 	github.com/getlantern/hex v0.0.0-20190417191902-c6586a6fe0b7 // indirect
 	github.com/getlantern/hidden v0.0.0-20190325191715-f02dbb02be55 // indirect
 	github.com/getlantern/ops v0.0.0-20190325191751-d70cb0d6f85f // indirect
@@ -73,7 +72,6 @@ require (
 	github.com/tv42/zbase32 v0.0.0-20160707012821-501572607d02
 	github.com/urfave/cli v1.18.0
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
-	go.etcd.io/bbolt v1.3.3
 	go.uber.org/zap v1.14.1 // indirect
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859

@@ -334,7 +334,7 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 	nodeKeyDesc *keychain.KeyDescriptor,
 	chansToRestore walletunlocker.ChannelsToRecover,
 	chanPredicate chanacceptor.ChannelAcceptor,
-	torController *tor.Controller, lnMode bool, isZkMerchant bool) (*server, error) {
+	torController *tor.Controller, zkMode bool, isZkMerchant bool) (*server, error) {
 
 	var (
 		err           error
@@ -989,22 +989,7 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 		Clock:                         clock.NewDefaultClock(),
 	}, chanDB)
 
-	if lnMode {
-		s.breachArbiter = newBreachArbiter(&BreachConfig{
-			CloseLink:          closeLink,
-			DB:                 chanDB,
-			Estimator:          s.cc.feeEstimator,
-			GenSweepScript:     newSweepPkScriptGen(cc.wallet),
-			Notifier:           cc.chainNotifier,
-			PublishTransaction: cc.wallet.PublishTransaction,
-			ContractBreaches:   contractBreaches,
-			Signer:             cc.wallet.Cfg.Signer,
-			Store:              newRetributionStore(chanDB),
-		})
-
-		s.zkBreachArbiter = nil
-	} else {
-
+	if zkMode {
 		zkChainWatcherFunc := func(z contractcourt.ZkChainWatcherConfig) error {
 			return s.chainArb.WatchNewZkChannel(z)
 		}
@@ -1028,6 +1013,20 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 			Signer:               cc.wallet.Cfg.Signer,
 			// Store:                newZkRetributionStore(chanDB),
 		})
+	} else {
+		s.breachArbiter = newBreachArbiter(&BreachConfig{
+			CloseLink:          closeLink,
+			DB:                 chanDB,
+			Estimator:          s.cc.feeEstimator,
+			GenSweepScript:     newSweepPkScriptGen(cc.wallet),
+			Notifier:           cc.chainNotifier,
+			PublishTransaction: cc.wallet.PublishTransaction,
+			ContractBreaches:   contractBreaches,
+			Signer:             cc.wallet.Cfg.Signer,
+			Store:              newRetributionStore(chanDB),
+		})
+
+		s.zkBreachArbiter = nil
 	}
 	// Select the configuration and furnding parameters for Bitcoin or
 	// Litecoin, depending on the primary registered chain.
@@ -1314,7 +1313,7 @@ func (s *server) Started() bool {
 // Start starts the main daemon server, all requested listeners, and any helper
 // goroutines.
 // NOTE: This function is safe for concurrent access.
-func (s *server) Start(lnMode bool) error {
+func (s *server) Start(zkMode bool) error {
 	var startErr error
 	s.start.Do(func() {
 		if s.torController != nil {
@@ -1388,13 +1387,13 @@ func (s *server) Start(lnMode bool) error {
 			startErr = err
 			return
 		}
-		if lnMode {
-			if err := s.breachArbiter.Start(); err != nil {
+		if zkMode {
+			if err := s.zkBreachArbiter.Start(); err != nil {
 				startErr = err
 				return
 			}
 		} else {
-			if err := s.zkBreachArbiter.Start(); err != nil {
+			if err := s.breachArbiter.Start(); err != nil {
 				startErr = err
 				return
 			}
@@ -1511,7 +1510,7 @@ func (s *server) Start(lnMode bool) error {
 // any active goroutines, or helper objects to exit, then blocks until they've
 // all successfully exited. Additionally, any/all listeners are closed.
 // NOTE: This function is safe for concurrent access.
-func (s *server) Stop(lnMode bool) error {
+func (s *server) Stop(zkMode bool) error {
 	s.stop.Do(func() {
 		atomic.StoreInt32(&s.stopping, 1)
 
@@ -1524,10 +1523,10 @@ func (s *server) Stop(lnMode bool) error {
 		s.htlcSwitch.Stop()
 		s.sphinx.Stop()
 		s.utxoNursery.Stop()
-		if lnMode {
-			s.breachArbiter.Stop()
-		} else {
+		if zkMode {
 			s.zkBreachArbiter.Stop()
+		} else {
+			s.breachArbiter.Stop()
 		}
 		s.authGossiper.Stop()
 		s.chainArb.Stop()
