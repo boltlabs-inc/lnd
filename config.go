@@ -372,7 +372,7 @@ func DefaultConfig() Config {
 		MaxChannelFeeAllocation: htlcswitch.DefaultMaxLinkFeeAllocation,
 		DB:                      lncfg.DefaultDB(),
 		registeredChains:        newChainRegistry(),
-		ZkMode:                  defaultZkMode,
+		zkMode:                  defaultZkMode,
 	}
 }
 
