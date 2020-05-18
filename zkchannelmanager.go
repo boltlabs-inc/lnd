@@ -56,8 +56,8 @@ func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.
 	}
 	return &zkChannelManager{
 		WatchNewZkChannel: zkChainWatcher,
-		isMerchant: isZkMerchant,
-		dbPath: dbPath,
+		isMerchant:        isZkMerchant,
+		dbPath:            dbPath,
 	}
 }
 
@@ -2672,12 +2672,6 @@ func (z *zkChannelManager) CustClaim(wallet *lnwallet.LightningWallet, notifier 
 		return err
 	}
 
-	err = json.Unmarshal(signedCustClaimTxBytes, &signedCustClaimTx)
-	if err != nil {
-		zkchLog.Error("Unmarshal signedCustClaimTx: ", err)
-		return err
-	}
-
 	err = zkCustDB.Close()
 
 	zkchLog.Debugf("signedCustClaimTx: %#v", signedCustClaimTx)
@@ -2721,12 +2715,6 @@ func (z *zkChannelManager) MerchClaim(wallet *lnwallet.LightningWallet, notifier
 	signedMerchClaimTx, err := zkchanneldb.GetStringField(zkMerchClaimDB, escrowTxid, "signedMerchClaimTxKey")
 	if err != nil {
 		zkchLog.Error("GetField: ", err)
-		return err
-	}
-
-	err = json.Unmarshal(signedMerchClaimTxBytes, &signedMerchClaimTx)
-	if err != nil {
-		zkchLog.Error("Unmarshal signedMerchClaimTx: ", err)
 		return err
 	}
 

@@ -977,12 +977,12 @@ func (c *ChainArbitrator) WatchNewZkChannel(zkCfg ZkChainWatcherConfig) error {
 	log.Infof("Creating new ChannelArbitrator for zkChannelPoint(%v)", fundingTxid)
 	fmt.Println("Creating new ChannelArbitrator for zkChannelPoint", fundingTxid)
 
-	// If we're already watching this channel, then we'll ignore this
-	// request.
-	chanPoint := newChan.FundingOutpoint
-	if _, ok := c.activeChannels[chanPoint]; ok {
-		return nil
-	}
+	// // If we're already watching this channel, then we'll ignore this
+	// // request.
+	// chanPoint := newChan.FundingOutpoint
+	// if _, ok := c.activeChannels[chanPoint]; ok {
+	// 	return nil
+	// }
 
 	// First, also create an active chainWatcher for this channel to ensure
 	// that we detect any relevant on chain events.

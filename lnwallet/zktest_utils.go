@@ -243,7 +243,7 @@ func CreateTestZkChannels(tweaklessCommits bool) (
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	commitFee := calcStaticFee(0)
+	commitFee := calcStaticFee(chanType, 0)
 
 	aliceCommit := channeldb.ChannelCommitment{
 		CommitHeight:  0,
