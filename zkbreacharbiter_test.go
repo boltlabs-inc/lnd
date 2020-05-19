@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"io/ioutil"
 	"log"
+	"os"
 	"path"
 	"sync"
 	"testing"
@@ -30,7 +31,7 @@ const (
 	payoutSkM  = "5611111111111111111111111111111100000000000000000000000000000000"
 	disputeSkM = "5711111111111111111111111111111100000000000000000000000000000000"
 
-	escrowTx   = "020000000001018d2744b606be69fd45d3661e1a61b81ec66d1417941ae33c4ac7079f2bd4aee80000000017160014d83e1345c76dc160630937746d2d2693562e9c58ffffffff0280841e0000000000220020b718e637a405ba914aede6bcb3d14dec83deca9b0449a20c7163b94456eb01c3806de7290100000016001461492b43be394b9e6eeb077f17e73665bbfd455b02483045022100cb3289b503a08250e7562f1ed4072065ef951d6bee0c02ea555a542c9650d30f02205eb0a7e8a471074a6f8a632033e484fa4a1e20dd2bdf9a73b160ad7f761fe9ea0121032581c94e62b16c1f5fc36c5ff6ddc5c3e7cc4e7e70e2ec3ab3f663cff9d9b7d000000000"
+	// escrowTx   = "020000000001018d2744b606be69fd45d3661e1a61b81ec66d1417941ae33c4ac7079f2bd4aee80000000017160014d83e1345c76dc160630937746d2d2693562e9c58ffffffff0280841e0000000000220020b718e637a405ba914aede6bcb3d14dec83deca9b0449a20c7163b94456eb01c3806de7290100000016001461492b43be394b9e6eeb077f17e73665bbfd455b02483045022100cb3289b503a08250e7562f1ed4072065ef951d6bee0c02ea555a542c9650d30f02205eb0a7e8a471074a6f8a632033e484fa4a1e20dd2bdf9a73b160ad7f761fe9ea0121032581c94e62b16c1f5fc36c5ff6ddc5c3e7cc4e7e70e2ec3ab3f663cff9d9b7d000000000"
 	escrowTxid = "7481edd312265b6fa916e1cc79cf427f73fe9fe7b44670f247bfd733de1aac80"
 
 	custCloseTxid = "99c74362e62b3301620274e7a562c2d40a9727e318cfa523b9d58cf6c34a65e8"
@@ -38,7 +39,7 @@ const (
 
 	closePkScript = "002072e2c63c7d43aa00de70c445e915b4d9157e270129a4852e0c89c44f644a9757"
 
-	merchCloseTxid = "7e4e51a76aaa9f23d6ada1522bfdb4ccefb5cd8875a4982bbb1bf02b6a99e203"
+	// merchCloseTxid = "7e4e51a76aaa9f23d6ada1522bfdb4ccefb5cd8875a4982bbb1bf02b6a99e203"
 	// merchCloseTx = "0200000000010180ac1ade33d7bf47f27046b4e79ffe737f42cf79cce116a96f5b2612d3ed81740000000000ffffffff02b07c1e00000000002200204bbedbfa9d195e8fc160e6a237d0d702fdae3b5a2d9494beb048452c4647095ae80300000000000016001430d0e52d62063f511cf71bdd8ae633bd514503af04004830450221008bd7b4c25dcbaeb624776adc3e9851b5b5c5ee54d845ed6749c2e12d917e0a550220316529e58b8ac6a0eaf0fee04d3c4bd2d67316951cb8d29c4466c17ac3e4a94f01483045022100be920e94fd52426ff8e09e46132211ace0ad3115e97ff3f0f9209b225124c6db02206bc923bfa19bd9db9cc20269881969586f383b8689bb20728790b853109d111301475221038c2add1dc8cf2c57bac6e19d1f963e0c42103554e8b35e425bc2a78f4c22b273210217d55a1e3ecdd220fde4bddbbfd485a1596c0c5cb7ef11dbfcdb2dd9cf4b85af52ae00000000"
 
 	// custCloseMerchTxid = "5deda336c2c1fa0886a3f2e00af54b653ae718043ab5315a4bb704eaf041cf2e"
@@ -86,6 +87,9 @@ func createTestZkArbiter(t *testing.T, custContractBreaches chan *ZkContractBrea
 
 	// The caller is responsible for closing the database.
 	cleanUp := func() {
+		if testDir != "" {
+			os.RemoveAll(testDir)
+		}
 		ba.Stop()
 	}
 
@@ -123,8 +127,8 @@ var zkBreachTests = []breachTest{
 	},
 }
 
-func initTestMerchState(t *testing.T, DBPath string, skM string, payoutSkM string, disputeSkM string) error {
-	dbURL := "redis://127.0.0.1/"
+func initTestMerchState(DBPath string, skM string, payoutSkM string, disputeSkM string) error {
+	dbURL := ""
 	channelState, err := libzkchannels.ChannelSetup("channel", 546, false)
 	if err != nil {
 		return err
@@ -232,7 +236,7 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 	}
 
 	// Set up merchState and channelState in a temporary db
-	err = initTestMerchState(t, brar.cfg.DBPath, skM, payoutSkM, disputeSkM)
+	err = initTestMerchState(brar.cfg.DBPath, skM, payoutSkM, disputeSkM)
 	if err != nil {
 		log.Fatal(err)
 	}
