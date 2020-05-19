@@ -1008,17 +1008,13 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 	}
 
 	zkchannels := make(map[string]libzkchannels.ChannelToken)
-	err = zkchanneldb.GetMerchField(zkMerchDB, "zkChannelsKey", &zkchannels)
-	if err != nil {
-		z.failEstablishFlow(p, err)
-		return
-	}
 
 	channelID, err := libzkchannels.GetChannelId(channelToken)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
 	}
+
 	zkchLog.Debugf("ChannelID: %v", channelID)
 	zkchannels[channelID] = channelToken
 	err = zkchanneldb.AddMerchField(zkMerchDB, zkchannels, "zkChannelsKey")
