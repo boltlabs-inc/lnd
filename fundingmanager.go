@@ -3285,7 +3285,7 @@ func (f *fundingManager) handleErrorMsg(fmsg *fundingErrorMsg) {
 	// we waited too long. Return a nice error message to the user in that
 	// case so the user knows what's the problem.
 	if resCtx.reservation.IsPsbt() {
-		fundingErr = fmt.Errorf("%w: %v", chanfunding.ErrRemoteCanceled,
+		fundingErr = fmt.Errorf("%v: %v", chanfunding.ErrRemoteCanceled,
 			fundingErr)
 	}
 

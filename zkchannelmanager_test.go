@@ -2,6 +2,12 @@ package lnd
 
 import (
 	"errors"
+	"io/ioutil"
+	"net"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/lightningnetwork/lnd/channeldb"
@@ -9,11 +15,6 @@ import (
 	"github.com/lightningnetwork/lnd/lnpeer"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"net"
-	"os"
-	"testing"
-	"time"
 )
 
 var (
@@ -103,9 +104,7 @@ func (z zkTestNode) AddNewChannel(channel *channeldb.OpenChannel, quit <-chan st
 	}
 }
 
-func (z zkTestNode) WipeChannel(_ *wire.OutPoint) error {
-	return nil
-}
+func (z *zkTestNode) WipeChannel(_ *wire.OutPoint) {}
 
 func (z zkTestNode) PubKey() [33]byte {
 	return newSerializedKey(z.addr.IdentityKey)
