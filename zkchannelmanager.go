@@ -202,10 +202,8 @@ func (z *zkChannelManager) initMerchant(merchName, skM, payoutSkM, disputeSkM st
 
 func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changePubKey string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, feeCC int64, feeMC int64, minFee int64, maxFee int64, p lnpeer.Peer) error {
 
-	zkchLog.Debug("Variables going into InitCustomer :=> ", merchPubKey, custBal, merchBal, "cust", custStateSk, custPayoutSk)
-
+	zkchLog.Debug("Variables going into InitCustomer :=> ", merchPubKey, custBal, merchBal, feeCC, minFee, maxFee, feeMC, "cust")
 	channelToken, custState, err := libzkchannels.InitCustomer(merchPubKey, custBal, merchBal, feeCC, minFee, maxFee, feeMC, "cust")
-
 	channelToken, custState, err = libzkchannels.LoadCustomerWallet(custState, channelToken, custStateSk, custPayoutSk)
 
 	if err != nil {
@@ -429,8 +427,6 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 		return
 	}
 
-	// TODO: Might not have to convert back and forth between bytes here
-	// Add variables to zkchannelsdb
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		z.failEstablishFlow(p, err)
