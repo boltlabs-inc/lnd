@@ -928,7 +928,6 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 		InitCustState: initCustStateBytes,
 		InitHash:      initHashBytes,
 	}
-	zkchLog.Info("zkEstablishInitialState", zkEstablishInitialState)
 
 	err = p.SendMessage(false, &zkEstablishInitialState)
 	if err != nil {
