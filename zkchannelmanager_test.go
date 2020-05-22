@@ -19,18 +19,12 @@ import (
 )
 
 type zkTestNode struct {
-	privKey         *btcec.PrivateKey
-	addr            *lnwire.NetAddress
 	msgChan         chan lnwire.Message
-	announceChan    chan lnwire.Message
 	publTxChan      chan *wire.MsgTx
 	zkChannelMgr    *zkChannelManager
-	newChannels     chan *newChannelMsg
 	mockNotifier    *mockNotifier
-	mockChanEvent   *mockChanEvent
 	testDir         string
 	shutdownChannel chan struct{}
-	remoteFeatures  []lnwire.FeatureBit
 
 	remotePeer  *zkTestNode
 	sendMessage func(lnwire.Message) error
@@ -47,52 +41,33 @@ func (z zkTestNode) SendMessageLazy(sync bool, msgs ...lnwire.Message) error {
 }
 
 func (z zkTestNode) AddNewChannel(channel *channeldb.OpenChannel, quit <-chan struct{}) error {
-	errChan := make(chan error)
-	msg := &newChannelMsg{
-		channel: channel,
-		err:     errChan,
-	}
-
-	select {
-	case z.newChannels <- msg:
-	case <-quit:
-		return ErrFundingManagerShuttingDown
-	}
-
-	select {
-	case err := <-errChan:
-		return err
-	case <-quit:
-		return ErrFundingManagerShuttingDown
-	}
+	return nil
 }
 
 func (z *zkTestNode) WipeChannel(_ *wire.OutPoint) {}
 
 func (z zkTestNode) PubKey() [33]byte {
-	return newSerializedKey(z.addr.IdentityKey)
+	return [33]byte{}
 }
 
 func (z zkTestNode) IdentityKey() *btcec.PublicKey {
-	return z.addr.IdentityKey
+	return (*btcec.PublicKey)(nil)
 }
 
 func (z zkTestNode) Address() net.Addr {
-	return z.addr.Address
+	return (net.Addr)(nil)
 }
 
 func (z zkTestNode) QuitSignal() <-chan struct{} {
-	return z.shutdownChannel
+	return (<-chan struct{})(nil)
 }
 
 func (z zkTestNode) LocalFeatures() *lnwire.FeatureVector {
-	return lnwire.NewFeatureVector(nil, nil)
+	return (*lnwire.FeatureVector)(nil)
 }
 
 func (z zkTestNode) RemoteFeatures() *lnwire.FeatureVector {
-	return lnwire.NewFeatureVector(
-		lnwire.NewRawFeatureVector(z.remoteFeatures...), nil,
-	)
+	return (*lnwire.FeatureVector)(nil)
 }
 
 func createTestZkChannelManager(t *testing.T, isMerchant bool) (*zkTestNode, error) {
