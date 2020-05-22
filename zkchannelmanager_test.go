@@ -397,7 +397,6 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 		t.Fatalf("expected ZkEstablishFundingLocked to be sent from "+
 			"cust, instead got %T", msg7)
 	}
-	_ = ZkEstablishFundingLockedMsg
 
 	go merch.zkChannelMgr.processZkEstablishFundingLocked(ZkEstablishFundingLockedMsg, cust)
 
@@ -422,8 +421,6 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 			"cust, instead got %T", msg8)
 	}
 
-	_ = ZkEstablishFundingConfirmedMsg
-
 	go cust.zkChannelMgr.processZkEstablishFundingConfirmed(ZkEstablishFundingConfirmedMsg, merch, zkChannelName)
 
 	var msg9 lnwire.Message
@@ -446,7 +443,6 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 		t.Fatalf("expected ZkEstablishCustActivated to be sent from "+
 			"cust, instead got %T", msg9)
 	}
-	_ = ZkEstablishCustActivatedMsg
 
 	go merch.zkChannelMgr.processZkEstablishCustActivated(ZkEstablishCustActivatedMsg, cust)
 
@@ -470,8 +466,6 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 		t.Fatalf("expected ZkEstablishPayTokenMsg to be sent from "+
 			"cust, instead got %T", msg10)
 	}
-
-	_ = ZkEstablishPayTokenMsg
 
 	go cust.zkChannelMgr.processZkEstablishPayToken(ZkEstablishPayTokenMsg, merch, zkChannelName)
 
