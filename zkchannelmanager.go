@@ -24,30 +24,31 @@ import (
 	"github.com/lightningnetwork/lnd/zkchanneldb"
 )
 
-// type ZkFundingInfo struct {
-// 	fundingOut      wire.OutPoint
-// 	pkScript        []byte
-// 	broadcastHeight uint32
-// }
-
 type zkChannelManager struct {
-	// zkChannelName string
-	Notifier   chainntnfs.ChainNotifier
-	wg         sync.WaitGroup
+	Notifier chainntnfs.ChainNotifier
+
+	wg sync.WaitGroup
+
 	isMerchant bool
+
 	// WatchNewZkChannel is to be called once a new zkchannel enters the final
 	// funding stage: waiting for on-chain confirmation. This method sends
 	// the channel to the ChainArbitrator so it can watch for any on-chain
 	// events related to the channel.
 	WatchNewZkChannel func(contractcourt.ZkChainWatcherConfig) error
-	dbPath            string
+
+	dbPath string
+
+	// PublishTransaction facilitates the process of broadcasting a
+	// transaction to the network.
+	PublishTransaction func(*wire.MsgTx) error
 }
 
 type Total struct {
 	amount int64
 }
 
-func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string) *zkChannelManager {
+func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx) error) *zkChannelManager {
 	var dbPath string
 	if isZkMerchant {
 		dbPath = path.Join(dbDirPath, "zkmerch.db")
@@ -55,9 +56,10 @@ func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.
 		dbPath = path.Join(dbDirPath, "zkcust.db")
 	}
 	return &zkChannelManager{
-		WatchNewZkChannel: zkChainWatcher,
-		isMerchant:        isZkMerchant,
-		dbPath:            dbPath,
+		WatchNewZkChannel:  zkChainWatcher,
+		isMerchant:         isZkMerchant,
+		dbPath:             dbPath,
+		PublishTransaction: publishTx,
 	}
 }
 
@@ -1101,7 +1103,7 @@ func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chain
 
 }
 
-func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstablishStateValidated, p lnpeer.Peer, zkChannelName string, wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier) {
+func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstablishStateValidated, p lnpeer.Peer, zkChannelName string, notifier chainntnfs.ChainNotifier) {
 
 	zkchLog.Debugf("Just received ZkEstablishStateValidated for %v", zkChannelName)
 
@@ -1179,7 +1181,7 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 
 	zkchLog.Debugf("Broadcasting signedEscrowTx: %#v\n", signedEscrowTx)
 
-	err = wallet.PublishTransaction(&msgTx)
+	err = z.PublishTransaction(&msgTx)
 	if err != nil {
 		zkchLog.Error(err)
 		return
@@ -2308,7 +2310,7 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 	}
 
 	zkchLog.Info("Broadcasting close transaction")
-	err = wallet.PublishTransaction(&msgTx)
+	err = z.PublishTransaction(&msgTx)
 	if err != nil {
 		zkchLog.Error(err)
 		return err
@@ -2437,7 +2439,7 @@ func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier
 	}
 
 	zkchLog.Info("Broadcasting merch close transaction")
-	err = wallet.PublishTransaction(&msgTx)
+	err = z.PublishTransaction(&msgTx)
 	if err != nil {
 		zkchLog.Infof("Couldn't publish transaction: %v", err)
 		return err
@@ -2682,7 +2684,7 @@ func (z *zkChannelManager) CustClaim(wallet *lnwallet.LightningWallet, notifier 
 	}
 
 	zkchLog.Info("Broadcasting merch close transaction")
-	err = wallet.PublishTransaction(&msgTx)
+	err = z.PublishTransaction(&msgTx)
 	if err != nil {
 		zkchLog.Infof("Couldn't publish transaction: %v", err)
 		return err
@@ -2728,7 +2730,7 @@ func (z *zkChannelManager) MerchClaim(wallet *lnwallet.LightningWallet, notifier
 	}
 
 	zkchLog.Info("Broadcasting merch close transaction")
-	err = wallet.PublishTransaction(&msgTx)
+	err = z.PublishTransaction(&msgTx)
 	if err != nil {
 		zkchLog.Infof("Couldn't publish transaction: %v", err)
 		return err

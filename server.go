@@ -993,7 +993,9 @@ func newServer(cfg *Config, LNMode bool, listenAddrs []net.Addr, chanDB *channel
 		zkChainWatcherFunc := func(z contractcourt.ZkChainWatcherConfig) error {
 			return s.chainArb.WatchNewZkChannel(z)
 		}
-		s.zkchannelMgr = newZkChannelManager(isZkMerchant, zkChainWatcherFunc, "")
+		publishTx := cc.wallet.PublishTransaction
+
+		s.zkchannelMgr = newZkChannelManager(isZkMerchant, zkChainWatcherFunc, "", publishTx)
 		if err != nil {
 			return nil, err
 		}

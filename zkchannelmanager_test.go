@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
@@ -108,15 +107,22 @@ func createTestZkChannelManager(t *testing.T, isMerchant bool) (*zkTestNode, err
 	if err != nil {
 		t.Fatalf("unable to create temp directory: %v", err)
 	}
+	publTxChan := make(chan *wire.MsgTx, 1)
+	publishTransaction := func(txn *wire.MsgTx) error {
+		publTxChan <- txn
+		return nil
+	}
+
 	chainNotifier := &mockNotifier{
 		oneConfChannel: make(chan *chainntnfs.TxConfirmation, 1),
 		sixConfChannel: make(chan *chainntnfs.TxConfirmation, 1),
 		epochChan:      make(chan *chainntnfs.BlockEpoch, 2),
 	}
-	manager := newZkChannelManager(isMerchant, zkChainWatcher, testDir)
+	manager := newZkChannelManager(isMerchant, zkChainWatcher, testDir, publishTransaction)
 	return &zkTestNode{
 		zkChannelMgr: manager,
 		msgChan:      sentMessages,
+		publTxChan:   publTxChan,
 		mockNotifier: chainNotifier,
 		testDir:      testDir,
 	}, nil
@@ -334,7 +340,6 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 			"cust, instead got %T", msg5)
 	}
 
-	fmt.Println("Here")
 	go merch.zkChannelMgr.processZkEstablishInitialState(ZkEstablishInitialStateMsg, cust, merch.mockNotifier)
 
 	signedEscrowTx := "0200000000010103bb2937f1641c81b5e7dd37b96a5e1ca44032e66ab1e53a949ef8bd669e77210000000017160014d83e1345c76dc160630937746d2d2693562e9c58ffffffff0280841e0000000000220020b718e637a405ba914aede6bcb3d14dec83deca9b0449a20c7163b94456eb01c3806de7290100000021037bed6ab680a171ef2ab564af25eff15c0659313df0bbfb96414da7c7d1e6588202473044022065772e4706e29b6d1449b9ea93bbc05939f52d24022f179908c0141c3e501e4002206bd7d1183c54dc5ac706f2da80ccb230de13c4f29054c0aa0ae1db089e246f0f0121032581c94e62b16c1f5fc36c5ff6ddc5c3e7cc4e7e70e2ec3ab3f663cff9d9b7d000000000"
