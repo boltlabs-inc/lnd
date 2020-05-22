@@ -1,8 +1,6 @@
 package lnd
 
 import (
-	"bytes"
-	"encoding/hex"
 	"errors"
 	"io/ioutil"
 	"net"
@@ -255,7 +253,6 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 	msg2Type := lnwire.ZkEstablishAccept{}
 	assert.Equal(t, msg2Type.MsgType(), msg2.MsgType())
 
-	// TODO: Check what exactly this does
 	ZkEstablishAcceptMsg, ok := msg2.(*lnwire.ZkEstablishAccept)
 	if !ok {
 		errorMsg, gotError := msg2.(*lnwire.Error)
@@ -279,7 +276,6 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 	msg3Type := lnwire.ZkEstablishMCloseSigned{}
 	assert.Equal(t, msg3Type.MsgType(), msg3.MsgType())
 
-	// TODO: Check what exactly this does
 	ZkEstablishMCloseSignedMsg, ok := msg3.(*lnwire.ZkEstablishMCloseSigned)
 	if !ok {
 		errorMsg, gotError := msg3.(*lnwire.Error)
@@ -303,7 +299,6 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 	msg4Type := lnwire.ZkEstablishCCloseSigned{}
 	assert.Equal(t, msg4Type.MsgType(), msg4.MsgType())
 
-	// TODO: Check what exactly this does
 	ZkEstablishCCloseSignedMsg, ok := msg4.(*lnwire.ZkEstablishCCloseSigned)
 	if !ok {
 		errorMsg, gotError := msg4.(*lnwire.Error)
@@ -327,7 +322,6 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 	msg5Type := lnwire.ZkEstablishInitialState{}
 	assert.Equal(t, msg5Type.MsgType(), msg5.MsgType())
 
-	// TODO: Check what exactly this does
 	ZkEstablishInitialStateMsg, ok := msg5.(*lnwire.ZkEstablishInitialState)
 	if !ok {
 		errorMsg, gotError := msg5.(*lnwire.Error)
@@ -342,28 +336,6 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 
 	go merch.zkChannelMgr.processZkEstablishInitialState(ZkEstablishInitialStateMsg, cust, merch.mockNotifier)
 
-	signedEscrowTx := "0200000000010103bb2937f1641c81b5e7dd37b96a5e1ca44032e66ab1e53a949ef8bd669e77210000000017160014d83e1345c76dc160630937746d2d2693562e9c58ffffffff0280841e0000000000220020b718e637a405ba914aede6bcb3d14dec83deca9b0449a20c7163b94456eb01c3806de7290100000021037bed6ab680a171ef2ab564af25eff15c0659313df0bbfb96414da7c7d1e6588202473044022065772e4706e29b6d1449b9ea93bbc05939f52d24022f179908c0141c3e501e4002206bd7d1183c54dc5ac706f2da80ccb230de13c4f29054c0aa0ae1db089e246f0f0121032581c94e62b16c1f5fc36c5ff6ddc5c3e7cc4e7e70e2ec3ab3f663cff9d9b7d000000000"
-
-	// Convert escrow to wire.MsgTx to broadcast on chain
-	serializedTx, err := hex.DecodeString(signedEscrowTx)
-	if err != nil {
-		zkchLog.Error(err)
-		return
-	}
-
-	var fundingTx wire.MsgTx
-	err = fundingTx.Deserialize(bytes.NewReader(serializedTx))
-	if err != nil {
-		zkchLog.Error(err)
-		return
-	}
-
-	// TODO: Check that fundingTx got confirmed.
-	// oneConfChannel is sufficient unless sixConfChannel is required
-	merch.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
-		Tx: &fundingTx,
-	}
-
 	var msg6 lnwire.Message
 	select {
 	case msg6 = <-merch.msgChan:
@@ -373,7 +345,6 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 	msg6Type := lnwire.ZkEstablishStateValidated{}
 	assert.Equal(t, msg6Type.MsgType(), msg6.MsgType())
 
-	// TODO: Check what exactly this does
 	ZkEstablishStateValidatedMsg, ok := msg6.(*lnwire.ZkEstablishStateValidated)
 	if !ok {
 		errorMsg, gotError := msg6.(*lnwire.Error)
@@ -385,6 +356,124 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 		t.Fatalf("expected ZkEstablishStateValidatedMsg to be sent from "+
 			"cust, instead got %T", msg6)
 	}
-	_ = ZkEstablishStateValidatedMsg
 
+	go cust.zkChannelMgr.processZkEstablishStateValidated(ZkEstablishStateValidatedMsg, merch,
+		zkChannelName, cust.mockNotifier)
+
+	// Get and return the funding transaction cust published to the network.
+	var fundingTx *wire.MsgTx
+	select {
+	case fundingTx = <-cust.publTxChan:
+	case <-time.After(time.Second * 5):
+		t.Fatalf("cust did not publish funding tx")
+	}
+
+	// Simulate confirmations on escrow tx for merch and cust
+	// 'oneConfChannel' is sufficient unless sixConfChannel is required
+	merch.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
+		Tx: fundingTx,
+	}
+	cust.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
+		Tx: fundingTx,
+	}
+
+	var msg7 lnwire.Message
+	select {
+	case msg7 = <-cust.msgChan:
+	case <-time.After(time.Second * 5):
+		t.Fatalf("peer did not send message")
+	}
+	msg7Type := lnwire.ZkEstablishFundingLocked{}
+	assert.Equal(t, msg7Type.MsgType(), msg7.MsgType())
+
+	ZkEstablishFundingLockedMsg, ok := msg7.(*lnwire.ZkEstablishFundingLocked)
+	if !ok {
+		errorMsg, gotError := msg7.(*lnwire.Error)
+		if gotError {
+			t.Fatalf("expected ZkEstablishFundingLocked to be sent "+
+				"from merch, instead got error: %v",
+				errorMsg.Error())
+		}
+		t.Fatalf("expected ZkEstablishFundingLocked to be sent from "+
+			"cust, instead got %T", msg7)
+	}
+	_ = ZkEstablishFundingLockedMsg
+
+	go merch.zkChannelMgr.processZkEstablishFundingLocked(ZkEstablishFundingLockedMsg, cust)
+
+	var msg8 lnwire.Message
+	select {
+	case msg8 = <-merch.msgChan:
+	case <-time.After(time.Second * 5):
+		t.Fatalf("peer did not send message")
+	}
+	msg8Type := lnwire.ZkEstablishFundingConfirmed{}
+	assert.Equal(t, msg8Type.MsgType(), msg8.MsgType())
+
+	ZkEstablishFundingConfirmedMsg, ok := msg8.(*lnwire.ZkEstablishFundingConfirmed)
+	if !ok {
+		errorMsg, gotError := msg8.(*lnwire.Error)
+		if gotError {
+			t.Fatalf("expected ZkEstablishFundingConfirmedMsg to be sent "+
+				"from merch, instead got error: %v",
+				errorMsg.Error())
+		}
+		t.Fatalf("expected ZkEstablishFundingConfirmedMsg to be sent from "+
+			"cust, instead got %T", msg8)
+	}
+
+	_ = ZkEstablishFundingConfirmedMsg
+
+	go cust.zkChannelMgr.processZkEstablishFundingConfirmed(ZkEstablishFundingConfirmedMsg, merch, zkChannelName)
+
+	var msg9 lnwire.Message
+	select {
+	case msg9 = <-cust.msgChan:
+	case <-time.After(time.Second * 5):
+		t.Fatalf("peer did not send message")
+	}
+	msg9Type := lnwire.ZkEstablishCustActivated{}
+	assert.Equal(t, msg9Type.MsgType(), msg9.MsgType())
+
+	ZkEstablishCustActivatedMsg, ok := msg9.(*lnwire.ZkEstablishCustActivated)
+	if !ok {
+		errorMsg, gotError := msg9.(*lnwire.Error)
+		if gotError {
+			t.Fatalf("expected ZkEstablishCustActivated to be sent "+
+				"from merch, instead got error: %v",
+				errorMsg.Error())
+		}
+		t.Fatalf("expected ZkEstablishCustActivated to be sent from "+
+			"cust, instead got %T", msg9)
+	}
+	_ = ZkEstablishCustActivatedMsg
+
+	go merch.zkChannelMgr.processZkEstablishCustActivated(ZkEstablishCustActivatedMsg, cust)
+
+	var msg10 lnwire.Message
+	select {
+	case msg10 = <-merch.msgChan:
+	case <-time.After(time.Second * 5):
+		t.Fatalf("peer did not send message")
+	}
+	msg10Type := lnwire.ZkEstablishPayToken{}
+	assert.Equal(t, msg10Type.MsgType(), msg10.MsgType())
+
+	ZkEstablishPayTokenMsg, ok := msg10.(*lnwire.ZkEstablishPayToken)
+	if !ok {
+		errorMsg, gotError := msg10.(*lnwire.Error)
+		if gotError {
+			t.Fatalf("expected ZkEstablishPayTokenMsg to be sent "+
+				"from merch, instead got error: %v",
+				errorMsg.Error())
+		}
+		t.Fatalf("expected ZkEstablishPayTokenMsg to be sent from "+
+			"cust, instead got %T", msg10)
+	}
+
+	_ = ZkEstablishPayTokenMsg
+
+	go cust.zkChannelMgr.processZkEstablishPayToken(ZkEstablishPayTokenMsg, merch, zkChannelName)
+
+	// TODO: Add a final check that the received payToken0 is valid
 }
