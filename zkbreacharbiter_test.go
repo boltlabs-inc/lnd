@@ -77,7 +77,7 @@ func createTestZkArbiter(t *testing.T, custContractBreaches chan *ZkContractBrea
 		CustContractBreaches: custContractBreaches,
 		Signer:               signer,
 		Notifier:             notifier,
-		PublishTransaction:   func(_ *wire.MsgTx) error { return nil },
+		PublishTransaction:   func(_ *wire.MsgTx, _ string) error { return nil },
 		// Store:              store,
 	})
 
@@ -216,7 +216,7 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 
 	// Make PublishTransaction always return ErrDoubleSpend to begin with.
 	publErr = lnwallet.ErrDoubleSpend
-	brar.cfg.PublishTransaction = func(tx *wire.MsgTx) error {
+	brar.cfg.PublishTransaction = func(tx *wire.MsgTx, label string) error {
 		publTx <- tx
 
 		publMtx.Lock()

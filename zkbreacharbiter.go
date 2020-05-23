@@ -87,7 +87,7 @@ type ZkBreachConfig struct {
 
 	// PublishTransaction facilitates the process of broadcasting a
 	// transaction to the network.
-	PublishTransaction func(*wire.MsgTx) error
+	PublishTransaction func(*wire.MsgTx, string) error
 
 	// CustContractBreaches is a channel where the zkBreachArbiter will receive
 	// notifications in the event of a contract breach being observed. A
@@ -591,7 +591,7 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 
 	zkchLog.Debugf("Broadcasting dispute Tx: %#v\n", finalTx)
 
-	err = b.cfg.PublishTransaction(&finalTx)
+	err = b.cfg.PublishTransaction(&finalTx, "")
 	if err != nil {
 		zkchLog.Error(err)
 		return
@@ -684,7 +684,7 @@ func (b *zkBreachArbiter) exactZkCloseMerch(confChan *chainntnfs.ConfirmationEve
 
 	zkchLog.Debugf("Broadcasting closeMerchTx: %#v\n", finalTx)
 
-	err = b.cfg.PublishTransaction(&finalTx)
+	err = b.cfg.PublishTransaction(&finalTx, "")
 	if err != nil {
 		zkchLog.Error(err)
 	}

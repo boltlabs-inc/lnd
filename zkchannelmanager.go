@@ -41,14 +41,14 @@ type zkChannelManager struct {
 
 	// PublishTransaction facilitates the process of broadcasting a
 	// transaction to the network.
-	PublishTransaction func(*wire.MsgTx) error
+	PublishTransaction func(*wire.MsgTx, string) error
 }
 
 type Total struct {
 	amount int64
 }
 
-func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx) error) *zkChannelManager {
+func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error) *zkChannelManager {
 	var dbPath string
 	if isZkMerchant {
 		dbPath = path.Join(dbDirPath, "zkmerch.db")
@@ -1181,7 +1181,7 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 
 	zkchLog.Debugf("Broadcasting signedEscrowTx: %#v\n", signedEscrowTx)
 
-	err = z.PublishTransaction(&msgTx)
+	err = z.PublishTransaction(&msgTx, "")
 	if err != nil {
 		zkchLog.Error(err)
 		return
@@ -2310,7 +2310,7 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 	}
 
 	zkchLog.Info("Broadcasting close transaction")
-	err = z.PublishTransaction(&msgTx)
+	err = z.PublishTransaction(&msgTx, "")
 	if err != nil {
 		zkchLog.Error(err)
 		return err
@@ -2439,7 +2439,7 @@ func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier
 	}
 
 	zkchLog.Info("Broadcasting merch close transaction")
-	err = z.PublishTransaction(&msgTx)
+	err = z.PublishTransaction(&msgTx, "")
 	if err != nil {
 		zkchLog.Infof("Couldn't publish transaction: %v", err)
 		return err
@@ -2684,7 +2684,7 @@ func (z *zkChannelManager) CustClaim(wallet *lnwallet.LightningWallet, notifier 
 	}
 
 	zkchLog.Info("Broadcasting merch close transaction")
-	err = z.PublishTransaction(&msgTx)
+	err = z.PublishTransaction(&msgTx, "")
 	if err != nil {
 		zkchLog.Infof("Couldn't publish transaction: %v", err)
 		return err
@@ -2730,7 +2730,7 @@ func (z *zkChannelManager) MerchClaim(wallet *lnwallet.LightningWallet, notifier
 	}
 
 	zkchLog.Info("Broadcasting merch close transaction")
-	err = z.PublishTransaction(&msgTx)
+	err = z.PublishTransaction(&msgTx, "")
 	if err != nil {
 		zkchLog.Infof("Couldn't publish transaction: %v", err)
 		return err

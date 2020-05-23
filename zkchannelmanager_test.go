@@ -81,7 +81,7 @@ func createTestZkChannelManager(t *testing.T, isMerchant bool) (*zkTestNode, err
 		t.Fatalf("unable to create temp directory: %v", err)
 	}
 	publTxChan := make(chan *wire.MsgTx, 1)
-	publishTransaction := func(txn *wire.MsgTx) error {
+	publishTransaction := func(txn *wire.MsgTx, label string) error {
 		publTxChan <- txn
 		return nil
 	}
