@@ -1254,7 +1254,7 @@ func (z *zkChannelManager) waitForFundingWithTimeout(notifier chainntnfs.ChainNo
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go z.waitForFundingConfirmation(notifier, cancelChan, confChan, wg, escrowTxid, pkScript)
+	go z.waitForFundingConfirmation(notifier, cancelChan, confChan, &wg, escrowTxid, pkScript)
 
 	// If we are not the initiator, we have no money at stake and will
 	// timeout waiting for the funding transaction to confirm after a
@@ -1262,7 +1262,7 @@ func (z *zkChannelManager) waitForFundingWithTimeout(notifier chainntnfs.ChainNo
 	IsInitiator := true
 	if !IsInitiator {
 		wg.Add(1)
-		go z.waitForTimeout(notifier, cancelChan, timeoutChan, wg)
+		go z.waitForTimeout(notifier, cancelChan, timeoutChan, &wg)
 	}
 
 	defer close(cancelChan)
@@ -1302,7 +1302,7 @@ func (z *zkChannelManager) waitForFundingWithTimeout(notifier chainntnfs.ChainNo
 // NOTE: This MUST be run as a goroutine.
 func (z *zkChannelManager) waitForFundingConfirmation(notifier chainntnfs.ChainNotifier,
 	cancelChan <-chan struct{},
-	confChan chan<- *confirmedChannel, wg sync.WaitGroup, escrowTxid string, pkScript []byte) {
+	confChan chan<- *confirmedChannel, wg *sync.WaitGroup, escrowTxid string, pkScript []byte) {
 
 	defer wg.Done()
 	defer close(confChan)
@@ -1403,7 +1403,7 @@ func (z *zkChannelManager) waitForFundingConfirmation(notifier chainntnfs.ChainN
 // NOTE: timeoutChan MUST be buffered.
 // NOTE: This MUST be run as a goroutine.
 func (z *zkChannelManager) waitForTimeout(notifier chainntnfs.ChainNotifier,
-	cancelChan <-chan struct{}, timeoutChan chan<- error, wg sync.WaitGroup) {
+	cancelChan <-chan struct{}, timeoutChan chan<- error, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	epochClient, err := notifier.RegisterBlockEpochNtfn(nil)
