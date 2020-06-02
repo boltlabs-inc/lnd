@@ -444,5 +444,11 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 
 	go cust.zkChannelMgr.processZkEstablishPayToken(ZkEstablishPayTokenMsg, merch, zkChannelName)
 
-	// TODO: Add a final check that the received payToken0 is valid
+	var msg11 lnwire.Message
+	select {
+	case msg11 = <-merch.msgChan:
+		errorMsg, _ := msg11.(*lnwire.Error)
+		t.Fatalf("Received an unexpected error message: " + errorMsg.Error())
+	case <-time.After(time.Second):
+	}
 }
