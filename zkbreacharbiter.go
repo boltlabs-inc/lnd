@@ -561,9 +561,22 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 		zkchLog.Error(err)
 		return
 	}
+ 	// We'll actually attempt to target inclusion within the next two
+ 	// blocks as we'd like to sweep these funds back into our wallet ASAP.
+// 	feePerKw, err := b.cfg.Estimator.EstimateFeePerKW(2)
+// 	if err != nil {
+//		return nil, err
+// 	}
+// 	txFee := // feePerKw.FeeForWeight(txWeight)
+
+// 	// TODO(roasbeef): already start to siphon their funds into fees
+// 	sweepAmt := int64(totalAmt - txFee)
 
 	// with all the info needed, create and sign the Dispute/Justice Tx.
-	finalTxStr, err := libzkchannels.MerchantSignDisputeTx(breachTxid, index, amount, toSelfDelay, outputPk,
+	txFee := int64(0)
+	inAmt := amount
+	outAmt := int64(inAmt - txFee)
+	finalTxStr, err := libzkchannels.MerchantSignDisputeTx(breachTxid, index, inAmt, outAmt, toSelfDelay, outputPk,
 		revLock, revSecret, custClosePk, merchState)
 	if err != nil {
 		zkchLog.Error(err)

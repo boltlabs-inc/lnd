@@ -690,7 +690,10 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 	log.Debugf("outputPk: %#v", outputPk)
 	log.Debugf("merchState: %#v", merchState)
 
-	signedMerchClaimTx, err := libzkchannels.MerchantSignMerchClaimTx(closeTxidLittleEn, index, amount, toSelfDelay, custClosePk, outputPk, merchState)
+	txFee := int64(0)
+	inAmt := amount
+	outAmt := int64(inAmt - txFee)
+	signedMerchClaimTx, err := libzkchannels.MerchantSignMerchClaimTx(closeTxidLittleEn, index, inAmt, outAmt, toSelfDelay, custClosePk, outputPk, merchState)
 	if err != nil {
 		log.Errorf("libzkchannels.MerchantSignMerchClaimTx: ", err)
 		return err
@@ -764,8 +767,10 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 	// reusing the custClosePk
 	outputPk := custClosePk
 	index := uint32(0)
-
-	signedCustClaimTx, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, index, custState.CustBalance, toSelfDelay, outputPk, custState.RevLock, custClosePk, custState)
+	txFee := int64(0)
+	inAmt := custState.CustBalance
+	outAmt := int64(inAmt - txFee)
+	signedCustClaimTx, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, index, inAmt, outAmt, toSelfDelay, outputPk, custState.RevLock, custClosePk, custState)
 	if err != nil {
 		log.Error(err)
 		return err
