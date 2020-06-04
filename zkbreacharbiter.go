@@ -573,7 +573,7 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 // 	sweepAmt := int64(totalAmt - txFee)
 
 	// with all the info needed, create and sign the Dispute/Justice Tx.
-	txFee := int64(0)
+	txFee := int64(1000) // TODO ZKLND-49: Use fee estimator
 	inAmt := amount
 	outAmt := int64(inAmt - txFee)
 	finalTxStr, err := libzkchannels.MerchantSignDisputeTx(breachTxid, index, inAmt, outAmt, toSelfDelay, outputPk,

@@ -690,7 +690,7 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 	log.Debugf("outputPk: %#v", outputPk)
 	log.Debugf("merchState: %#v", merchState)
 
-	txFee := int64(0)
+	txFee := int64(1000) // TODO ZKLND-49: Use fee estimator
 	inAmt := amount
 	outAmt := int64(inAmt - txFee)
 	signedMerchClaimTx, err := libzkchannels.MerchantSignMerchClaimTx(closeTxidLittleEn, index, inAmt, outAmt, toSelfDelay, custClosePk, outputPk, merchState)
@@ -767,7 +767,7 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 	// reusing the custClosePk
 	outputPk := custClosePk
 	index := uint32(0)
-	txFee := int64(0)
+	txFee := int64(1000) // TODO ZKLND-49: Use fee estimator
 	inAmt := custState.CustBalance
 	outAmt := int64(inAmt - txFee)
 	signedCustClaimTx, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, index, inAmt, outAmt, toSelfDelay, outputPk, custState.RevLock, custClosePk, custState)

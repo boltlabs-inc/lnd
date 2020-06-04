@@ -6,15 +6,18 @@ import (
 	"encoding/hex"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"path"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/contractcourt"
@@ -282,16 +285,16 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 	}
 
 	// TODO ZKC-15: Add the check below when txFee has been added to MerchantSignDisputeTx
-	// // Calculate appropriate minimum tx fee and check it is large enough
-	// expectedWeight := blockchain.GetTransactionWeight(btcutil.NewTx(tx))
+	// Calculate appropriate minimum tx fee and check it is large enough
+	expectedWeight := blockchain.GetTransactionWeight(btcutil.NewTx(tx))
 
-	// // a minRelayTxFee of 1 satoshi per vbyte is equal to 0.253 satoshi per weight unit
-	// minTxFee := int64(math.Ceil(float64(expectedWeight) * 0.253))
+	// a minRelayTxFee of 1 satoshi per vbyte is equal to 0.253 satoshi per weight unit
+	minTxFee := int64(math.Ceil(float64(expectedWeight) * 0.253))
 
-	// disputeTxFee := ZkCustBreachInfo.Amount - tx.TxOut[0].Value
-	// if disputeTxFee < minTxFee {
-	// 	t.Fatalf("disputeTx fee of %v sat is less than minRelayTxFee of %v sat", disputeTxFee, minTxFee)
-	// }
+	disputeTxFee := ZkCustBreachInfo.Amount - tx.TxOut[0].Value
+	if disputeTxFee < minTxFee {
+		t.Fatalf("disputeTx fee of %v sat is less than minRelayTxFee of %v sat", disputeTxFee, minTxFee)
+	}
 
 	// Deliver confirmation of sweep if the test expects it.
 	if test.sendFinalConf {
