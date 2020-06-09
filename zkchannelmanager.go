@@ -1060,16 +1060,14 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 	ZkFundingInfo := contractcourt.ZkFundingInfo{
 		FundingOut:      *fundingOut,
 		PkScript:        pkScript,
-		BroadcastHeight: uint32(300), // TODO: Replace with actual fundingtx confirm height
+		BroadcastHeight: uint32(300), // TODO ZKLND-50: Replace with actual fundingtx confirm height
 	}
 	zkchLog.Debugf("ZkFundingInfo: %v", ZkFundingInfo)
 	zkchLog.Debugf("pkScript: %v", ZkFundingInfo.PkScript)
 
-	const isMerch = true
-
 	zkChainWatcherCfg := contractcourt.ZkChainWatcherConfig{
 		ZkFundingInfo:   ZkFundingInfo,
-		IsMerch:         isMerch,
+		IsMerch:         true,
 		CustChannelName: "",
 		Notifier:        notifier,
 	}
@@ -1159,16 +1157,14 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 	ZkFundingInfo := contractcourt.ZkFundingInfo{
 		FundingOut:      *fundingOut,
 		PkScript:        msgTx.TxOut[0].PkScript,
-		BroadcastHeight: uint32(300), // TODO: Replace with actual fundingtx confirm height
+		BroadcastHeight: uint32(300), // TODO ZKLND-50: Replace with actual fundingtx confirm height
 	}
 	zkchLog.Debugf("ZkFundingInfo: %v", ZkFundingInfo)
 	zkchLog.Debugf("pkScript: %v", ZkFundingInfo.PkScript)
 
-	const isMerch = false
-
 	zkChainWatcherCfg := contractcourt.ZkChainWatcherConfig{
 		ZkFundingInfo:   ZkFundingInfo,
-		IsMerch:         isMerch,
+		IsMerch:         false,
 		CustChannelName: zkChannelName,
 		Notifier:        notifier,
 	}
@@ -2436,6 +2432,35 @@ func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier
 	if err != nil {
 		zkchLog.Error(err)
 		return err
+	}
+
+	fundingOut := &wire.OutPoint{
+		Hash:  msgTx.TxHash(),
+		Index: uint32(0),
+	}
+	zkchLog.Debugf("fundingOut: %v", fundingOut)
+
+	// TODO: Rename to merchClose Info, or something more general
+	ZkFundingInfo := contractcourt.ZkFundingInfo{
+		FundingOut:      *fundingOut,
+		PkScript:        msgTx.TxOut[0].PkScript,
+		BroadcastHeight: uint32(300), // TODO ZKLND-50: Replace with actual fundingtx confirm height
+	}
+	zkchLog.Debugf("ZkFundingInfo: %v", ZkFundingInfo)
+	zkchLog.Debugf("pkScript: %v", ZkFundingInfo.PkScript)
+
+	zkChainWatcherCfg := contractcourt.ZkChainWatcherConfig{
+		ZkFundingInfo:      ZkFundingInfo,
+		IsMerch:            true,
+		WatchingMerchClose: true,
+		CustChannelName:    "",
+		Notifier:           notifier,
+	}
+	zkchLog.Debugf("notifier: %v", notifier)
+
+	if err := z.WatchNewZkChannel(zkChainWatcherCfg); err != nil {
+		zkchLog.Errorf("Unable to send new ChannelPoint(%v) for "+
+			"arbitration: %v", escrowTxid, err)
 	}
 
 	zkchLog.Info("Broadcasting merch close transaction")
