@@ -132,7 +132,7 @@ var zkBreachTests = []breachTest{
 
 func initTestMerchState(DBPath string, skM string, payoutSkM string, disputeSkM string) error {
 	dbURL := ""
-	channelState, err := libzkchannels.ChannelSetup("channel", 546, false)
+	channelState, err := libzkchannels.ChannelSetup("channel", 546, 546, 1000, false)
 	if err != nil {
 		return err
 	}
