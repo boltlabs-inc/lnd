@@ -207,9 +207,19 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 
 	zkchLog.Debug("Variables going into InitCustomer :=> ", merchPubKey, custBal, merchBal, feeCC, minFee, maxFee, feeMC, "cust")
 	// TODO ZKLND-37: Make sure dust limit is set to finalized value
-	dustLimit := int64(546)
 	valCpfp := int64(1000)
-	channelToken, custState, err := libzkchannels.InitCustomer(merchPubKey, custBal, merchBal, feeCC, minFee, maxFee, feeMC, dustLimit, dustLimit, valCpfp, "cust")
+	minThreshold := int64(546)
+	txFeeInfo := libzkchannels.TransactionFeeInfo{
+		BalMinCust:  minThreshold,
+		BalMinMerch: minThreshold,
+		ValCpFp:     valCpfp,
+		FeeCC:       feeCC,
+		FeeMC:       feeMC,
+		MinFee:      minFee,
+		MaxFee:      maxFee,
+	}
+
+	channelToken, custState, err := libzkchannels.InitCustomer(merchPubKey, custBal, merchBal, txFeeInfo, "cust")
 	channelToken, custState, err = libzkchannels.LoadCustomerWallet(custState, channelToken, custStateSk, custPayoutSk)
 
 	if err != nil {
@@ -318,6 +328,12 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 		return err
 	}
 
+	err = zkchanneldb.AddField(zkCustDB, zkChannelName, txFeeInfo, "txFeeInfoKey")
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+
 	err = zkCustDB.Close()
 	if err != nil {
 		zkchLog.Error(err)
@@ -354,7 +370,7 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 
 	zkchLog.Debug("Just received ZkEstablishOpen")
 
-	// // Convert variables received
+	// TODO ZKLND-51: Merchant should check ZkEstablishOpen message before proceeding
 	// escrowTxid := string(msg.EscrowTxid)
 	// custPk := string(msg.CustPk)
 	// escrowPrevout := string(msg.EscrowPrevout)
@@ -601,8 +617,8 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	merchBal := int64(binary.LittleEndian.Uint64(msg.MerchBal))
 	feeCC := int64(binary.LittleEndian.Uint64(msg.FeeCC))
 	feeMC := int64(binary.LittleEndian.Uint64(msg.FeeMC))
-	minFee := int64(binary.LittleEndian.Uint64(msg.MinFee))
-	maxFee := int64(binary.LittleEndian.Uint64(msg.MaxFee))
+	// minFee := int64(binary.LittleEndian.Uint64(msg.MinFee))
+	// maxFee := int64(binary.LittleEndian.Uint64(msg.MaxFee))
 	escrowTxid := string(msg.EscrowTxid)
 	escrowPrevout := string(msg.EscrowPrevout)
 	revLock := string(msg.RevLock)
@@ -675,14 +691,11 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 		MerchPrevout:  merchPrevout,
 		InitCustBal:   custBal,
 		InitMerchBal:  merchBal,
-		FeeMC:         feeMC,
-		MinFee:        minFee,
-		MaxFee:        maxFee,
 	}
 
 	zkchLog.Debug("RevLock => ", revLock)
 
-	escrowSig, merchSig, err := libzkchannels.MerchantSignInitCustCloseTx(txInfo, revLock, custPk, custClosePk, toSelfDelay, merchState, feeCC, channelState.ValCpfp)
+	escrowSig, merchSig, err := libzkchannels.MerchantSignInitCustCloseTx(txInfo, revLock, custPk, custClosePk, toSelfDelay, merchState, feeCC, feeMC, channelState.ValCpfp)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -832,22 +845,8 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 		return
 	}
 
-	var feeMC int64
-	err = zkchanneldb.GetField(zkCustDB, zkChannelName, "feeMCKey", &feeMC)
-	if err != nil {
-		z.failEstablishFlow(p, err)
-		return
-	}
-
-	var minFee int64
-	err = zkchanneldb.GetField(zkCustDB, zkChannelName, "minFeeKey", &minFee)
-	if err != nil {
-		z.failEstablishFlow(p, err)
-		return
-	}
-
-	var maxFee int64
-	err = zkchanneldb.GetField(zkCustDB, zkChannelName, "maxFeeKey", &maxFee)
+	var txFeeInfo libzkchannels.TransactionFeeInfo
+	err = zkchanneldb.GetField(zkCustDB, zkChannelName, "txFeeInfoKey", &txFeeInfo)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -876,12 +875,9 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 		MerchPrevout:  merchPrevout,
 		InitCustBal:   custBal,
 		InitMerchBal:  merchBal,
-		FeeMC:         feeMC,
-		MinFee:        minFee,
-		MaxFee:        maxFee,
 	}
 
-	isOk, channelToken, custState, err := libzkchannels.CustomerVerifyInitCustCloseTx(txInfo, channelState, channelToken, escrowSig, merchSig, custState)
+	isOk, channelToken, custState, err := libzkchannels.CustomerVerifyInitCustCloseTx(txInfo, txFeeInfo, channelState, channelToken, escrowSig, merchSig, custState)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -1911,7 +1907,7 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 
 	zkchLog.Debug("channelState channelTokenPkM => ", channelToken.PkM)
 
-	isOk, custState, err := libzkchannels.PayUpdateCustomer(channelState, channelToken, oldState, newState, payTokenMaskCom, revLockCom, amount, feeCC, custState)
+	isOk, custState, err := libzkchannels.PayUpdateCustomer(channelState, channelToken, oldState, newState, payTokenMaskCom, revLockCom, amount, custState)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
