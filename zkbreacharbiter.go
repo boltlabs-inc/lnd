@@ -562,15 +562,16 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 		return
 	}
  	// We'll actually attempt to target inclusion within the next two
- 	// blocks as we'd like to sweep these funds back into our wallet ASAP.
-// 	feePerKw, err := b.cfg.Estimator.EstimateFeePerKW(2)
-// 	if err != nil {
-//		return nil, err
-// 	}
-// 	txFee := // feePerKw.FeeForWeight(txWeight)
+	// We'll actually attempt to target inclusion within the next two
+	// blocks as we'd like to sweep these funds back into our wallet ASAP.
+	// 	feePerKw, err := b.cfg.Estimator.EstimateFeePerKW(2)
+	// 	if err != nil {
+	//		return nil, err
+	// 	}
+	// 	txFee := // feePerKw.FeeForWeight(txWeight)
 
-// 	// TODO(roasbeef): already start to siphon their funds into fees
-// 	sweepAmt := int64(totalAmt - txFee)
+	// 	// TODO(roasbeef): already start to siphon their funds into fees
+	// 	sweepAmt := int64(totalAmt - txFee)
 
 	// with all the info needed, create and sign the Dispute/Justice Tx.
 	txFee := int64(1000) // TODO ZKLND-49: Use fee estimator
@@ -679,7 +680,7 @@ func (b *zkBreachArbiter) exactZkCloseMerch(confChan *chainntnfs.ConfirmationEve
 	zkbaLog.Debugf("Merch Close transaction %v has been confirmed. ", breachInfo.CloseTxid)
 
 	closeFromEscrow := false
-	closeMerchTx, _, err := GetSignedCustCloseTxs(breachInfo.CustChannelName, closeFromEscrow)
+	closeMerchTx, _, err := GetSignedCustCloseTxs(breachInfo.CustChannelName, closeFromEscrow, "zkcust.db")
 
 	zkchLog.Warnf("closeMerchTx: %#v\n", closeMerchTx)
 

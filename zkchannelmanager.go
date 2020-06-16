@@ -154,12 +154,12 @@ func (z *zkChannelManager) initMerchant(merchName, skM, payoutSkM, disputeSkM st
 
 		// TODO ZKLND-19: Make toSelfDelay an input argument and add to config file
 		// currently not configurable in MPC
-		// toSelfDelay := uint16(1487)
+		selfDelay := int16(1487)
 		// TODO ZKLND-37: Make sure dust limit is set to finalized value
 		dustLimit := int64(546)
 		valCpfp := int64(1000)
 
-		channelState, err := libzkchannels.ChannelSetup("channel", dustLimit, dustLimit, valCpfp, false)
+		channelState, err := libzkchannels.ChannelSetup("channel", selfDelay, dustLimit, dustLimit, valCpfp, false)
 		zkchLog.Debugf("libzkchannels.ChannelSetup done")
 
 		channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")
@@ -237,10 +237,10 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 
 	changePkIsHash := true
 
-	zkchLog.Debug("Variables going into FormEscrowTx :=> ", custUtxoTxIdLe, index, inputSats, custBal, custInputSk, custPk, merchPk, changePubKey, changePkIsHash)
-
+	// TODO ZKLND-49: Query fee estimator to determine escrowTx fee
+	txFee := int64(1000)
 	outputSats := custBal + merchBal
-	_, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxIdLe, index, custInputSk, inputSats, outputSats, custPk, merchPk, changePubKey, changePkIsHash)
+	_, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxIdLe, index, custInputSk, inputSats, outputSats, custPk, merchPk, changePubKey, changePkIsHash, txFee)
 	if err != nil {
 		zkchLog.Error("FormEscrowTx: ", err)
 		return err
@@ -248,7 +248,7 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 
 	zkchLog.Info("escrow txid => ", escrowTxid)
 	// TODO: move escrow signing to a later in establish
-	signedEscrowTx, _, _, _, err := libzkchannels.SignEscrowTx(custUtxoTxIdLe, index, custInputSk, inputSats, outputSats, custPk, merchPk, changePubKey, changePkIsHash)
+	signedEscrowTx, _, _, _, err := libzkchannels.SignEscrowTx(custUtxoTxIdLe, index, custInputSk, inputSats, outputSats, custPk, merchPk, changePubKey, changePkIsHash, txFee)
 	zkchLog.Info("signedEscrowTx => ", signedEscrowTx)
 
 	zkchLog.Info("storing new zkchannel variables for:", zkChannelName)
@@ -654,6 +654,7 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	}
 
 	isOk, merchTxid_BE, merchTxid, merchPrevout, merchState, err := libzkchannels.MerchantVerifyMerchCloseTx(escrowTxid, custPk, custBal, merchBal, feeMC, channelState.ValCpfp, toSelfDelay, custSig, merchState)
+	zkchLog.Infof("isOk?: %v", isOk)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -2281,11 +2282,11 @@ func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p l
 }
 
 // CloseZkChannel broadcasts a close transaction
-func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, zkChannelName string, dryRun bool) error {
+func (z *zkChannelManager) CloseZkChannel(notifier chainntnfs.ChainNotifier, zkChannelName string, dryRun bool) error {
 
 	closeFromEscrow := true
 
-	closeEscrowTx, closeEscrowTxid, err := GetSignedCustCloseTxs(zkChannelName, closeFromEscrow)
+	closeEscrowTx, closeEscrowTxid, err := GetSignedCustCloseTxs(zkChannelName, closeFromEscrow, z.dbPath)
 	if err != nil {
 		zkchLog.Error(err)
 		return err
@@ -2321,30 +2322,29 @@ func (z *zkChannelManager) CloseZkChannel(wallet *lnwallet.LightningWallet, noti
 		return err
 	}
 
-	// Start watching for on-chain notifications of  custClose
-	pkScript := msgTx.TxOut[0].PkScript
+	// TODO ZKLND-11: Remove channel from channeldb after cust-close has reached 3 confirmations.
 
-	// ZKCHANNEL TODO: REFACTOR TO WRAP waitForFundingWithTimeout IN GO ROUTINE
-	// AND PASS REFERENCE TO A CHANNELDB
-	confChannel, err := z.waitForFundingWithTimeout(notifier, closeEscrowTxid, pkScript)
-	if err != nil {
-		zkchLog.Infof("error waiting for funding "+
-			"confirmation: %v", err)
-		return err
-	}
+	// // Start watching for on-chain notifications of  custClose
+	// pkScript := msgTx.TxOut[0].PkScript
 
-	zkchLog.Debugf("\n%#v\n", confChannel)
-	zkchLog.Debugf("\nwaitForFundingWithTimeout\npkScript: %#x\n\n", pkScript)
+	// // ZKCHANNEL TODO: REFACTOR TO WRAP waitForFundingWithTimeout IN GO ROUTINE
+	// // AND PASS REFERENCE TO A CHANNELDB
+	// confChannel, err := z.waitForFundingWithTimeout(notifier, closeEscrowTxid, pkScript)
+	// if err != nil {
+	// 	zkchLog.Infof("error waiting for funding "+
+	// 		"confirmation: %v", err)
+	// 	return err
+	// }
 
 	return nil
 }
 
 // GetSignedCustCloseTxs gets the custCloseTx and also sets closeInitiated to true
 // to signal that no further payments should be made with this channel.
-func GetSignedCustCloseTxs(zkChannelName string, closeEscrow bool) (closeEscrowTx string, closeEscrowTxid string, err error) {
+func GetSignedCustCloseTxs(zkChannelName string, closeEscrow bool, DBPath string) (closeEscrowTx string, closeEscrowTxid string, err error) {
 	// Add a flag to zkchannelsdb to say that closeChannel has been initiated.
 	// This is used to prevent another payment being made
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, "zkcust.db")
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, DBPath)
 	if err != nil {
 		zkchLog.Error(err)
 		return "", "", err
@@ -2394,7 +2394,7 @@ func GetSignedCustCloseTxs(zkChannelName string, closeEscrow bool) (closeEscrowT
 }
 
 // MerchClose broadcasts a close transaction for a given escrow txid
-func (z *zkChannelManager) MerchClose(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, escrowTxid string) error {
+func (z *zkChannelManager) MerchClose(notifier chainntnfs.ChainNotifier, escrowTxid string) error {
 
 	// open the zkchanneldb to create signedMerchCloseTx
 	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)

@@ -3647,7 +3647,7 @@ func (s *server) CloseZkChannel(zkChannelName string, dryRun bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.zkchannelMgr.CloseZkChannel(s.cc.wallet, s.cc.chainNotifier, zkChannelName, dryRun)
+	return s.zkchannelMgr.CloseZkChannel(s.cc.chainNotifier, zkChannelName, dryRun)
 }
 
 // MerchClose closes a channel with a given escrowTxid for the merchant
@@ -3657,7 +3657,7 @@ func (s *server) MerchClose(escrowTxid string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.zkchannelMgr.MerchClose(s.cc.wallet, s.cc.chainNotifier, escrowTxid)
+	return s.zkchannelMgr.MerchClose(s.cc.chainNotifier, escrowTxid)
 }
 
 // ZkChannelBalance returns a list of zkchannels and their balances to the customer.
