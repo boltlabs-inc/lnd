@@ -457,11 +457,31 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 
 func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, merchDBPath string) {
 
-	// TODO: Change this dbUrl to be different to actual dbUrl used in production?
-	dbUrl := "redis://127.0.0.1/"
+	// Load MerchState and ChannelState
+	zkMerchDB, err := zkchanneldb.SetupDB(merchDBPath)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	var channelState libzkchannels.ChannelState
+	err = zkchanneldb.GetMerchField(zkMerchDB, "channelStateKey", &channelState)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	err = zkMerchDB.Close()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
 	valCpfp := int64(1000)
 	minThreshold := int64(546)
-	selfDelay := int16(1487)
+	// selfDelay := int16(1487)
 	txFeeInfo := libzkchannels.TransactionFeeInfo{
 		BalMinCust:  minThreshold,
 		BalMinMerch: minThreshold,
@@ -473,24 +493,6 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 	}
 	feeCC := txFeeInfo.FeeCC
 	feeMC := txFeeInfo.FeeMC
-
-	channelState, err := libzkchannels.ChannelSetup("channel", selfDelay, txFeeInfo.BalMinCust, txFeeInfo.BalMinMerch, txFeeInfo.ValCpFp, false)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	skM := "e6e0c5310bb03809e1b2a1595a349f002125fa557d481e51f401ddaf3287e6ae"
-	payoutSkM := "5611111111111111111111111111111100000000000000000000000000000000"
-	disputeSkM := "5711111111111111111111111111111100000000000000000000000000000000"
-	channelState, merchState, err = libzkchannels.LoadMerchantWallet(merchState, channelState, skM, payoutSkM, disputeSkM)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
 
 	custBal := int64(1000000)
 	merchBal := int64(1000000)
@@ -636,7 +638,7 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 	}
 
 	// Save variables needed to create merch close in zkmerch.db
-	zkMerchDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, merchDBPath)
+	zkMerchDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName, merchDBPath)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
