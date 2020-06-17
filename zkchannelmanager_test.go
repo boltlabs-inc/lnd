@@ -455,9 +455,10 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 	}
 }
 
-func setupLibzkChannels(t *testing.T, zkChannelName string, DBPath string) {
+func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, merchDBPath string) {
 
-	dbUrl := ""
+	// TODO: Change this dbUrl to be different to actual dbUrl used in production?
+	dbUrl := "redis://127.0.0.1/"
 	valCpfp := int64(1000)
 	minThreshold := int64(546)
 	selfDelay := int16(1487)
@@ -609,7 +610,7 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, DBPath string) {
 	// End of libzkchannels_test.go
 
 	// Save variables needed to create cust close in zkcust.db
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, DBPath)
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, custDBPath)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -634,6 +635,37 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, DBPath string) {
 		zkchLog.Error(err)
 	}
 
+	// Save variables needed to create merch close in zkmerch.db
+	zkMerchDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, merchDBPath)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	err = zkchanneldb.AddMerchField(zkMerchDB, escrowTxid_LE, "escrowTxidKey")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	err = zkchanneldb.AddMerchField(zkMerchDB, channelState, "channelStateKey")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	err = zkchanneldb.AddMerchField(zkMerchDB, channelToken, "channelTokenKey")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	err = zkMerchDB.Close()
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
 }
 
 func TestCloseZkChannel(t *testing.T) {
@@ -641,23 +673,63 @@ func TestCloseZkChannel(t *testing.T) {
 	cust, merch := setupZkChannelManagers(t)
 	defer tearDownZkChannelManagers(cust, merch)
 
-	fmt.Print(cust.zkChannelMgr.dbPath)
-
-	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath)
+	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
 	cust.zkChannelMgr.CloseZkChannel(cust.mockNotifier, "myChannel", false)
 
-	// Get and return the funding transaction cust published to the network.
-	var fundingTx *wire.MsgTx
+	// Get and return the cust-close tx cust published to the network.
+	var custCloseTx *wire.MsgTx
 	select {
-	case fundingTx = <-cust.publTxChan:
+	case custCloseTx = <-cust.publTxChan:
 	case <-time.After(time.Second * 5):
-		t.Fatalf("cust did not publish funding tx")
+		t.Fatalf("cust did not publish custClose tx")
 	}
-	fmt.Println(fundingTx)
+	_ = custCloseTx
 
 	// // TODO ZKLND-11 - make sure channel is removed after channel closure
 	// // has been confirmed on chain
 	// cust.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
-	// 	Tx: fundingTx,
+	// 	Tx: custCloseTx,
+	// }
+}
+
+func TestMerchClose(t *testing.T) {
+
+	cust, merch := setupZkChannelManagers(t)
+	defer tearDownZkChannelManagers(cust, merch)
+
+	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
+
+	// open the zkchanneldb to load merchState
+	zkMerchDB, err := zkchanneldb.SetupDB(merch.zkChannelMgr.dbPath)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	var escrowTxid string
+	err = zkchanneldb.GetMerchField(zkMerchDB, "escrowTxidKey", &escrowTxid)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	err = zkMerchDB.Close()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	merch.zkChannelMgr.MerchClose(merch.mockNotifier, escrowTxid)
+
+	// Get and return the merch-close tx merch published to the network.
+	var merchCloseTx *wire.MsgTx
+	select {
+	case merchCloseTx = <-merch.publTxChan:
+	case <-time.After(time.Second * 5):
+		t.Fatalf("merch did not publish merchClose tx")
+	}
+	_ = merchCloseTx
+
+	// // TODO ZKLND-11 - make sure channel is removed after channel closure
+	// // has been confirmed on chain
+	// merch.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
+	// 	Tx: merchCloseTx,
 	// }
 }

@@ -240,17 +240,16 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 	// TODO ZKLND-49: Query fee estimator to determine escrowTx fee
 	txFee := int64(1000)
 	outputSats := custBal + merchBal
-	_, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxIdLe, index, custInputSk, inputSats, outputSats, custPk, merchPk, changePubKey, changePkIsHash, txFee)
-	if err != nil {
-		zkchLog.Error("FormEscrowTx: ", err)
-		return err
-	}
+	// _, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxIdLe, index, custInputSk, inputSats, outputSats, custPk, merchPk, changePubKey, changePkIsHash, txFee)
+	// if err != nil {
+	// 	zkchLog.Error("FormEscrowTx: ", err)
+	// 	return err
+	// }
 
-	zkchLog.Info("escrow txid => ", escrowTxid)
 	// TODO: move escrow signing to a later in establish
-	signedEscrowTx, _, _, _, err := libzkchannels.SignEscrowTx(custUtxoTxIdLe, index, custInputSk, inputSats, outputSats, custPk, merchPk, changePubKey, changePkIsHash, txFee)
+	signedEscrowTx, _, escrowTxid, escrowPrevout, err := libzkchannels.SignEscrowTx(custUtxoTxIdLe, index, custInputSk, inputSats, outputSats, custPk, merchPk, changePubKey, changePkIsHash, txFee)
+	zkchLog.Info("escrow txid => ", escrowTxid)
 	zkchLog.Info("signedEscrowTx => ", signedEscrowTx)
-
 	zkchLog.Info("storing new zkchannel variables for:", zkChannelName)
 	// TODO: Write a function to handle the storing of variables in zkchanneldb
 	// Add variables to zkchannelsdb
@@ -2422,10 +2421,10 @@ func (z *zkChannelManager) MerchClose(notifier chainntnfs.ChainNotifier, escrowT
 		return err
 	}
 
-	zkchLog.Debug("escrowTxid to close =>:", escrowTxid)
+	zkchLog.Infof("escrowTxid to close =>:", escrowTxid)
 
-	zkchLog.Debugf("\n\nmerchState =>:%+v", merchState)
-	zkchLog.Debugf("\n\nCloseTxMap =>:%+v", merchState.CloseTxMap)
+	zkchLog.Debugf("\nmerchState =>:%+v", merchState)
+	zkchLog.Infof("\nCloseTxMap =>:%+v", merchState.CloseTxMap)
 
 	signedMerchCloseTx, _, merchTxid2, merchState, err := libzkchannels.ForceMerchantCloseTx(escrowTxid, merchState, channelState.ValCpfp)
 	if err != nil {

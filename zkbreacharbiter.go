@@ -561,7 +561,6 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 		zkchLog.Error(err)
 		return
 	}
- 	// We'll actually attempt to target inclusion within the next two
 	// We'll actually attempt to target inclusion within the next two
 	// blocks as we'd like to sweep these funds back into our wallet ASAP.
 	// 	feePerKw, err := b.cfg.Estimator.EstimateFeePerKW(2)
