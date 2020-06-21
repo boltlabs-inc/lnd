@@ -522,6 +522,7 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 	custPk := fmt.Sprintf("%v", custState.PkC)
 	// merchSk := fmt.Sprintf("%v", *merchState.SkM)
 	merchPk := fmt.Sprintf("%v", *merchState.PkM)
+	t.Log("merchPk", merchPk)
 	// changeSk := "4157697b6428532758a9d0f9a73ce58befe3fd665797427d1c5bb3d33f6a132e"
 	changePk := "037bed6ab680a171ef2ab564af25eff15c0659313df0bbfb96414da7c7d1e65882"
 
@@ -734,4 +735,121 @@ func TestMerchClose(t *testing.T) {
 	// merch.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
 	// 	Tx: merchCloseTx,
 	// }
+}
+
+func addAmountToTotalReceieved(t *testing.T, dbPath string, amount int64) error {
+	zkMerchDB, err := zkchanneldb.SetupDB(dbPath)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	var totalReceived Total
+	err = zkchanneldb.GetMerchField(zkMerchDB, "totalReceivedKey", &totalReceived)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	totalReceived.Amount += amount
+
+	err = zkchanneldb.AddMerchField(zkMerchDB, totalReceived, "totalReceivedKey")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	err = zkMerchDB.Close()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	return err
+}
+
+func addDummyChannelToken(t *testing.T, dbPath string) error {
+	zkchannels := make(map[string]libzkchannels.ChannelToken)
+
+	channelToken := libzkchannels.ChannelToken{
+		PkC:        "0217d55a1e3ecdd220fde4bddbbfd485a1596c0c5cb7ef11dbfcdb2dd9cf4b85af",
+		PkM:        "038c2add1dc8cf2c57bac6e19d1f963e0c42103554e8b35e425bc2a78f4c22b273",
+		EscrowTxId: "a9f308e24254b83ed42c23db99dd8cdd4b3f2e47080c46ed897a53418d9788f4",
+		MerchTxId:  "f2acaa74600d1d67ec33053a08fce0bca17a769d56092a503772105afa905182",
+	}
+	channelID, err := libzkchannels.GetChannelId(channelToken)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	zkchannels[channelID] = channelToken
+
+	zkMerchDB, err := zkchanneldb.SetupDB(dbPath)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	err = zkchanneldb.AddMerchField(zkMerchDB, zkchannels, "zkChannelsKey")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	err = zkMerchDB.Close()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	return nil
+}
+
+func TestCliCommands(t *testing.T) {
+
+	cust, merch := setupZkChannelManagers(t)
+	defer tearDownZkChannelManagers(cust, merch)
+
+	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
+
+	// Test that ZkInfo returns pubkey (hex) of len 66
+	merchPk, err := merch.zkChannelMgr.ZkInfo()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	assert.Equal(t, 66, len(merchPk), "ZkInfo returned a pubkey (hex) with bad length")
+
+	// Test that TotalReceived updates correctly
+	paymentAmount := int64(1000)
+	amount0, err := merch.zkChannelMgr.TotalReceived()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	addAmountToTotalReceieved(t, merch.zkChannelMgr.dbPath, paymentAmount)
+
+	amount1, err := merch.zkChannelMgr.TotalReceived()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	assert.Equal(t, paymentAmount, amount1-amount0, "TotalReceived failed to update amount correctly")
+
+	// Test ListZkChannels
+	ListOfZkChannels, err := merch.zkChannelMgr.ListZkChannels()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	numChannels0 := len(ListOfZkChannels.ChannelID)
+	assert.Equal(t, 0, numChannels0, "Non-empty list of zkchannels when Merchant is initialized")
+
+	addDummyChannelToken(t, merch.zkChannelMgr.dbPath)
+
+	ListOfZkChannels, err = merch.zkChannelMgr.ListZkChannels()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	numChannels1 := len(ListOfZkChannels.ChannelID)
+
+	assert.Equal(t, 1, numChannels1, "ListZkChannels did not return the added channel")
+
+	escrowTxid, localBalance, remoteBalance, err := cust.zkChannelMgr.ZkChannelBalance("myChannelName")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	t.Log("escrowTxid", escrowTxid)
+	t.Log("localBalance", localBalance)
+	t.Log("remoteBalance", remoteBalance)
 }

@@ -45,7 +45,7 @@ type zkChannelManager struct {
 }
 
 type Total struct {
-	amount int64
+	Amount int64 `json:"Amount"`
 }
 
 func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error) *zkChannelManager {
@@ -185,10 +185,27 @@ func (z *zkChannelManager) initMerchant(merchName, skM, payoutSkM, disputeSkM st
 			return err
 		}
 
-		// save totalBalance in zkMerchDB.
+		zkchannels := make(map[string]libzkchannels.ChannelToken)
+
+		// channelID, err := libzkchannels.GetChannelId(channelToken)
+		// if err != nil {
+		// 	z.failEstablishFlow(p, err)
+		// 	return
+		// }
+
+		// zkchLog.Debugf("ChannelID: %v", channelID)
+		// zkchannels[channelID] = channelToken
+		err = zkchanneldb.AddMerchField(zkMerchDB, zkchannels, "zkChannelsKey")
+		if err != nil {
+			return err
+		}
+
+		// save totalReceived in zkMerchDB.
 		// With no channels initially, the total balance starts off at 0
-		totalBalance := int64(0)
-		err = zkchanneldb.AddMerchField(zkMerchDB, totalBalance, "totalBalanceKey")
+		totalReceived := Total{
+			Amount: 0,
+		}
+		err = zkchanneldb.AddMerchField(zkMerchDB, totalReceived, "totalReceivedKey")
 		if err != nil {
 			return err
 		}
@@ -2002,7 +2019,7 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	}
 
 	// TODO: Move this until after previous state has been revoked
-	totalReceived.amount += amount
+	totalReceived.Amount += amount
 
 	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
 	if err != nil {
@@ -2506,6 +2523,15 @@ func (z *zkChannelManager) ZkChannelBalance(zkChannelName string) (string, int64
 	}
 
 	custState, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
+	// If there are no channels set up, close the db and return 0
+	if len(custState.Name) == 0 {
+		err = zkCustDB.Close()
+		if err != nil {
+			zkchLog.Error("Close: ", err)
+			return "", 0, 0, err
+		}
+		return "", 0, 0, nil
+	}
 	if err != nil {
 		zkchLog.Error("GetCustState: ", err)
 		return "", 0, 0, err
@@ -2516,6 +2542,8 @@ func (z *zkChannelManager) ZkChannelBalance(zkChannelName string) (string, int64
 
 	var escrowTxid string
 	err = zkchanneldb.GetField(zkCustDB, zkChannelName, "escrowTxidKey", &escrowTxid)
+	zkchLog.Infof("escrowTxid: ", escrowTxid)
+
 	if err != nil {
 		zkchLog.Error("GetField: ", err)
 		return "", 0, 0, err
@@ -2530,7 +2558,7 @@ func (z *zkChannelManager) ZkChannelBalance(zkChannelName string) (string, int64
 	return escrowTxid, localBalance, remoteBalance, err
 }
 
-// TotalReceived returns the balance on the customer's zkchannel
+// TotalReceived returns the balance on the merchant's zkchannel
 func (z *zkChannelManager) TotalReceived() (int64, error) {
 
 	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
@@ -2548,7 +2576,7 @@ func (z *zkChannelManager) TotalReceived() (int64, error) {
 
 	err = zkMerchDB.Close()
 
-	return totalReceived.amount, err
+	return totalReceived.Amount, err
 }
 
 // ZkInfo returns info about this zklnd node
@@ -2572,8 +2600,8 @@ func (z *zkChannelManager) ZkInfo() (string, error) {
 }
 
 type ListOfZkChannels struct {
-	channelID    []string
-	channelToken []libzkchannels.ChannelToken
+	ChannelID    []string
+	ChannelToken []libzkchannels.ChannelToken
 }
 
 // ListZkChannels returns a list of the merchant's zkchannels
@@ -2598,7 +2626,7 @@ func (z *zkChannelManager) ListZkChannels() (ListOfZkChannels, error) {
 	var zkChannels map[string]libzkchannels.ChannelToken
 	err = zkchanneldb.GetMerchField(zkMerchDB, "zkChannelsKey", &zkChannels)
 	if err != nil {
-		zkchLog.Error(err)
+		zkchLog.Error("zkChannels", err)
 		return ListOfZkChannels{}, err
 	}
 
@@ -2610,8 +2638,8 @@ func (z *zkChannelManager) ListZkChannels() (ListOfZkChannels, error) {
 	}
 
 	ListOfZkChannels := ListOfZkChannels{
-		channelIDs,
-		channelTokens,
+		ChannelID:    channelIDs,
+		ChannelToken: channelTokens,
 	}
 
 	err = zkMerchDB.Close()

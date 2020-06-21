@@ -6707,18 +6707,18 @@ func (r *rpcServer) ListZkChannels(ctx context.Context,
 	}
 
 	// put the channel details in to a json
-	numChannels := len(ListOfZkChannels.channelID)
+	numChannels := len(ListOfZkChannels.ChannelID)
 
 	resp := &lnrpc.ListZkChannelsResponse{
 		ZkChannel: make([]*lnrpc.ListZkChannelsInfo, 0, numChannels),
 	}
 
 	for i := 0; i < numChannels; i++ {
-		channelToken := ListOfZkChannels.channelToken[i]
+		channelToken := ListOfZkChannels.ChannelToken[i]
 		channelTokenResp := &lnrpc.ChannelToken{PkC: channelToken.PkC, PkM: channelToken.PkM,
 			EscrowTxid: channelToken.EscrowTxId, MerchTxid: channelToken.MerchTxId}
 		listOfZkChannels := &lnrpc.ListZkChannelsInfo{
-			ZkChannelId:  ListOfZkChannels.channelID[i],
+			ZkChannelId:  ListOfZkChannels.ChannelID[i],
 			ChannelToken: channelTokenResp,
 		}
 		resp.ZkChannel = append(resp.ZkChannel, listOfZkChannels)
