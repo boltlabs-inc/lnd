@@ -8,6 +8,7 @@ import "io"
 // the end of the ping message (which is padding).
 type ZkPayTokenMask struct {
 	// Payment contains the payment from generatePaymentProof
+	SessionID     ZkMsgType
 	PayTokenMask  ZkMsgType
 	PayTokenMaskR ZkMsgType
 }
@@ -21,6 +22,7 @@ var _ Message = (*ZkPayTokenMask)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkPayTokenMask) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
+		&p.SessionID,
 		&p.PayTokenMask,
 		&p.PayTokenMaskR)
 }
@@ -31,6 +33,7 @@ func (p *ZkPayTokenMask) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkPayTokenMask) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
+		p.SessionID,
 		p.PayTokenMask,
 		p.PayTokenMaskR)
 }

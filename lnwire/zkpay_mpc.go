@@ -2,17 +2,9 @@ package lnwire
 
 import "io"
 
-// ZkPayMPC contains the close token the merchant sends to the customer,
-// after having verified the customer's payment proof.
-// The close token is given to the Customer by the Merchant, to allow the
-// Customer to close the channel unilaterally, paying out to each party
-// the channel balances specified in the Customer's original openChannel
-// request.
+// ZkPayMPC contains the PayTokenMaskCom
 type ZkPayMPC struct {
-	// CloseToken is given to the Customer by the Merchant, to allow the
-	// Customer to close the channel unilaterally, paying out to each party
-	// the channel balances specified in the Customer's original openChannel
-	// request.
+	SessionID       ZkMsgType
 	StateNonce      ZkMsgType
 	Amount          ZkMsgType
 	PayTokenMaskCom ZkMsgType
@@ -28,6 +20,7 @@ var _ Message = (*ZkPayMPC)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkPayMPC) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
+		&p.SessionID,
 		&p.StateNonce,
 		&p.Amount,
 		&p.PayTokenMaskCom,
@@ -40,6 +33,7 @@ func (p *ZkPayMPC) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkPayMPC) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
+		p.SessionID,
 		p.StateNonce,
 		p.Amount,
 		p.PayTokenMaskCom,

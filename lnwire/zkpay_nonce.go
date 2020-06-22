@@ -8,9 +8,11 @@ import "io"
 // the end of the ping message (which is padding).
 type ZkPayNonce struct {
 	// Payment contains the payment from generatePaymentProof
-	StateNonce ZkMsgType
-	Amount     ZkMsgType
-	RevLockCom ZkMsgType
+	SessionID     ZkMsgType
+	Justification ZkMsgType
+	StateNonce    ZkMsgType
+	Amount        ZkMsgType
+	RevLockCom    ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -22,6 +24,8 @@ var _ Message = (*ZkPayNonce)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkPayNonce) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
+		&p.SessionID,
+		&p.Justification,
 		&p.StateNonce,
 		&p.Amount,
 		&p.RevLockCom)
@@ -33,6 +37,8 @@ func (p *ZkPayNonce) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkPayNonce) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
+		p.SessionID,
+		p.Justification,
 		p.StateNonce,
 		p.Amount,
 		p.RevLockCom)

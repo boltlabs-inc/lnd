@@ -8,7 +8,8 @@ import "io"
 // the end of the ping message (which is padding).
 type ZkPayRevoke struct {
 	// Payment contains the payment from generatePaymentProof
-	RevState ZkMsgType
+	SessionID ZkMsgType
+	RevState  ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -20,6 +21,7 @@ var _ Message = (*ZkPayRevoke)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkPayRevoke) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
+		&p.SessionID,
 		&p.RevState)
 }
 
@@ -29,6 +31,7 @@ func (p *ZkPayRevoke) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkPayRevoke) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
+		p.SessionID,
 		p.RevState)
 }
 

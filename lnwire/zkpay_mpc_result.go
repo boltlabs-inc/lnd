@@ -5,7 +5,8 @@ import "io"
 // ZkPayMPCResult contains the success message from the Customer of whether
 // the MPC protocol was successful
 type ZkPayMPCResult struct {
-	IsOk ZkMsgType
+	SessionID ZkMsgType
+	IsOk      ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -17,6 +18,7 @@ var _ Message = (*ZkPayMPCResult)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkPayMPCResult) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
+		&p.SessionID,
 		&p.IsOk)
 }
 
@@ -26,6 +28,7 @@ func (p *ZkPayMPCResult) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkPayMPCResult) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
+		p.SessionID,
 		p.IsOk)
 }
 

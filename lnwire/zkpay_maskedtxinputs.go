@@ -2,10 +2,9 @@ package lnwire
 
 import "io"
 
-// ZkPayMaskedTxInputs contains the paytoken the merchan sends to the Customer.
+// ZkPayMaskedTxInputs contains the MaskedTxInputs sent by the Merchant to the Customer.
 type ZkPayMaskedTxInputs struct {
-	// PayToken is given to the Customer by the Merchant, to allow the
-	// Customer to make a new payment on the channel.
+	SessionID      ZkMsgType
 	MaskedTxInputs ZkMsgType
 }
 
@@ -17,7 +16,9 @@ var _ Message = (*ZkPayMaskedTxInputs)(nil)
 //
 // This is part of the lnwire.Message interface.
 func (p *ZkPayMaskedTxInputs) Decode(r io.Reader, pver uint32) error {
-	return ReadElements(r, &p.MaskedTxInputs)
+	return ReadElements(r,
+		&p.SessionID,
+		&p.MaskedTxInputs)
 }
 
 // Encode serializes the target Ping into the passed io.Writer observing the
@@ -25,7 +26,9 @@ func (p *ZkPayMaskedTxInputs) Decode(r io.Reader, pver uint32) error {
 //
 // This is part of the lnwire.Message interface.
 func (p *ZkPayMaskedTxInputs) Encode(w io.Writer, pver uint32) error {
-	return WriteElements(w, p.MaskedTxInputs)
+	return WriteElements(w,
+		p.SessionID,
+		p.MaskedTxInputs)
 }
 
 // MsgType returns the integer uniquely identifying this message type on the
