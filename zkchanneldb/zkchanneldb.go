@@ -145,8 +145,9 @@ func AddMerchField(db *bolt.DB, field interface{}, fieldName string) error {
 	return AddField(db, MerchBucket, field, fieldName)
 }
 
-// AddField adds arbitrary field to the zkCustDB
+// AddField adds arbitrary field to the DB
 func AddField(db *bolt.DB, zkChannelName string, field interface{}, fieldName string) error {
+
 	fieldBytes, err := json.Marshal(field)
 	if err != nil {
 		return err
@@ -164,7 +165,7 @@ func AddField(db *bolt.DB, zkChannelName string, field interface{}, fieldName st
 	return err
 }
 
-// AddField adds arbitrary field to the zkCustDB
+// AddStringField adds arbitrary field to the DB
 func AddStringField(db *bolt.DB, zkChannelName string, field string, fieldName string) error {
 	BucketName := []byte(zkChannelName)
 
@@ -225,7 +226,7 @@ func GetField(db *bolt.DB, bucketName string, fieldName string, out interface{})
 	return json.Unmarshal(fieldBytes, &out)
 }
 
-// GetField gets a field from DB (works for zkCustDB and zkMerchDB)
+// GetStringField gets a field from DB (works for zkCustDB and zkMerchDB)
 func GetStringField(db *bolt.DB, bucketName string, fieldName string) (string, error) {
 	fieldBytes, err := getFieldInBytes(db, bucketName, fieldName)
 	return string(fieldBytes), err

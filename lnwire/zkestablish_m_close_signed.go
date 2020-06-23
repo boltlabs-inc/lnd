@@ -15,8 +15,6 @@ type ZkEstablishMCloseSigned struct {
 	RevLock       ZkMsgType
 	FeeCC         ZkMsgType
 	FeeMC         ZkMsgType
-	MinFee        ZkMsgType
-	MaxFee        ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -38,8 +36,6 @@ func (p *ZkEstablishMCloseSigned) Decode(r io.Reader, pver uint32) error {
 		&p.RevLock,
 		&p.FeeCC,
 		&p.FeeMC,
-		&p.MinFee,
-		&p.MaxFee,
 	)
 }
 
@@ -59,8 +55,6 @@ func (p *ZkEstablishMCloseSigned) Encode(w io.Writer, pver uint32) error {
 		p.RevLock,
 		p.FeeCC,
 		p.FeeMC,
-		p.MinFee,
-		p.MaxFee,
 	)
 }
 

@@ -48,6 +48,10 @@ type Total struct {
 	Amount int64 `json:"Amount"`
 }
 
+type PaySession struct {
+	Amount int64 `json:"Amount"`
+}
+
 func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error) *zkChannelManager {
 	var dbPath string
 	if isZkMerchant {
@@ -187,14 +191,6 @@ func (z *zkChannelManager) initMerchant(merchName, skM, payoutSkM, disputeSkM st
 
 		zkchannels := make(map[string]libzkchannels.ChannelToken)
 
-		// channelID, err := libzkchannels.GetChannelId(channelToken)
-		// if err != nil {
-		// 	z.failEstablishFlow(p, err)
-		// 	return
-		// }
-
-		// zkchLog.Debugf("ChannelID: %v", channelID)
-		// zkchannels[channelID] = channelToken
 		err = zkchanneldb.AddMerchField(zkMerchDB, zkchannels, "zkChannelsKey")
 		if err != nil {
 			return err
@@ -586,12 +582,6 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 	feeMCBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(feeMCBytes, uint64(feeMC))
 
-	minFeeBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(minFeeBytes, uint64(minFee))
-
-	maxFeeBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(maxFeeBytes, uint64(maxFee))
-
 	escrowTxidBytes := []byte(escrowTxid)
 
 	escrowPrevoutBytes := []byte(escrowPrevout)
@@ -614,8 +604,6 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 		RevLock:       revLockBytes,
 		FeeCC:         feeCCBytes,
 		FeeMC:         feeMCBytes,
-		MinFee:        minFeeBytes,
-		MaxFee:        maxFeeBytes,
 	}
 	err = p.SendMessage(false, &zkEstablishMCloseSigned)
 	if err != nil {
@@ -633,8 +621,6 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	merchBal := int64(binary.LittleEndian.Uint64(msg.MerchBal))
 	feeCC := int64(binary.LittleEndian.Uint64(msg.FeeCC))
 	feeMC := int64(binary.LittleEndian.Uint64(msg.FeeMC))
-	// minFee := int64(binary.LittleEndian.Uint64(msg.MinFee))
-	// maxFee := int64(binary.LittleEndian.Uint64(msg.MaxFee))
 	escrowTxid := string(msg.EscrowTxid)
 	escrowPrevout := string(msg.EscrowPrevout)
 	revLock := string(msg.RevLock)
@@ -1779,20 +1765,22 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 
 	zkchLog.Debug("Just received ZkPayNonce for sessionID:", sessionID)
 
+	paySession := PaySession{
+		Amount: amount,
+	}
+
 	// open the zkchanneldb to load merchState
 	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
 	}
-	zkchLog.Debug("SetupDB")
 
 	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
 	}
-	zkchLog.Debug("GetMerchState")
 
 	var channelState libzkchannels.ChannelState
 	err = zkchanneldb.GetMerchField(zkMerchDB, "channelStateKey", &channelState)
@@ -1800,14 +1788,12 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 		z.failZkPayFlow(p, err)
 		return
 	}
-	zkchLog.Debug("GetMerchField")
 
 	payTokenMaskCom, merchState, err := libzkchannels.PreparePaymentMerchant(channelState, sessionID, stateNonce, revLockCom, amount, justification, merchState)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
 	}
-	zkchLog.Debug("PreparePaymentMerchant")
 
 	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
 	if err != nil {
@@ -1819,6 +1805,17 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 	if err != nil {
 		zkchLog.Error(err)
 	}
+
+	paySessionDB, err := zkchanneldb.OpenZkClaimBucket(sessionID, "paysessions.db")
+	if err != nil {
+		zkchLog.Error(err)
+	}
+	err = zkchanneldb.AddField(paySessionDB, sessionID, paySession, sessionID)
+	if err != nil {
+		zkchLog.Error(err)
+	}
+	paySessionDB.Close()
+
 	sessionIDBytes := []byte(sessionID)
 	payTokenMaskComBytes := []byte(payTokenMaskCom)
 
@@ -1897,22 +1894,10 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 		return
 	}
 
-	revLockComBytes := []byte(revLockCom)
-
-	amountBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(amountBytes, uint64(amount))
-
-	oldStateNonce := oldState.Nonce
-	oldStateNonceBytes := []byte(oldStateNonce)
-
 	sessionIDBytes := []byte(sessionID)
-
 	ZkPayMPC := lnwire.ZkPayMPC{
 		SessionID:       sessionIDBytes,
-		StateNonce:      oldStateNonceBytes,
-		Amount:          amountBytes,
 		PayTokenMaskCom: msg.PayTokenMaskCom,
-		RevLockCom:      revLockComBytes,
 	}
 	err = p.SendMessage(false, &ZkPayMPC)
 	if err != nil {
@@ -1966,9 +1951,6 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) {
 
 	sessionID := string(msg.SessionID)
-	//TODO ZKLND-53 - remove nonce and amount from msg
-	stateNonce := string(msg.StateNonce)
-	amount := int64(binary.LittleEndian.Uint64(msg.Amount))
 	payTokenMaskCom := string(msg.PayTokenMaskCom)
 
 	zkchLog.Debug("Just received ZkPayMPC from sessionID:", sessionID)
@@ -1976,14 +1958,12 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	// open the zkchanneldb to load merchState
 	zkMerchDB, err := zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
-		zkchLog.Debug("1")
 		z.failZkPayFlow(p, err)
 		return
 	}
 
 	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
 	if err != nil {
-		zkchLog.Debug("2")
 		z.failZkPayFlow(p, err)
 		return
 	}
@@ -1991,7 +1971,6 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	var channelState libzkchannels.ChannelState
 	err = zkchanneldb.GetMerchField(zkMerchDB, "channelStateKey", &channelState)
 	if err != nil {
-		zkchLog.Debug("3")
 		z.failZkPayFlow(p, err)
 		return
 	}
@@ -1999,9 +1978,13 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	var totalReceived Total
 	err = zkchanneldb.GetMerchField(zkMerchDB, "totalReceivedKey", &totalReceived)
 	if err != nil {
-		zkchLog.Debug("4")
 		z.failZkPayFlow(p, err)
 		return
+	}
+
+	err = zkMerchDB.Close()
+	if err != nil {
+		zkchLog.Error(err)
 	}
 
 	zkchLog.Debug("channelState MerchPayOutPk => ", *channelState.MerchPayOutPk)
@@ -2019,16 +2002,13 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 		return
 	}
 
-	// TODO: Move this until after previous state has been revoked
-	totalReceived.Amount += amount
-
-	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
+	zkMerchDB, err = zkchanneldb.SetupDB(z.dbPath)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
 	}
 
-	err = zkchanneldb.AddMerchField(zkMerchDB, stateNonce, "stateNonceKey")
+	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
@@ -2044,8 +2024,6 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	if err != nil {
 		zkchLog.Error(err)
 	}
-
-	zkchLog.Debug("db closed")
 
 }
 
@@ -2076,13 +2054,6 @@ func (z *zkChannelManager) processZkPayMPCResult(msg *lnwire.ZkPayMPCResult, p l
 	}
 
 	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
-	if err != nil {
-		z.failZkPayFlow(p, err)
-		return
-	}
-
-	var stateNonce string
-	err = zkchanneldb.GetMerchField(zkMerchDB, "stateNonceKey", &stateNonce)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
@@ -2235,13 +2206,57 @@ func (z *zkChannelManager) processZkPayRevoke(msg *lnwire.ZkPayRevoke, p lnpeer.
 		return
 	}
 
+	var totalReceived Total
+	err = zkchanneldb.GetMerchField(zkMerchDB, "totalReceivedKey", &totalReceived)
+	if err != nil {
+		z.failZkPayFlow(p, err)
+		return
+	}
+
+	err = zkMerchDB.Close()
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
 	payTokenMask, payTokenMaskR, merchState, err := libzkchannels.PayValidateRevLockMerchant(sessionID, revState, merchState)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
 	}
 
+	// open the paySessionDB to get the payment amount so we can add it to totalReceived
+	paySessionDB, err := zkchanneldb.OpenZkClaimBucket(sessionID, "paysessions.db")
+	if err != nil {
+		zkchLog.Errorf("Opening bucket for pay session %v. err: %v", sessionID, err)
+	}
+
+	var paySession PaySession
+	err = zkchanneldb.GetField(paySessionDB, sessionID, sessionID, &paySession)
+	if err != nil {
+		zkchLog.Error("GetField: ", err)
+	}
+
+	err = paySessionDB.Close()
+	if err != nil {
+		z.failZkPayFlow(p, err)
+		return
+	}
+
+	totalReceived.Amount += paySession.Amount
+
+	zkMerchDB, err = zkchanneldb.SetupDB(z.dbPath)
+	if err != nil {
+		z.failZkPayFlow(p, err)
+		return
+	}
+
 	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
+	if err != nil {
+		z.failZkPayFlow(p, err)
+		return
+	}
+
+	err = zkchanneldb.AddMerchField(zkMerchDB, totalReceived, "totalReceivedKey")
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
