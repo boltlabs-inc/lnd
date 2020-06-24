@@ -148,7 +148,7 @@ func initTestMerchState(DBPath string, skM string, payoutSkM string, disputeSkM 
 		return err
 	}
 
-	testDB, err := zkchanneldb.SetupDB(DBPath)
+	testDB, err := zkchanneldb.SetupMerchDB(DBPath)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func initTestMerchState(DBPath string, skM string, payoutSkM string, disputeSkM 
 		return err
 	}
 
-	err = zkchanneldb.AddMerchField(testDB, channelState, "channelStateKey")
+	err = zkchanneldb.AddMerchField(testDB, channelState, channelStateKey)
 	if err != nil {
 		return err
 	}

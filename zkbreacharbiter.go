@@ -531,7 +531,7 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	amount := breachInfo.Amount
 
 	// open the zkchanneldb to load merchState and channelState
-	zkMerchDB, err := zkchanneldb.SetupDB(b.cfg.DBPath)
+	zkMerchDB, err := zkchanneldb.OpenMerchBucket(b.cfg.DBPath)
 	if err != nil {
 		zkchLog.Error(err)
 		return
@@ -544,7 +544,7 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	}
 
 	var channelState libzkchannels.ChannelState
-	err = zkchanneldb.GetMerchField(zkMerchDB, "channelStateKey", &channelState)
+	err = zkchanneldb.GetMerchField(zkMerchDB, channelStateKey, &channelState)
 	if err != nil {
 		zkchLog.Error(err)
 		return

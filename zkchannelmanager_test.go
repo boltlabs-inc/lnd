@@ -458,7 +458,7 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, merchDBPath string) {
 
 	// Load MerchState and ChannelState
-	zkMerchDB, err := zkchanneldb.SetupDB(merchDBPath)
+	zkMerchDB, err := zkchanneldb.SetupMerchDB(merchDBPath)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -469,7 +469,7 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 	}
 
 	var channelState libzkchannels.ChannelState
-	err = zkchanneldb.GetMerchField(zkMerchDB, "channelStateKey", &channelState)
+	err = zkchanneldb.GetMerchField(zkMerchDB, channelStateKey, &channelState)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -623,12 +623,12 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 		t.Fatalf("%v", err)
 	}
 
-	err = zkchanneldb.AddField(zkCustDB, zkChannelName, channelState, "channelStateKey")
+	err = zkchanneldb.AddField(zkCustDB, zkChannelName, channelState, channelStateKey)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
-	err = zkchanneldb.AddField(zkCustDB, zkChannelName, channelToken, "channelTokenKey")
+	err = zkchanneldb.AddField(zkCustDB, zkChannelName, channelToken, channelTokenKey)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -639,7 +639,7 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 	}
 
 	// Save variables needed to create merch close in zkmerch.db
-	zkMerchDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName, merchDBPath)
+	zkMerchDB, err = zkchanneldb.OpenMerchBucket(merchDBPath)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -649,17 +649,17 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 		t.Fatalf("%v", err)
 	}
 
-	err = zkchanneldb.AddMerchField(zkMerchDB, escrowTxid_LE, "escrowTxidKey")
+	err = zkchanneldb.AddMerchField(zkMerchDB, escrowTxid_LE, escrowTxidKey)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
-	err = zkchanneldb.AddMerchField(zkMerchDB, channelState, "channelStateKey")
+	err = zkchanneldb.AddMerchField(zkMerchDB, channelState, channelStateKey)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
-	err = zkchanneldb.AddMerchField(zkMerchDB, channelToken, "channelTokenKey")
+	err = zkchanneldb.AddMerchField(zkMerchDB, channelToken, channelTokenKey)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -703,13 +703,13 @@ func TestMerchClose(t *testing.T) {
 	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
 
 	// open the zkchanneldb to load merchState
-	zkMerchDB, err := zkchanneldb.SetupDB(merch.zkChannelMgr.dbPath)
+	zkMerchDB, err := zkchanneldb.OpenMerchBucket(merch.zkChannelMgr.dbPath)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	var escrowTxid string
-	err = zkchanneldb.GetMerchField(zkMerchDB, "escrowTxidKey", &escrowTxid)
+	err = zkchanneldb.GetMerchField(zkMerchDB, escrowTxidKey, &escrowTxid)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -738,20 +738,20 @@ func TestMerchClose(t *testing.T) {
 }
 
 func addAmountToTotalReceieved(t *testing.T, dbPath string, amount int64) error {
-	zkMerchDB, err := zkchanneldb.SetupDB(dbPath)
+	zkMerchDB, err := zkchanneldb.OpenMerchBucket(dbPath)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	var totalReceived Total
-	err = zkchanneldb.GetMerchField(zkMerchDB, "totalReceivedKey", &totalReceived)
+	err = zkchanneldb.GetMerchField(zkMerchDB, totalReceivedKey, &totalReceived)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	totalReceived.Amount += amount
 
-	err = zkchanneldb.AddMerchField(zkMerchDB, totalReceived, "totalReceivedKey")
+	err = zkchanneldb.AddMerchField(zkMerchDB, totalReceived, totalReceivedKey)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -779,12 +779,12 @@ func addDummyChannelToken(t *testing.T, dbPath string) error {
 	}
 	zkchannels[channelID] = channelToken
 
-	zkMerchDB, err := zkchanneldb.SetupDB(dbPath)
+	zkMerchDB, err := zkchanneldb.OpenMerchBucket(dbPath)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
-	err = zkchanneldb.AddMerchField(zkMerchDB, zkchannels, "zkChannelsKey")
+	err = zkchanneldb.AddMerchField(zkMerchDB, zkchannels, zkChannelsKey)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}

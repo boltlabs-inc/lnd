@@ -16,8 +16,8 @@ var (
 	MerchBucket = "merch-bucket"
 )
 
-// SetupDB creates the zkchanneldb for the merchant
-func SetupDB(path string) (*bolt.DB, error) {
+// SetupMerchDB creates the zkchanneldb for the merchant
+func SetupMerchDB(path string) (*bolt.DB, error) {
 	return SetupWithBucketNameDB(path, MerchBucket)
 }
 
@@ -77,8 +77,18 @@ func Buckets(path string) ([]string, error) {
 	return bucketList, err
 }
 
-// OpenZkChannelBucket opens or creates the bucket for a zkchannel
+// OpenMerchBucket opens the zkchanneldb for the merchant
+func OpenMerchBucket(path string) (*bolt.DB, error) {
+	return OpenZkChannelBucket(MerchBucket, path)
+}
+
+// OpenZkChannelBucket opens the bucket for a zkchannel
 func OpenZkChannelBucket(zkChannelName string, dbPath string) (*bolt.DB, error) {
+	// make sure the db already exists
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("tried to access bucket %v in %v but the db does not exist", zkChannelName, dbPath)
+	}
+
 	BucketName := []byte(zkChannelName)
 
 	db, err := bolt.Open(dbPath, 0600, nil)

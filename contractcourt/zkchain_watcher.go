@@ -451,7 +451,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			if isMerch {
 
 				// open the zkchanneldb to load merchState and channelState
-				zkMerchDB, err := zkchanneldb.SetupDB("zkmerch.db")
+				zkMerchDB, err := zkchanneldb.OpenMerchBucket("zkmerch.db")
 				if err != nil {
 					log.Error(err)
 					return
@@ -541,7 +541,7 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 
 	// Load the current merchState and channelState so that it can be retrieved
 	// later when it is needed to sign the claim tx.
-	zkMerchDB, err := zkchanneldb.SetupDB("zkmerch.db")
+	zkMerchDB, err := zkchanneldb.OpenMerchBucket("zkmerch.db")
 	if err != nil {
 		log.Error(err)
 		return err
