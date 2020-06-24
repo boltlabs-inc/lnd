@@ -283,9 +283,8 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 	zkchLog.Info("escrow txid => ", escrowTxid)
 	zkchLog.Info("signedEscrowTx => ", signedEscrowTx)
 	zkchLog.Info("storing new zkchannel variables for:", zkChannelName)
-	// TODO: Write a function to handle the storing of variables in zkchanneldb
-	// Add variables to zkchannelsdb
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
+
+	zkCustDB, err := zkchanneldb.CreateZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		zkchLog.Error(err)
 		return err

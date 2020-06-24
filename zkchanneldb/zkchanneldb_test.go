@@ -1,13 +1,14 @@
 package zkchanneldb
 
 import (
-	"github.com/boltdb/bolt"
-	"github.com/lightningnetwork/lnd/libzkchannels"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/boltdb/bolt"
+	"github.com/lightningnetwork/lnd/libzkchannels"
+	"github.com/stretchr/testify/assert"
 )
 
 func setupTestDB(t *testing.T, filename string, bucketName string) *bolt.DB {
@@ -36,13 +37,36 @@ func TestSetupDB(t *testing.T) {
 	tearDownTestDB(db)
 }
 
+func TestCreateZkChannelBucket(t *testing.T) {
+	testDir, err := ioutil.TempDir("", "zkchanneldb")
+	if err != nil {
+		t.Fatalf("unable to create temp directory: %v", err)
+	}
+	dbPath := path.Join(testDir, "zkcust.db")
+	InitDB(dbPath)
+	db, err := CreateZkChannelBucket("channelName", dbPath)
+	if err != nil {
+		t.Fatalf("unable to open zk channel bucket: %v", err)
+	}
+	assert.Equal(t, dbPath, db.Path())
+
+	db.Close()
+	os.RemoveAll(dbPath)
+}
+
 func TestOpenZkChannelBucket(t *testing.T) {
 	testDir, err := ioutil.TempDir("", "zkchanneldb")
 	if err != nil {
 		t.Fatalf("unable to create temp directory: %v", err)
 	}
 	dbPath := path.Join(testDir, "zkcust.db")
-	db, err := OpenZkChannelBucket("channelName", dbPath)
+	InitDB(dbPath)
+	db, err := CreateZkChannelBucket("channelName", dbPath)
+	if err != nil {
+		t.Fatalf("unable to open zk channel bucket: %v", err)
+	}
+	db.Close()
+	db, err = OpenZkChannelBucket("channelName", dbPath)
 	if err != nil {
 		t.Fatalf("unable to open zk channel bucket: %v", err)
 	}

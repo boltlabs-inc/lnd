@@ -82,6 +82,33 @@ func OpenMerchBucket(path string) (*bolt.DB, error) {
 	return OpenZkChannelBucket(MerchBucket, path)
 }
 
+// CreateZkChannelBucket opens the bucket for a zkchannel
+func CreateZkChannelBucket(zkChannelName string, dbPath string) (*bolt.DB, error) {
+	// make sure the db already exists
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("tried to access bucket %v in %v but the db does not exist", zkChannelName, dbPath)
+	}
+
+	BucketName := []byte(zkChannelName)
+
+	db, err := bolt.Open(dbPath, 0600, nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not open db, %v", err)
+	}
+	err = db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucket(BucketName)
+		if err != nil {
+			return fmt.Errorf("could not create customer bucket: %v", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not set up zk cust buckets, %v", err)
+	}
+	return db, nil
+}
+
 // OpenZkChannelBucket opens the bucket for a zkchannel
 func OpenZkChannelBucket(zkChannelName string, dbPath string) (*bolt.DB, error) {
 	// make sure the db already exists
@@ -96,9 +123,9 @@ func OpenZkChannelBucket(zkChannelName string, dbPath string) (*bolt.DB, error) 
 		return nil, fmt.Errorf("could not open db, %v", err)
 	}
 	err = db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists(BucketName)
-		if err != nil {
-			return fmt.Errorf("could not create customer bucket: %v", err)
+		b := tx.Bucket(BucketName)
+		if b == nil {
+			return fmt.Errorf("%v bucket in %v does not exist", zkChannelName, dbPath)
 		}
 
 		return nil
