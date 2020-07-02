@@ -42,6 +42,24 @@ type zkChannelManager struct {
 	// PublishTransaction facilitates the process of broadcasting a
 	// transaction to the network.
 	PublishTransaction func(*wire.MsgTx, string) error
+
+	// MinFee is the minimum allowed tx fee for closing transactions (zkChannels).
+	SelfDelay int16
+
+	// MinFee is the minimum allowed tx fee for closing transactions (zkChannels).
+	MinFee int64
+
+	// MaxFee is the maximum allowed tx fee for closing transactions (zkChannels).
+	MaxFee int64
+
+	// ValCpfp is the value in satoshis of the child (aka anchor) output in closing transaction (zkChannels).
+	ValCpfp int64
+
+	// BalMinCust is the minimum allowed customer balance in satoshis (zkChannels).
+	BalMinCust int64
+
+	// BalMinMerch is the minimum allowed merchant balance in satoshis (zkChannels).
+	BalMinMerch int64
 }
 
 type Total struct {
@@ -71,7 +89,7 @@ var (
 	totalReceivedKey  = "totalReceivedKey"
 )
 
-func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error) *zkChannelManager {
+func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, minFee int64, maxFee int64, valCpfp int64, balMinCust int64, balMinMerch int64) *zkChannelManager {
 	var dbPath string
 	if isZkMerchant {
 		dbPath = path.Join(dbDirPath, "zkmerch.db")
@@ -83,6 +101,11 @@ func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.
 		isMerchant:         isZkMerchant,
 		dbPath:             dbPath,
 		PublishTransaction: publishTx,
+		MinFee:             minFee,
+		MaxFee:             maxFee,
+		ValCpfp:            valCpfp,
+		BalMinCust:         balMinCust,
+		BalMinMerch:        balMinMerch,
 	}
 }
 
@@ -175,14 +198,7 @@ func (z *zkChannelManager) initMerchant(merchName, skM, payoutSkM, disputeSkM st
 
 		dbUrl := "redis://127.0.0.1/"
 
-		// TODO ZKLND-19: Make toSelfDelay an input argument and add to config file
-		// currently not configurable in MPC
-		selfDelay := int16(1487)
-		// TODO ZKLND-37: Make sure dust limit is set to finalized value
-		dustLimit := int64(546)
-		valCpfp := int64(1000)
-
-		channelState, err := libzkchannels.ChannelSetup("channel", selfDelay, dustLimit, dustLimit, valCpfp, false)
+		channelState, err := libzkchannels.ChannelSetup("channel", z.SelfDelay, z.BalMinCust, z.BalMinMerch, z.ValCpfp, false)
 		zkchLog.Debugf("libzkchannels.ChannelSetup done")
 
 		channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")
@@ -235,20 +251,28 @@ func (z *zkChannelManager) initMerchant(merchName, skM, payoutSkM, disputeSkM st
 	return nil
 }
 
-func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changePubKey string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, feeCC int64, feeMC int64, minFee int64, maxFee int64, p lnpeer.Peer) error {
+func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe string, index uint32, custInputSk string, custStateSk string, custPayoutSk string, changePubKey string, merchPubKey string, zkChannelName string, custBal int64, merchBal int64, feeCC int64, feeMC int64, p lnpeer.Peer) error {
 
-	zkchLog.Debug("Variables going into InitCustomer :=> ", merchPubKey, custBal, merchBal, feeCC, minFee, maxFee, feeMC, "cust")
-	// TODO ZKLND-37: Make sure dust limit is set to finalized value
-	valCpfp := int64(1000)
-	minThreshold := int64(546)
+	zkchLog.Debug("Variables going into InitCustomer :=> ", merchPubKey, custBal, merchBal, "cust")
+
+	// If no fee for cust-close or merch-close were passed in, then use the fee estimator to determine them
+	if feeCC == 0 {
+		// ZKLND-49: Query LND fee estimator to get latest fee
+		feeCC = int64(1000)
+	}
+	if feeMC == 0 {
+		// ZKLND-49: Query LND fee estimator to get latest fee
+		feeMC = int64(1000)
+	}
+
 	txFeeInfo := libzkchannels.TransactionFeeInfo{
-		BalMinCust:  minThreshold,
-		BalMinMerch: minThreshold,
-		ValCpFp:     valCpfp,
+		BalMinCust:  z.BalMinCust,
+		BalMinMerch: z.BalMinMerch,
+		ValCpFp:     z.ValCpfp,
 		FeeCC:       feeCC,
 		FeeMC:       feeMC,
-		MinFee:      minFee,
-		MaxFee:      maxFee,
+		MinFee:      z.MinFee,
+		MaxFee:      z.MaxFee,
 	}
 
 	channelToken, custState, err := libzkchannels.InitCustomer(merchPubKey, custBal, merchBal, txFeeInfo, "cust")
@@ -332,13 +356,13 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 		return err
 	}
 
-	err = zkchanneldb.AddField(zkCustDB, zkChannelName, minFee, minFeeKey)
+	err = zkchanneldb.AddField(zkCustDB, zkChannelName, txFeeInfo.MinFee, minFeeKey)
 	if err != nil {
 		zkchLog.Error(err)
 		return err
 	}
 
-	err = zkchanneldb.AddField(zkCustDB, zkChannelName, maxFee, maxFeeKey)
+	err = zkchanneldb.AddField(zkCustDB, zkChannelName, txFeeInfo.MaxFee, maxFeeKey)
 	if err != nil {
 		zkchLog.Error(err)
 		return err

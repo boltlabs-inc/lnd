@@ -3316,21 +3316,21 @@ func openZkChannel(ctx *cli.Context) error {
 		feeMC = ctx.Int64("fee_mc")
 	}
 
-	// TODO ZKLND-36: if fee values not specified, get default values from config file.
-	var minFee int64
-	if !ctx.IsSet("min_fee") {
-		minFee = 0
-	} else {
-		minFee = ctx.Int64("min_fee")
-	}
+	// // TODO ZKLND-36: if fee values not specified, get default values from config file.
+	// var minFee int64
+	// if !ctx.IsSet("min_fee") {
+	// 	minFee = lncfg.MaxFee
+	// } else {
+	// 	minFee = ctx.Int64("min_fee")
+	// }
 
-	// TODO ZKLND-36: if fee values not specified, get default values from config file.
-	var maxFee int64
-	if !ctx.IsSet("max_fee") {
-		maxFee = 0
-	} else {
-		maxFee = ctx.Int64("max_fee")
-	}
+	// // TODO ZKLND-36: if fee values not specified, get default values from config file.
+	// var maxFee int64
+	// if !ctx.IsSet("max_fee") {
+	// 	maxFee = lncfg.MaxFee
+	// } else {
+	// 	maxFee = ctx.Int64("max_fee")
+	// }
 
 	req := &lnrpc.OpenZkChannelRequest{
 		PubKey:        pubKey,
@@ -3340,8 +3340,6 @@ func openZkChannel(ctx *cli.Context) error {
 		MerchBalance:  merchBalance,
 		FeeCc:         feeCC,
 		FeeMc:         feeMC,
-		MinFee:        minFee,
-		MaxFee:        maxFee,
 	}
 
 	lnid, err := client.OpenZkChannel(ctxb, req)

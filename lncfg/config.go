@@ -60,6 +60,21 @@ const (
 	// peer and a block arriving during that round trip to trigger force
 	// closure.
 	DefaultOutgoingCltvRejectDelta = DefaultOutgoingBroadcastDelta + 3
+
+	// MinFee is the minimum allowed tx fee for closing transactions (zkChannels).
+	MinFee = 100
+
+	// MaxFee is the maximum allowed tx fee for closing transactions (zkChannels).
+	MaxFee = 10000
+
+	// ValCpfp is the value in satoshis of the child (aka anchor) output in closing transaction (zkChannels).
+	ValCpfp = 330
+
+	// BalMinCust is the minimum allowed customer balance in satoshis (zkChannels).
+	BalMinCust = 1000
+
+	// BalMinMerch is the minimum allowed merchant balance in satoshis (zkChannels).
+	BalMinMerch = 1000
 )
 
 // CleanAndExpandPath expands environment variables and leading ~ in the

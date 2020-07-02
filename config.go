@@ -262,6 +262,19 @@ type Config struct {
 	zkMode bool `long:"zkmode" description:"If true, the node will load as a zkLND Node. If false, it'll run as a regular LND node."`
 
 	ZkMerchant bool `long:"zkmerchant" description:"If true, the node initialize as a merchant. Otherwise it'll initialize as a customer"`
+
+	selfDelay int16 `long:"selfdelay" description:"the number of blocks to wait before a closing transaction output to self can be claimed by the broadcaster."`
+
+	minFee int64 `long:"minfee" description:"Minimum allowed tx fee for closing transactions."`
+
+	maxFee int64 `long:"maxfee" description:"Maximum allowed tx fee for closing transactions."`
+
+	valCpfp int64 `long:"valcpfp" description:"The value in satoshis of the child (aka anchor) output in closing transaction."`
+
+	balMinCust int64 `long:"balmincust" description:"The minimum allowed customer balance in satoshis."`
+
+	balMinMerch int64 `long:"balminmerch" description:"The minimum allowed merchant balance in satoshis."`
+
 	// ########### ln-mpc ###########
 
 	// networkDir is the path to the directory of the currently active
@@ -373,6 +386,11 @@ func DefaultConfig() Config {
 		DB:                      lncfg.DefaultDB(),
 		registeredChains:        newChainRegistry(),
 		zkMode:                  defaultZkMode,
+		minFee:                  lncfg.MinFee,
+		maxFee:                  lncfg.MaxFee,
+		valCpfp:                 lncfg.ValCpfp,
+		balMinCust:              lncfg.BalMinCust,
+		balMinMerch:             lncfg.BalMinMerch,
 	}
 }
 
