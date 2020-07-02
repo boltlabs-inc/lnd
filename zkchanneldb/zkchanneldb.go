@@ -104,7 +104,7 @@ func CreateZkChannelBucket(zkChannelName string, dbPath string) (*bolt.DB, error
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not set up zk cust buckets, %v", err)
+		return nil, fmt.Errorf("Create could not set up zk cust buckets, %v", err)
 	}
 	return db, nil
 }
@@ -131,7 +131,7 @@ func OpenZkChannelBucket(zkChannelName string, dbPath string) (*bolt.DB, error) 
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not set up zk cust buckets, %v", err)
+		return nil, fmt.Errorf("Error opening bucket: %v", err)
 	}
 	return db, nil
 }

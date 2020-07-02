@@ -15,6 +15,7 @@ import (
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/contractcourt"
 	"github.com/lightningnetwork/lnd/libzkchannels"
+	"github.com/lightningnetwork/lnd/lncfg"
 	"github.com/lightningnetwork/lnd/lnpeer"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/zkchanneldb"
@@ -94,7 +95,7 @@ func createTestZkChannelManager(t *testing.T, isMerchant bool) (*zkTestNode, err
 		sixConfChannel: make(chan *chainntnfs.TxConfirmation, 1),
 		epochChan:      make(chan *chainntnfs.BlockEpoch, 2),
 	}
-	manager := newZkChannelManager(isMerchant, zkChainWatcher, testDir, publishTransaction)
+	manager := newZkChannelManager(isMerchant, zkChainWatcher, testDir, publishTransaction, lncfg.MinFee, lncfg.MaxFee, lncfg.ValCpfp, lncfg.BalMinCust, lncfg.BalMinMerch)
 	return &zkTestNode{
 		zkChannelMgr: manager,
 		msgChan:      sentMessages,
@@ -192,10 +193,8 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 	merchBal := int64(1000000)
 	feeCC := int64(1000)
 	feeMC := int64(1000)
-	minFee := int64(0)
-	maxFee := int64(10000)
 
-	go cust.zkChannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePk, merchPk, zkChannelName, custBal, merchBal, feeCC, feeMC, minFee, maxFee, merch)
+	go cust.zkChannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePk, merchPk, zkChannelName, custBal, merchBal, feeCC, feeMC, merch)
 
 	var msg1 lnwire.Message
 	select {
@@ -479,17 +478,14 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 		t.Fatalf("%v", err)
 	}
 
-	valCpfp := int64(1000)
-	minThreshold := int64(546)
-	// selfDelay := int16(1487)
 	txFeeInfo := libzkchannels.TransactionFeeInfo{
-		BalMinCust:  minThreshold,
-		BalMinMerch: minThreshold,
-		ValCpFp:     valCpfp,
+		BalMinCust:  lncfg.BalMinCust,
+		BalMinMerch: lncfg.BalMinMerch,
+		ValCpFp:     lncfg.ValCpfp,
 		FeeCC:       1000,
 		FeeMC:       1000,
-		MinFee:      0,
-		MaxFee:      10000,
+		MinFee:      lncfg.MinFee,
+		MaxFee:      lncfg.MaxFee,
 	}
 	feeCC := txFeeInfo.FeeCC
 	feeMC := txFeeInfo.FeeMC
@@ -577,7 +573,7 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 	}
 
 	custClosePk := custState.PayoutPk
-	escrowSig, merchSig, err := libzkchannels.MerchantSignInitCustCloseTx(txInfo, custState.RevLock, custState.PkC, custClosePk, toSelfDelay, merchState, feeCC, feeMC, valCpfp)
+	escrowSig, merchSig, err := libzkchannels.MerchantSignInitCustCloseTx(txInfo, custState.RevLock, custState.PkC, custClosePk, toSelfDelay, merchState, feeCC, feeMC, txFeeInfo.ValCpFp)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -613,7 +609,7 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 	// End of libzkchannels_test.go
 
 	// Save variables needed to create cust close in zkcust.db
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, custDBPath)
+	zkCustDB, err := zkchanneldb.CreateZkChannelBucket(zkChannelName, custDBPath)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -629,6 +625,11 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 	}
 
 	err = zkchanneldb.AddField(zkCustDB, zkChannelName, channelToken, channelTokenKey)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	err = zkchanneldb.AddField(zkCustDB, zkChannelName, escrowTxid, escrowTxidKey)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -806,7 +807,7 @@ func TestCliCommands(t *testing.T) {
 	// Test that ZkInfo returns pubkey (hex) of len 66
 	merchPk, err := merch.zkChannelMgr.ZkInfo()
 	if err != nil {
-		t.Fatalf("%v", err)
+		t.Errorf("%v", err)
 	}
 
 	assert.Equal(t, 66, len(merchPk), "ZkInfo returned a pubkey (hex) with bad length")
@@ -815,14 +816,14 @@ func TestCliCommands(t *testing.T) {
 	paymentAmount := int64(1000)
 	amount0, err := merch.zkChannelMgr.TotalReceived()
 	if err != nil {
-		t.Fatalf("%v", err)
+		t.Errorf("%v", err)
 	}
 
 	addAmountToTotalReceieved(t, merch.zkChannelMgr.dbPath, paymentAmount)
 
 	amount1, err := merch.zkChannelMgr.TotalReceived()
 	if err != nil {
-		t.Fatalf("%v", err)
+		t.Errorf("%v", err)
 	}
 
 	assert.Equal(t, paymentAmount, amount1-amount0, "TotalReceived failed to update amount correctly")
@@ -830,7 +831,7 @@ func TestCliCommands(t *testing.T) {
 	// Test ListZkChannels
 	ListOfZkChannels, err := merch.zkChannelMgr.ListZkChannels()
 	if err != nil {
-		t.Fatalf("%v", err)
+		t.Errorf("%v", err)
 	}
 	numChannels0 := len(ListOfZkChannels.ChannelID)
 	assert.Equal(t, 0, numChannels0, "Non-empty list of zkchannels when Merchant is initialized")
@@ -839,15 +840,16 @@ func TestCliCommands(t *testing.T) {
 
 	ListOfZkChannels, err = merch.zkChannelMgr.ListZkChannels()
 	if err != nil {
-		t.Fatalf("%v", err)
+		t.Errorf("%v", err)
 	}
 	numChannels1 := len(ListOfZkChannels.ChannelID)
 
 	assert.Equal(t, 1, numChannels1, "ListZkChannels did not return the added channel")
 
-	escrowTxid, localBalance, remoteBalance, err := cust.zkChannelMgr.ZkChannelBalance("myChannelName")
+	// Test ZkChannelBalance
+	escrowTxid, localBalance, remoteBalance, err := cust.zkChannelMgr.ZkChannelBalance("myChannel")
 	if err != nil {
-		t.Fatalf("%v", err)
+		t.Errorf("%v", err)
 	}
 	t.Log("escrowTxid", escrowTxid)
 	t.Log("localBalance", localBalance)
