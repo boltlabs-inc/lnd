@@ -995,7 +995,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr, chanDB *channeldb.DB,
 		}
 		publishTx := cc.wallet.PublishTransaction
 
-		s.zkchannelMgr = newZkChannelManager(isZkMerchant, zkChainWatcherFunc, "", publishTx, lncfg.MinFee, lncfg.MaxFee, lncfg.ValCpfp, lncfg.BalMinCust, lncfg.BalMinMerch)
+		s.zkchannelMgr = newZkChannelManager(isZkMerchant, zkChainWatcherFunc, "", publishTx, s.DisconnectPeer, lncfg.MinFee, lncfg.MaxFee, lncfg.ValCpfp, lncfg.BalMinCust, lncfg.BalMinMerch)
 		if err != nil {
 			return nil, err
 		}
@@ -3611,7 +3611,12 @@ func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index ui
 	}
 
 	// peer.server.zkchannelMgr.zkChannelName = zkChannelName
-	return peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, merchPubKey, zkChannelName, custBalance, merchBalance, feeCC, feeMC, peer)
+	err = peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, merchPubKey, zkChannelName, custBalance, merchBalance, feeCC, feeMC, peer)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ZkPay sends the request to server to close the connection with peer

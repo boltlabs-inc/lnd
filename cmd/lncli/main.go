@@ -312,9 +312,7 @@ func main() {
 		versionCommand,
 		// ################## ln-zkmpc ##################
 		openZkChannelCommand,
-		connOpenZkChannelCommand,
 		zkPayCommand,
-		connPayCommand,
 		closeZkChannelCommand,
 		merchCloseCommand,
 		zkChannelBalanceCommand,

@@ -12,6 +12,7 @@ import (
 	"path"
 	"sync"
 
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/jinzhu/copier"
@@ -43,7 +44,10 @@ type zkChannelManager struct {
 	// transaction to the network.
 	PublishTransaction func(*wire.MsgTx, string) error
 
-	// MinFee is the minimum allowed tx fee for closing transactions (zkChannels).
+	// DisconnectMerchant is used at the end of the establish or pay flow, to disconnect from the merchant.
+	DisconnectMerchant func(*btcec.PublicKey) error
+
+	// SelfDelay the number of blocks to wait before a closing transaction output to self can be claimed by the broadcaster (zkChannels).
 	SelfDelay int16
 
 	// MinFee is the minimum allowed tx fee for closing transactions (zkChannels).
@@ -89,7 +93,7 @@ var (
 	totalReceivedKey  = "totalReceivedKey"
 )
 
-func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, minFee int64, maxFee int64, valCpfp int64, balMinCust int64, balMinMerch int64) *zkChannelManager {
+func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, disconnectMerchant func(*btcec.PublicKey) error, minFee int64, maxFee int64, valCpfp int64, balMinCust int64, balMinMerch int64) *zkChannelManager {
 	var dbPath string
 	if isZkMerchant {
 		dbPath = path.Join(dbDirPath, "zkmerch.db")
@@ -101,6 +105,7 @@ func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.
 		isMerchant:         isZkMerchant,
 		dbPath:             dbPath,
 		PublishTransaction: publishTx,
+		DisconnectMerchant: disconnectMerchant,
 		MinFee:             minFee,
 		MaxFee:             maxFee,
 		ValCpfp:            valCpfp,
@@ -1686,6 +1691,14 @@ func (z *zkChannelManager) processZkEstablishPayToken(msg *lnwire.ZkEstablishPay
 	if err != nil {
 		zkchLog.Error(err)
 	}
+
+	// Now that the pay session has ended, disconnect from the merchant so that
+	// subsequent payments can be made on a fresh connection with a new
+	// customer nodeID
+	err = z.DisconnectMerchant(p.IdentityKey())
+	if err != nil {
+		zkchLog.Error(err)
+	}
 }
 
 func (z *zkChannelManager) InitZkPay(p lnpeer.Peer, zkChannelName string, amount int64) error {
@@ -2324,6 +2337,7 @@ func (z *zkChannelManager) processZkPayRevoke(msg *lnwire.ZkPayRevoke, p lnpeer.
 	if err != nil {
 		zkchLog.Error(err)
 	}
+
 }
 
 func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p lnpeer.Peer, zkChannelName string) {
@@ -2366,6 +2380,14 @@ func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p l
 	}
 
 	err = zkCustDB.Close()
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	// Now that the pay session has ended, disconnect from the merchant so that
+	// subsequent payments can be made on a fresh connection with a new
+	// customer nodeID
+	err = z.DisconnectMerchant(p.IdentityKey())
 	if err != nil {
 		zkchLog.Error(err)
 	}

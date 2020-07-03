@@ -25,6 +25,7 @@ import (
 type zkTestNode struct {
 	msgChan         chan lnwire.Message
 	publTxChan      chan *wire.MsgTx
+	disconnectPeer  chan *btcec.PublicKey
 	zkChannelMgr    *zkChannelManager
 	mockNotifier    *mockNotifier
 	testDir         string
@@ -90,18 +91,25 @@ func createTestZkChannelManager(t *testing.T, isMerchant bool) (*zkTestNode, err
 		return nil
 	}
 
+	peerDisconnected := make(chan *btcec.PublicKey, 1)
+	disconnectPeer := func(pubKey *btcec.PublicKey) error {
+		peerDisconnected <- pubKey
+		return nil
+	}
+
 	chainNotifier := &mockNotifier{
 		oneConfChannel: make(chan *chainntnfs.TxConfirmation, 1),
 		sixConfChannel: make(chan *chainntnfs.TxConfirmation, 1),
 		epochChan:      make(chan *chainntnfs.BlockEpoch, 2),
 	}
-	manager := newZkChannelManager(isMerchant, zkChainWatcher, testDir, publishTransaction, lncfg.MinFee, lncfg.MaxFee, lncfg.ValCpfp, lncfg.BalMinCust, lncfg.BalMinMerch)
+	manager := newZkChannelManager(isMerchant, zkChainWatcher, testDir, publishTransaction, disconnectPeer, lncfg.MinFee, lncfg.MaxFee, lncfg.ValCpfp, lncfg.BalMinCust, lncfg.BalMinMerch)
 	return &zkTestNode{
-		zkChannelMgr: manager,
-		msgChan:      sentMessages,
-		publTxChan:   publTxChan,
-		mockNotifier: chainNotifier,
-		testDir:      testDir,
+		zkChannelMgr:   manager,
+		msgChan:        sentMessages,
+		publTxChan:     publTxChan,
+		disconnectPeer: peerDisconnected,
+		mockNotifier:   chainNotifier,
+		testDir:        testDir,
 	}, nil
 }
 
@@ -445,13 +453,14 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 
 	go cust.zkChannelMgr.processZkEstablishPayToken(ZkEstablishPayTokenMsg, merch, zkChannelName)
 
-	var msg11 lnwire.Message
+	var disconnectMsg *btcec.PublicKey
 	select {
-	case msg11 = <-merch.msgChan:
-		errorMsg, _ := msg11.(*lnwire.Error)
-		t.Fatalf("Received an unexpected error message: " + errorMsg.Error())
-	case <-time.After(time.Second):
+	case disconnectMsg = <-cust.disconnectPeer:
+		t.Logf("NodeID of disconnected merchant: %v", disconnectMsg)
+	case <-time.After(time.Second * 5):
+		t.Fatalf("Customer did not disconnect from merchant at the end of establish")
 	}
+
 }
 
 func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, merchDBPath string) {
