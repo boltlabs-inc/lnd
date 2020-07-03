@@ -3293,7 +3293,6 @@ func openZkChannel(ctx *cli.Context) error {
 		merchBalance = ctx.Int64("merch_balance")
 	}
 
-	// TODO ZKLND-36: if fee values not specified, get default values from config file.
 	var feeCC int64
 	if !ctx.IsSet("fee_cc") {
 		feeCC = 0
@@ -3301,29 +3300,12 @@ func openZkChannel(ctx *cli.Context) error {
 		feeCC = ctx.Int64("fee_cc")
 	}
 
-	// TODO ZKLND-36: if fee values not specified, get default values from config file.
 	var feeMC int64
 	if !ctx.IsSet("fee_mc") {
 		feeMC = 0
 	} else {
 		feeMC = ctx.Int64("fee_mc")
 	}
-
-	// // TODO ZKLND-36: if fee values not specified, get default values from config file.
-	// var minFee int64
-	// if !ctx.IsSet("min_fee") {
-	// 	minFee = lncfg.MaxFee
-	// } else {
-	// 	minFee = ctx.Int64("min_fee")
-	// }
-
-	// // TODO ZKLND-36: if fee values not specified, get default values from config file.
-	// var maxFee int64
-	// if !ctx.IsSet("max_fee") {
-	// 	maxFee = lncfg.MaxFee
-	// } else {
-	// 	maxFee = ctx.Int64("max_fee")
-	// }
 
 	// Connect to merchant
 	addr := &lnrpc.LightningAddress{

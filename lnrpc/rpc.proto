@@ -3639,10 +3639,6 @@ message OpenZkChannelRequest {
     int64 fee_cc = 6 [json_name = "fee_cc"];
     /// Fee merchant close
     int64 fee_mc = 7 [json_name = "fee_mc"];
-    /// minimum fee
-    int64 min_fee = 8 [json_name = "min_fee"];
-    /// maximum fee
-    int64 max_fee = 9 [json_name = "max_fee"];
 }
 
 message OpenZkChannelResponse {
