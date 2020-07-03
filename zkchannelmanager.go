@@ -1877,13 +1877,11 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 }
 
 func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpeer.Peer, zkChannelName string) {
-	zkchLog.Debug("J111ust received ZkPayMaskCom")
+	zkchLog.Debug("Just received ZkPayMaskCom")
 
 	// TODO ZKLND-53: match up sessionID to appropriate bucket
 	sessionID := string(msg.SessionID)
 	payTokenMaskCom := string(msg.PayTokenMaskCom)
-
-	zkchLog.Debug("Just received ZkPayMaskCom")
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)

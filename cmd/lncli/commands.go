@@ -3197,7 +3197,7 @@ var openZkChannelCommand = cli.Command{
 	Usage:    "Open a zk-channel to a node or an existing peer.",
 	Description: `
 	Create a zk-channel with an ln-mpc node.`,
-	ArgsUsage: "node-key merch_pubkey cust_balance merch_balance",
+	ArgsUsage: "node_key merch_pubkey cust_balance merch_balance",
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name: "node_key",
@@ -3351,6 +3351,180 @@ func openZkChannel(ctx *cli.Context) error {
 	return nil
 }
 
+var connOpenZkChannelCommand = cli.Command{
+	Name:     "connopenzkchannel",
+	Category: "ZkChannels",
+	Usage:    "Open a zk-channel to a node or an existing peer.",
+	Description: `
+	Create a zk-channel with an ln-mpc node.`,
+	ArgsUsage: "<pubkey>@host merch_pubkey cust_balance merch_balance",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name: "merch_pubkey",
+			Usage: "the merchant's public key for the escrow tx" +
+				"serialized in compressed format",
+		},
+		cli.StringFlag{
+			Name:  "channel_name",
+			Usage: "create a name to identify the channel for future use",
+		},
+		cli.IntFlag{
+			Name:  "cust_balance",
+			Usage: "the number of satoshis the wallet should commit to the customer's balance (local side)",
+		},
+		cli.IntFlag{
+			Name: "merch_balance",
+			Usage: "the number of satoshis to give the merchant (remote side)" +
+				"as part of the initial commitment state, " +
+				"this is equivalent to first opening a " +
+				"channel and sending the remote party funds, " +
+				"but done all in one step",
+		},
+		cli.IntFlag{
+			Name:  "fee_cc",
+			Usage: "the number of satoshis to pay as fee on customer close",
+		},
+		cli.IntFlag{
+			Name:  "fee_mc",
+			Usage: "the number of satoshis to pay as fee on merchant close",
+		},
+		cli.IntFlag{
+			Name:  "min_fee",
+			Usage: "the number of satoshis that defines the minimum fee",
+		},
+		cli.IntFlag{
+			Name:  "max_fee",
+			Usage: "the number of satoshis that defines the maximum fee",
+		},
+	},
+	Action: actionDecorator(connOpenZkChannel),
+}
+
+func connOpenZkChannel(ctx *cli.Context) error {
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	isMerch, err := lnd.DetermineIfMerch()
+	if err != nil {
+		return err
+	}
+
+	if isMerch {
+		return fmt.Errorf("you are operating as a merchant, only customers can make payments")
+	}
+
+	// Parse arguments
+	targetAddress := ctx.Args().First()
+	splitAddr := strings.Split(targetAddress, "@")
+	if len(splitAddr) != 2 {
+		return fmt.Errorf("target address expected in format: " +
+			"pubkey@host:port")
+	}
+
+	// Load Merchant's bitcoin pubkey
+	var merchPubKey string
+	if !ctx.IsSet("merch_pubkey") {
+		return fmt.Errorf("merch_pubkey is missing")
+	}
+	merchPubKey = ctx.String("merch_pubkey")
+
+	var zkChannelName string
+	if !ctx.IsSet("channel_name") {
+		return fmt.Errorf("enter a unique name for channel_name")
+	}
+	zkChannelName = ctx.String("channel_name")
+
+	if lnd.ChannelExists(zkChannelName) {
+		return fmt.Errorf("there is already a payment channel with that name")
+	}
+
+	fmt.Println("\nConnecting to merchant with bitcoin PubKey:", merchPubKey)
+
+	if !ctx.IsSet("cust_balance") {
+		return fmt.Errorf("must specify amount of satoshis for customer balance")
+	}
+	custBalance := ctx.Int64("cust_balance")
+
+	var merchBalance int64
+	if !ctx.IsSet("merch_balance") {
+		merchBalance = 0
+	} else {
+		merchBalance = ctx.Int64("merch_balance")
+	}
+
+	// TODO ZKLND-36: if fee values not specified, get default values from config file.
+	var feeCC int64
+	if !ctx.IsSet("fee_cc") {
+		feeCC = 0
+	} else {
+		feeCC = ctx.Int64("fee_cc")
+	}
+
+	// TODO ZKLND-36: if fee values not specified, get default values from config file.
+	var feeMC int64
+	if !ctx.IsSet("fee_mc") {
+		feeMC = 0
+	} else {
+		feeMC = ctx.Int64("fee_mc")
+	}
+
+	// // TODO ZKLND-36: if fee values not specified, get default values from config file.
+	// var minFee int64
+	// if !ctx.IsSet("min_fee") {
+	// 	minFee = lncfg.MaxFee
+	// } else {
+	// 	minFee = ctx.Int64("min_fee")
+	// }
+
+	// // TODO ZKLND-36: if fee values not specified, get default values from config file.
+	// var maxFee int64
+	// if !ctx.IsSet("max_fee") {
+	// 	maxFee = lncfg.MaxFee
+	// } else {
+	// 	maxFee = ctx.Int64("max_fee")
+	// }
+
+	// Connect to merchant
+	addr := &lnrpc.LightningAddress{
+		Pubkey: splitAddr[0],
+		Host:   splitAddr[1],
+	}
+	connReq := &lnrpc.ConnectPeerRequest{
+		Addr: addr,
+		Perm: ctx.Bool("perm"),
+	}
+
+	// Block pay until connect has finished
+	var connectFinished = make(chan error)
+	go func() {
+		_, err := client.ConnectPeer(ctxb, connReq)
+		connectFinished <- err
+	}()
+	msg := <-connectFinished
+	_ = msg
+
+	// Open Channel
+
+	req := &lnrpc.OpenZkChannelRequest{
+		PubKey:        addr.Pubkey,
+		MerchPubKey:   merchPubKey,
+		ZkChannelName: zkChannelName,
+		CustBalance:   custBalance,
+		MerchBalance:  merchBalance,
+		FeeCc:         feeCC,
+		FeeMc:         feeMC,
+	}
+
+	lnid, err := client.OpenZkChannel(ctxb, req)
+	if err != nil {
+		return err
+	}
+
+	printRespJSON(lnid)
+	return nil
+}
+
 var zkPayCommand = cli.Command{
 	Name:     "zkpay",
 	Category: "ZkChannels",
@@ -3400,7 +3574,14 @@ func zkPay(ctx *cli.Context) error {
 	case ctx.IsSet("node_key"):
 		pubKey = ctx.String("node_key")
 	case ctx.Args().Present():
-		pubKey = ctx.Args().First()
+
+		targetAddress := ctx.Args().First()
+		splitAddr := strings.Split(targetAddress, "@")
+		if len(splitAddr) != 2 {
+			return fmt.Errorf("provide --node_key, or specify target address expected in format: " +
+				"pubkey@host:port")
+		}
+		pubKey = splitAddr[0]
 	default:
 		return fmt.Errorf("must specify target public key")
 	}
@@ -3434,6 +3615,122 @@ func zkPay(ctx *cli.Context) error {
 
 	printRespJSON(lnid)
 	return nil
+}
+
+var connPayCommand = cli.Command{
+	Name:     "newpay",
+	Category: "ZkChannels",
+	Usage:    "Send a zero-knowledge payment over zkChannel.",
+	Description: `
+	Send a zkPayment to a merchant over an already established zkChannel.`,
+	ArgsUsage: "<pubkey>@host --amt=A --channel_name=",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "channel_name",
+			Usage: "the name of the zkchannel to make a payment on",
+		},
+		cli.IntFlag{
+			Name: "amt",
+			Usage: "the number of satoshis to give the remote side " +
+				"as part of the initial commitment state, " +
+				"this is equivalent to first opening a " +
+				"channel and sending the remote party funds, " +
+				"but done all in one step",
+		},
+	},
+	Action: actionDecorator(connPay),
+}
+
+func connPay(ctx *cli.Context) error {
+
+	ctxb := context.Background()
+	client, cleanUp := getClient(ctx)
+	defer cleanUp()
+
+	isMerch, err := lnd.DetermineIfMerch()
+	if err != nil {
+		return err
+	}
+
+	if isMerch {
+		return fmt.Errorf("you are a operating as a merchant, only customers can make payments")
+	}
+
+	// Parse arguments
+	targetAddress := ctx.Args().First()
+	splitAddr := strings.Split(targetAddress, "@")
+	if len(splitAddr) != 2 {
+		return fmt.Errorf("target address expected in format: " +
+			"pubkey@host:port")
+	}
+
+	var zkChannelName string
+	if !ctx.IsSet("channel_name") {
+		return fmt.Errorf("must specify which channel to make the payment on")
+	}
+	zkChannelName = ctx.String("channel_name")
+
+	if !lnd.ChannelExists(zkChannelName) {
+		return fmt.Errorf("there is no payment channel with that name")
+	}
+
+	var amt int64
+	if !ctx.IsSet("amt") {
+		return fmt.Errorf("must specify amount of satoshis to send")
+	}
+	amt = ctx.Int64("amt")
+
+	// Connect to merchant
+	addr := &lnrpc.LightningAddress{
+		Pubkey: splitAddr[0],
+		Host:   splitAddr[1],
+	}
+	connReq := &lnrpc.ConnectPeerRequest{
+		Addr: addr,
+		Perm: ctx.Bool("perm"),
+	}
+
+	// Block pay until connect has finished
+	var connectFinished = make(chan error)
+	go func() {
+		_, err := client.ConnectPeer(ctxb, connReq)
+		connectFinished <- err
+	}()
+	msg := <-connectFinished
+	_ = msg
+
+	// Pay merchant
+	payReq := &lnrpc.ZkPayRequest{
+		PubKey:        addr.Pubkey,
+		ZkChannelName: zkChannelName,
+		Amount:        amt,
+	}
+
+	payLnid, err := client.ZkPay(ctxb, payReq)
+	if err != nil {
+		return err
+	}
+	printRespJSON(payLnid)
+
+	// ZKLND-32: Return success message after pay
+	// Right now there's no way to know when zkPay has finished.
+	// Using sleep as temporary solution until ZKLND-32 is implemented.
+	time.Sleep(3 * time.Second)
+
+	// Disconnect from merchant
+	discReq := &lnrpc.DisconnectPeerRequest{
+		PubKey: addr.Pubkey,
+	}
+
+	discLnid, err := client.DisconnectPeer(ctxb, discReq)
+	if err != nil {
+		return err
+	}
+
+	printRespJSON(discLnid)
+
+	return nil
+
 }
 
 var closeZkChannelCommand = cli.Command{
