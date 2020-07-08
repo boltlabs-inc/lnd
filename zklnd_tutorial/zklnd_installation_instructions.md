@@ -72,10 +72,16 @@ In order to work with [`zkLND`](https://github.com/boltlabs-inc/lnd), the follow
 
  ### Installing Rust
 
- To install Rust, we recommend using [rustup](https://www.rustup.rs/). You can install `rustup` on macOS or Linux as follows:
+To install Rust, we recommend using [rustup](https://www.rustup.rs/). You can install `rustup` on macOS or Linux as follows:
 
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   ```
+
+Make sure the version of `rustc` is greater than 1.42. If you have an older version, update it by running:
+
+   ```bash
+   rustup update
    ```
 
 ## Installing libzkchannels
@@ -105,9 +111,7 @@ Currently, the libzkchannels is located in the `lnd` directory. So first we will
 To be able to build `libzkchannels`, you will need to install the EMP-toolkit among other dependencies. Make sure you are in your `lnd` directory and run the following commands:
 
     git clone https://github.com/boltlabs-inc/libzkchannels
-    cd libzkchannels
-    ./build.sh ..
-    cd ..
+    ./scripts/install_libzkchannels.sh 
     . ./make/libzkchannels.mk
     go get github.com/boltlabs-inc/libzkchannels
     go test -v github.com/boltlabs-inc/libzkchannels
