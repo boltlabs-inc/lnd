@@ -44,9 +44,10 @@ jobs:
         - . ./libzkchannels/libzkchannels.mk
         - make rpc-check
         - make unit pkg=... case=_NONE_
-        - make lint workers=1
+        #- make lint workers=1
         - make btcd
-        - make release
+        #- make release sys=windows-amd64
+        - make && make install
     - stage: Test
       script: 
         - . ./libzkchannels/libzkchannels.mk
