@@ -93,7 +93,7 @@ var (
 	totalReceivedKey  = "totalReceivedKey"
 )
 
-func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, disconnectMerchant func(*btcec.PublicKey) error, minFee int64, maxFee int64, valCpfp int64, balMinCust int64, balMinMerch int64) *zkChannelManager {
+func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, disconnectMerchant func(*btcec.PublicKey) error, selfDelay int16, minFee int64, maxFee int64, valCpfp int64, balMinCust int64, balMinMerch int64) *zkChannelManager {
 	var dbPath string
 	if isZkMerchant {
 		dbPath = path.Join(dbDirPath, "zkmerch.db")
@@ -106,6 +106,7 @@ func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.
 		dbPath:             dbPath,
 		PublishTransaction: publishTx,
 		DisconnectMerchant: disconnectMerchant,
+		SelfDelay:          selfDelay,
 		MinFee:             minFee,
 		MaxFee:             maxFee,
 		ValCpfp:            valCpfp,
