@@ -46,7 +46,7 @@ jobs:
         - make unit pkg=... case=_NONE_
         - make lint workers=1
         - make btcd
-        - make release sys=windows-amd64
+        - make release
     - stage: Test
       script: 
         - . ./libzkchannels/libzkchannels.mk
