@@ -386,6 +386,7 @@ func DefaultConfig() Config {
 		DB:                      lncfg.DefaultDB(),
 		registeredChains:        newChainRegistry(),
 		zkMode:                  defaultZkMode,
+		selfDelay:               lncfg.SelfDelay,
 		minFee:                  lncfg.MinFee,
 		maxFee:                  lncfg.MaxFee,
 		valCpfp:                 lncfg.ValCpfp,

@@ -68,10 +68,10 @@ require (
 	github.com/urfave/cli v1.18.0
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.uber.org/zap v1.14.1 // indirect
-	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
-	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
-	golang.org/x/sys v0.0.0-20200116001909-b77594299b42 // indirect
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/net v0.0.0-20200625001655-4c5254603344
 	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2
+	golang.org/x/tools v0.0.0-20200708003708-134513de8882 // indirect
 	google.golang.org/genproto v0.0.0-20190201180003-4b09977fb922
 	google.golang.org/grpc v1.19.0
 	gopkg.in/errgo.v1 v1.0.1 // indirect

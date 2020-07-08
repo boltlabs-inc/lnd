@@ -76,6 +76,11 @@ type newChannelMsg struct {
 	err     chan error
 }
 
+// mpcMsg is a wrapper struct around a message used for MPC communications
+type mpcMsg struct {
+	msg lnwire.ZkMPC
+}
+
 // closeMsgs is a wrapper struct around any wire messages that deal with the
 // cooperative channel closure negotiation process. This struct includes the
 // raw channel ID targeted along with the original message.
@@ -200,6 +205,10 @@ type peer struct {
 	// and instructs the channelManager to clean remaining channel state.
 	linkFailures chan linkFailureReport
 
+	// chanMpcMsgs is a channel where messages intended for MPC
+	// communication are queued
+	chanMpcMsgs chan *mpcMsg
+
 	// chanCloseMsgs is a channel that any message related to channel
 	// closures are sent over. This includes lnwire.Shutdown message as
 	// well as lnwire.ClosingSigned messages.
@@ -307,6 +316,8 @@ func newPeer(cfg *Config, conn net.Conn, connReq *connmgr.ConnReq, server *serve
 		linkFailures:       make(chan linkFailureReport),
 		chanCloseMsgs:      make(chan *closeMsg),
 		resentChanSyncMsg:  make(map[lnwire.ChannelID]struct{}),
+
+		chanMpcMsgs:        make(chan *mpcMsg),
 
 		chanActiveTimeout: chanActiveTimeout,
 
@@ -1243,6 +1254,9 @@ out:
 			p.server.zkchannelMgr.processZkPayRevoke(msg, p)
 		case *lnwire.ZkPayTokenMask:
 			p.server.zkchannelMgr.processZkPayTokenMask(msg, p, p.server.zkChannelName)
+
+		case *lnwire.ZkMPC:
+			p.chanMpcMsgs <- &mpcMsg{ *msg }
 
 		case *lnwire.OpenChannel:
 			p.server.fundingMgr.processFundingOpen(msg, p)

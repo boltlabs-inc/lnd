@@ -61,6 +61,8 @@ const (
 	// closure.
 	DefaultOutgoingCltvRejectDelta = DefaultOutgoingBroadcastDelta + 3
 
+	SelfDelay = 1487
+
 	// MinFee is the minimum allowed tx fee for closing transactions (zkChannels).
 	MinFee = 100
 

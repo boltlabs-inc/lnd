@@ -102,7 +102,7 @@ func createTestZkChannelManager(t *testing.T, isMerchant bool) (*zkTestNode, err
 		sixConfChannel: make(chan *chainntnfs.TxConfirmation, 1),
 		epochChan:      make(chan *chainntnfs.BlockEpoch, 2),
 	}
-	manager := newZkChannelManager(isMerchant, zkChainWatcher, testDir, publishTransaction, disconnectPeer, lncfg.MinFee, lncfg.MaxFee, lncfg.ValCpfp, lncfg.BalMinCust, lncfg.BalMinMerch)
+	manager := newZkChannelManager(isMerchant, zkChainWatcher, testDir, publishTransaction, disconnectPeer, lncfg.SelfDelay, lncfg.MinFee, lncfg.MaxFee, lncfg.ValCpfp, lncfg.BalMinCust, lncfg.BalMinMerch)
 	return &zkTestNode{
 		zkChannelMgr:   manager,
 		msgChan:        sentMessages,
