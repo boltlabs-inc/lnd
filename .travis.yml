@@ -4,6 +4,7 @@ cache:
     - ~/bitcoin/bitcoin-0.19.1/bin
     - $DOWNLOAD_CACHE
     - $GOCACHE
+    - $LIBZKCHANNELS
     - $GOPATH/pkg/mod
     - $GOPATH/src/github.com/btcsuite
     - $GOPATH/src/github.com/golang
@@ -23,6 +24,7 @@ env:
   global:
     - GOCACHE=$HOME/.go-build
     - DOWNLOAD_CACHE=$HOME/download_cache
+    - LIBZKCHANNELS=$GOPATH/src/github.com/boltlabs-inc/lnd/libzkchannels
 
 sudo: required
 
