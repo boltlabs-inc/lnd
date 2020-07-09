@@ -76,11 +76,6 @@ type newChannelMsg struct {
 	err     chan error
 }
 
-// mpcMsg is a wrapper struct around a message used for MPC communications
-type mpcMsg struct {
-	msg lnwire.ZkMPC
-}
-
 // closeMsgs is a wrapper struct around any wire messages that deal with the
 // cooperative channel closure negotiation process. This struct includes the
 // raw channel ID targeted along with the original message.
@@ -207,7 +202,7 @@ type peer struct {
 
 	// chanMpcMsgs is a channel where messages intended for MPC
 	// communication are queued
-	chanMpcMsgs chan *mpcMsg
+	chanMpcMsgs chan *lnwire.ZkMPC
 
 	// chanCloseMsgs is a channel that any message related to channel
 	// closures are sent over. This includes lnwire.Shutdown message as
@@ -317,7 +312,7 @@ func newPeer(cfg *Config, conn net.Conn, connReq *connmgr.ConnReq, server *serve
 		chanCloseMsgs:      make(chan *closeMsg),
 		resentChanSyncMsg:  make(map[lnwire.ChannelID]struct{}),
 
-		chanMpcMsgs:        make(chan *mpcMsg),
+		chanMpcMsgs:        make(chan *lnwire.ZkMPC),
 
 		chanActiveTimeout: chanActiveTimeout,
 
@@ -1243,9 +1238,9 @@ out:
 		case *lnwire.ZkPayNonce:
 			p.server.zkchannelMgr.processZkPayNonce(msg, p)
 		case *lnwire.ZkPayMaskCom:
-			p.server.zkchannelMgr.processZkPayMaskCom(msg, p, p.server.zkChannelName)
+			go p.server.zkchannelMgr.processZkPayMaskCom(msg, p, p.server.zkChannelName)
 		case *lnwire.ZkPayMPC:
-			p.server.zkchannelMgr.processZkPayMPC(msg, p)
+			go p.server.zkchannelMgr.processZkPayMPC(msg, p)
 		case *lnwire.ZkPayMPCResult:
 			p.server.zkchannelMgr.processZkPayMPCResult(msg, p)
 		case *lnwire.ZkPayMaskedTxInputs:
@@ -1256,7 +1251,7 @@ out:
 			p.server.zkchannelMgr.processZkPayTokenMask(msg, p, p.server.zkChannelName)
 
 		case *lnwire.ZkMPC:
-			p.chanMpcMsgs <- &mpcMsg{ *msg }
+			p.chanMpcMsgs <- msg
 
 		case *lnwire.OpenChannel:
 			p.server.fundingMgr.processFundingOpen(msg, p)

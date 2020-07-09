@@ -461,6 +461,14 @@ func WriteElement(w io.Writer, element interface{}) error {
 		if err := wire.WriteVarBytes(w, 0, e); err != nil {
 			return err
 		}
+	case ZkMPCMsgType:
+		Length := len(e)
+		if Length > 44464 {
+			return fmt.Errorf("'ZkMPCMsgType' too long")
+		}
+		if err := wire.WriteVarBytes(w, 0, e); err != nil {
+			return err
+		}
 		// ########### ln-mpc end ###########
 	default:
 		return fmt.Errorf("unknown type in WriteElement: %T", e)
@@ -895,6 +903,12 @@ func ReadElement(r io.Reader, element interface{}) error {
 			return err
 		}
 		*e = zkPayment
+	case *ZkMPCMsgType:
+		zkMpc, err := wire.ReadVarBytes(r, 0, 44464, "zkmpc")
+		if err != nil {
+			return err
+		}
+		*e = zkMpc
 	// ########### ln-mpc end ###########
 
 	default:

@@ -1,10 +1,14 @@
 package lnwire
 
-import "io"
+import (
+	"io"
+)
+
+type ZkMPCMsgType []byte
 
 // ZkMPC defines a message which is sent by peers while doing MPC
 type ZkMPC struct {
-	Data []byte
+	Data ZkMPCMsgType
 }
 
 // A compile time check to ensure ZkMPC implements the lnwire.Message interface.
@@ -15,8 +19,7 @@ var _ Message = (*ZkMPC)(nil)
 //
 // This is part of the lnwire.Message interface.
 func (p *ZkMPC) Decode(r io.Reader, pver uint32) error {
-	return ReadElements(r,
-		&p.Data)
+	return ReadElements(r, &p.Data)
 }
 
 // Encode serializes the target ZkMPC into the passed io.Writer observing the

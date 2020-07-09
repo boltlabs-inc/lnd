@@ -20,25 +20,23 @@ var (
 //export send
 func send(msg *C.char, length C.int, pPtr unsafe.Pointer) *C.char {
 	msgBytes := C.GoBytes(unsafe.Pointer(msg), length)
-	fmt.Println("Do Send: ", string(msgBytes))
-	p := RestorePointer(pPtr).(peer)
-	fmt.Println("Cast went well:", p)
+	p := RestorePointer(pPtr).(*peer)
 	mpcMsg := lnwire.ZkMPC{Data: msgBytes}
 	err := p.SendMessage(false, &mpcMsg)
 	if err != nil {
+		fmt.Println(err.Error())
 		return C.CString(err.Error())
 	}
+	fmt.Println("message sent: ", mpcMsg)
 	return nil
 }
 
 //export receive
 func receive(pPtr unsafe.Pointer) (*C.char, C.int, *C.char) {
-	fmt.Println("Got into lnd code")
-	p := RestorePointer(pPtr).(peer)
-	fmt.Println("Cast went well: ", p)
+	p := RestorePointer(pPtr).(*peer)
 	msg := <-p.chanMpcMsgs
 	fmt.Println("message received: ", msg)
-	return C.CString(string(msg.msg.Data)), C.int(len(msg.msg.Data)), nil
+	return (*C.char)(C.CBytes(msg.Data)), C.int(len(msg.Data)), nil
 }
 
 func SavePointer(v interface{}) unsafe.Pointer {
