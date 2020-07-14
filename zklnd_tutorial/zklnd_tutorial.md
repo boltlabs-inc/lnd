@@ -232,16 +232,18 @@ Check Alice’s wallet balance.
 
     alice$ lncli-alice walletbalance
 
-### Creating the P2P Network
+### Setting up a zkchannel
 
-Now that Alice has some simnet Bitcoin, let’s connect Alice and Bob together.
+Now that Alice has some simnet Bitcoin, let’s set up a zkchannel between Alice and Bob. Since Alice is playing the role of the customer, it's Alice who must initiate the zkchannel opening. 
 
-Connect Alice to Bob:
+Note that unlike Lightning Network payment channels in which the peers maintain persistent P2P connections with each other, in zkchannels the customer only maintains a P2P connection with a merchant for the duration of establishing the payment channel (or making a payment). Connecting and disconnecting from the merchant are handled automatically during channel establishment and payment sessions. 
+
+In order to create a zkchannel with Bob, Alice will need to know his node `identity_pubkey`, ip address, and `MerchPubkey`:
 
     # Get Bob's identity pubkey:
     bob$ lncli-bob getinfo
     {
-    --->"identity_pubkey": <BOB_PUBKEY>,
+    --->"identity_pubkey": <BOB_ID_PUBKEY>,
         "alias": "",
         "num_pending_channels": 0,
         "num_active_channels": 0,
@@ -259,54 +261,6 @@ Connect Alice to Bob:
         "version":  "0.4.2-beta commit=7a5a824d179c6ef16bd78bcb7a4763fda5f3f498"
     }
 
-    # Connect Alice and Bob together
-    alice$ lncli-alice connect <BOB_PUBKEY>@localhost:10012
-    {
-
-    }
-
-Notice that `localhost:10012` corresponds to the `--listen=localhost:10012` flag we set when starting the Bob `lnd` node.
-
-Let’s check that Alice and Bob are now aware of each other.
-
-    # Check that Alice has added Bob as a peer:
-    alice$ lncli-alice listpeers
-    {
-        "peers": [
-            {
-                "pub_key": <BOB_PUBKEY>,
-                "address": "127.0.0.1:10012",
-                "bytes_sent": "7",
-                "bytes_recv": "7",
-                "sat_sent": "0",
-                "sat_recv": "0",
-                "inbound": false,
-                "ping_time": "0"
-            }
-        ]
-    }
-
-    # Check that Bob has added Alice as a peer:
-    bob$ lncli-bob listpeers
-    {
-        "peers": [
-            {
-                "pub_key": <ALICE_PUBKEY>,
-                "address": "127.0.0.1:60104",
-                "bytes_sent": "318",
-                "bytes_recv": "318",
-                "sat_sent": "0",
-                "sat_recv": "0",
-                "inbound": true,
-                "ping_time": "5788"
-            }
-        ]
-    }
-
-### Setting up a zkchannel
-
-Before we can send payment, we will need to set up a zkchannels from Alice to Bob. Since Alice is playing the role of the customer, it's Alice who must initiate the zkchannel opening. Alice will need to know Bob's `MerchPubkey` in order to create a zkchannel with him.
-
     # Get Bob's merchant pubkey:
     bob$ lncli-bob zkinfo
     {
@@ -315,7 +269,9 @@ Before we can send payment, we will need to set up a zkchannels from Alice to Bo
 
 Now, Alice is ready to initiate setting up a zkchannel.
 
-    alice$ lncli-alice openzkchannel --node_key=<BOB_PUBKEY> --merch_pubkey=<BOB_MERCHPUBKEY> --cust_balance=50000 --merch_balance=0 --channel_name=<CHANNEL_NAME>
+    alice$ lncli-alice openzkchannel <BOB_ID_PUBKEY>@localhost:10012 --merch_pubkey=<BOB_MERCHPUBKEY> --cust_balance=50000 --merch_balance=0 --channel_name=<CHANNEL_NAME>
+    
+The first argument specifies Bob's node ID public key (used for communication over the P2P network), and IP address. Notice that `localhost:10012` corresponds to the `--listen=localhost:10012` flag we set when starting the Bob `lnd` node.
 
 *   `--merch_pubkey` Specifies Bob's bitcoin public key which will be used in the escrow transaction.
 *   `--cust_balance` The amount in satoshis to fund the the customer's (Alice's) channel with.
@@ -344,7 +300,7 @@ Check that Alice<–>Bob zkchannel was created:
 
 Finally, to the exciting part - sending unlinkable payments! Let’s send a payment from Alice to Bob.
 
-    alice$ lncli-alice zkpay --node_key=<BOB_PUBKEY> --channel_name=<CHANNEL_NAME> --amt=1000
+    alice$ lncli-alice zkpay <BOB_ID_PUBKEY>@localhost:10012 --node_key=<BOB_PUBKEY> --channel_name=<CHANNEL_NAME> --amt=1000
     {
 
     }

@@ -533,6 +533,7 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 
 	merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
 	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
+	t.Log("toSelfDelay", toSelfDelay)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}

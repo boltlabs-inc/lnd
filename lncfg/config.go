@@ -61,6 +61,7 @@ const (
 	// closure.
 	DefaultOutgoingCltvRejectDelta = DefaultOutgoingBroadcastDelta + 3
 
+	// SelfDelay the number of blocks to wait before a closing transaction output to self can be claimed by the broadcaster (zkChannels).
 	SelfDelay = 1487
 
 	// MinFee is the minimum allowed tx fee for closing transactions (zkChannels).
