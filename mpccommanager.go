@@ -27,7 +27,6 @@ func send(msg *C.char, length C.int, pPtr unsafe.Pointer) *C.char {
 		fmt.Println(err.Error())
 		return C.CString(err.Error())
 	}
-	fmt.Println("message sent: ", mpcMsg)
 	return nil
 }
 
@@ -35,7 +34,6 @@ func send(msg *C.char, length C.int, pPtr unsafe.Pointer) *C.char {
 func receive(pPtr unsafe.Pointer) (*C.char, C.int, *C.char) {
 	p := RestorePointer(pPtr).(*peer)
 	msg := <-p.chanMpcMsgs
-	fmt.Println("message received: ", msg)
 	return (*C.char)(C.CBytes(msg.Data)), C.int(len(msg.Data)), nil
 }
 
