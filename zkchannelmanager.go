@@ -1,5 +1,10 @@
 package lnd
 
+/*
+    struct Receive_return receive_cgo(char* msg, int length, void* p);
+	char* send_cgo(void* p);
+*/
+import "C"
 import (
 	"bytes"
 	"crypto/sha256"
@@ -11,6 +16,7 @@ import (
 	"os"
 	"path"
 	"sync"
+	"unsafe"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -1965,7 +1971,11 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 
 	zkchLog.Debug("channelState channelTokenPkM => ", channelToken.PkM)
 
-	isOk, custState, err := libzkchannels.PayUpdateCustomer(channelState, channelToken, oldState, newState, payTokenMaskCom, revLockCom, amount, custState)
+	pPtr := SavePointer(p)
+	defer UnrefPointer(pPtr)
+	isOk, custState, err := libzkchannels.PayUpdateCustomer(channelState, channelToken, oldState, newState,
+		payTokenMaskCom, revLockCom, amount, custState,
+		pPtr, unsafe.Pointer(C.send_cgo), unsafe.Pointer(C.receive_cgo))
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
@@ -2049,7 +2059,10 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	zkchLog.Debug("channelState MerchDisputePk => ", *channelState.MerchDisputePk)
 	zkchLog.Debug("channelState MerchStatePkM => ", *merchState.PkM)
 
-	isOk, merchState, err := libzkchannels.PayUpdateMerchant(channelState, sessionID, payTokenMaskCom, merchState)
+	pPtr := SavePointer(p)
+	defer UnrefPointer(pPtr)
+	isOk, merchState, err := libzkchannels.PayUpdateMerchant(channelState, sessionID, payTokenMaskCom, merchState,
+		pPtr, unsafe.Pointer(C.send_cgo), unsafe.Pointer(C.receive_cgo))
 
 	// TODO: Handle this case properly
 	if !isOk {
