@@ -518,9 +518,10 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 		return
 	}
 
-	zkbaLog.Debugf("Breach transaction %v has been confirmed, sweeping "+
+	zkbaLog.Infof("Breach transaction %v has been confirmed, sweeping "+
 		"revoked funds", breachInfo.CloseTxid)
 
+	escrowTxid := breachInfo.EscrowTxid.String()
 	breachTxid := breachInfo.CloseTxid.String()
 	index := uint32(0)
 	// TODO ZKLND-33: Generate outputPk from merchant's wallet
@@ -554,7 +555,7 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	if err != nil {
 		zkchLog.Error(err)
 	}
-	zkbaLog.Debugf("merchState %#v:", merchState)
+	zkbaLog.Infof("exactZkDispute merchState %#v:", merchState)
 
 	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
 	if err != nil {
@@ -576,10 +577,11 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	txFee := int64(1000) // TODO ZKLND-49: Use fee estimator
 	inAmt := amount
 	outAmt := int64(inAmt - txFee)
-	finalTxStr, err := libzkchannels.MerchantSignDisputeTx(breachTxid, index, inAmt, outAmt, toSelfDelay, outputPk,
+	zkchLog.Info(escrowTxid, breachTxid, index, inAmt, outAmt, toSelfDelay, outputPk, revLock, revSecret, custClosePk, merchState)
+	finalTxStr, merchState, err := libzkchannels.MerchantSignDisputeTx(escrowTxid, breachTxid, index, inAmt, outAmt, toSelfDelay, outputPk,
 		revLock, revSecret, custClosePk, merchState)
 	if err != nil {
-		zkchLog.Error(err)
+		zkchLog.Errorf("MerchantSignDisputeTx: %v", err)
 		return
 	}
 

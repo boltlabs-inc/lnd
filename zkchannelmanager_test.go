@@ -563,16 +563,6 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 	}
 	_ = merchTxid_LE
 
-	// initiate merch-close-tx
-	signedMerchCloseTx, merchTxid2_BE, merchTxid2_LE, merchState, err := libzkchannels.ForceMerchantCloseTx(escrowTxid_LE, merchState, txFeeInfo.ValCpFp)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	_ = merchState
-	_ = signedMerchCloseTx
-	_ = merchTxid2_BE
-	_ = merchTxid2_LE
-
 	txInfo := libzkchannels.FundingTxInfo{
 		EscrowTxId:    escrowTxid_BE, // big-endian
 		EscrowPrevout: escrowPrevout, // big-endian
@@ -660,6 +650,9 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 		t.Fatalf("%v", err)
 	}
 
+	// ZKLND-11 Merchant support for multiple channels
+	// cannot use this method for storing escrowTxid as it will get
+	// overwritten by new channels
 	err = zkchanneldb.AddMerchField(zkMerchDB, escrowTxid_LE, escrowTxidKey)
 	if err != nil {
 		t.Fatalf("%v", err)
@@ -719,8 +712,23 @@ func TestMerchClose(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
+	// TODO ZKLND-4 - Merchant support for multiple channels
+	// Cannot
 	var escrowTxid string
 	err = zkchanneldb.GetMerchField(zkMerchDB, escrowTxidKey, &escrowTxid)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Change channel status to open, as if the funding tx was confirmed
+	merchState, err = libzkchannels.MerchantChangeChannelStatusToOpen(escrowTxid, merchState)
+
+	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}

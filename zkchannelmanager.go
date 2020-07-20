@@ -813,6 +813,9 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	zkchLog.Debugf("multisigScript: %#x\n", multisigScript)
 	zkchLog.Debugf("pkScript: %#x\n", pkScript)
 
+	// ZKLND-11 Merchant support for multiple channels
+	// cannot use this method for storing escrowTxid as it will get
+	// overwritten by new channels
 	err = zkchanneldb.AddMerchField(zkMerchDB, escrowTxid, escrowTxidKey)
 	if err != nil {
 		z.failEstablishFlow(p, err)
@@ -1141,13 +1144,20 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 
 	// Wait for on chain confirmations of escrow transaction
 	z.wg.Add(1)
-	go z.advanceMerchantStateAfterConfirmations(notifier, escrowTxid, pkScript)
+	go z.advanceMerchantStateAfterConfirmations(notifier, true, escrowTxid, "", pkScript)
 
 }
 
-func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chainntnfs.ChainNotifier, txid string, pkScript []byte) {
+func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chainntnfs.ChainNotifier, confirmOpen bool, escrowTxid string, closeTxid string, pkScript []byte) {
 
 	zkchLog.Debugf("waitForFundingWithTimeout\npkScript: %#x\n", pkScript)
+
+	var txid string
+	if confirmOpen == true {
+		txid = escrowTxid
+	} else {
+		txid = closeTxid
+	}
 
 	confChannel, err := z.waitForFundingWithTimeout(notifier, txid, pkScript)
 	if err != nil {
@@ -1158,7 +1168,43 @@ func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chain
 	zkchLog.Debugf("confChannel: %#v\n", confChannel)
 	zkchLog.Infof("Transaction %v has 3 confirmations", txid)
 
-	// TODO: Update status of channel state from pending to confirmed.
+	// Now that the tx has been confirmed, update the status of the channel in
+	// the db
+	zkMerchDB, err := zkchanneldb.OpenMerchBucket(z.dbPath)
+	if err != nil {
+		zkchLog.Error(err)
+		return
+	}
+
+	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
+	if err != nil {
+		zkchLog.Error(err)
+		return
+	}
+
+	if confirmOpen == true {
+		merchState, err = libzkchannels.MerchantChangeChannelStatusToOpen(escrowTxid, merchState)
+		if err != nil {
+			zkchLog.Error(err)
+			return
+		}
+	} else {
+		merchState, err = libzkchannels.MerchantChangeChannelStatusToConfirmedClose(escrowTxid, merchState)
+		if err != nil {
+			zkchLog.Error(err)
+			return
+		}
+	}
+	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
+	if err != nil {
+		zkchLog.Error(err)
+		return
+	}
+
+	err = zkMerchDB.Close()
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
 }
 
@@ -1281,6 +1327,23 @@ func (z *zkChannelManager) advanceCustomerStateAfterConfirmations(notifier chain
 		return
 	}
 
+	custState, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
+	if err != nil {
+		zkchLog.Error(err)
+		return
+	}
+
+	custState, err = libzkchannels.CustomerChangeChannelStatusToOpen(custState)
+	if err != nil {
+		zkchLog.Error(err)
+		return
+	}
+
+	err = zkchanneldb.AddCustState(zkCustDB, zkChannelName, custState)
+	if err != nil {
+		z.failEstablishFlow(p, err)
+		return
+	}
 	err = zkCustDB.Close()
 	if err != nil {
 		zkchLog.Error(err)
@@ -1292,6 +1355,8 @@ func (z *zkChannelManager) advanceCustomerStateAfterConfirmations(notifier chain
 		return
 	}
 
+	zkchLog.Debugf("confChannel: %#v\n", confChannel)
+	zkchLog.Infof("Transaction %v has 3 confirmations", txid)
 }
 
 // waitForFundingWithTimeout is a wrapper around waitForFundingConfirmation and
@@ -2615,9 +2680,9 @@ func (z *zkChannelManager) MerchClose(notifier chainntnfs.ChainNotifier, escrowT
 	// Start watching for on-chain notifications of merchClose
 	pkScript := msgTx.TxOut[0].PkScript
 
-	// Wait for on chain confirmations of escrow transaction
+	// Wait for on chain confirmations of merch close transaction
 	z.wg.Add(1)
-	go z.advanceMerchantStateAfterConfirmations(notifier, merchTxid2, pkScript)
+	go z.advanceMerchantStateAfterConfirmations(notifier, false, escrowTxid, merchTxid2, pkScript)
 
 	return nil
 }
