@@ -1356,7 +1356,7 @@ func (z *zkChannelManager) advanceCustomerStateAfterConfirmations(notifier chain
 	}
 
 	zkchLog.Debugf("confChannel: %#v\n", confChannel)
-	zkchLog.Infof("Transaction %v has 3 confirmations", txid)
+	zkchLog.Infof("Transaction %v has 3 confirmations", escrowTxid)
 }
 
 // waitForFundingWithTimeout is a wrapper around waitForFundingConfirmation and

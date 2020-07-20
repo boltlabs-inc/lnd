@@ -172,6 +172,43 @@ func initTestMerchState(DBPath string, skM string, payoutSkM string, disputeSkM 
 	return err
 }
 
+func setupMerchChannelState(escrowTxid string, DBPath string, newStatus string) error {
+	zkMerchDB, err := zkchanneldb.OpenMerchBucket(DBPath)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+
+	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+	// TEMPORARY CODE TO FLIP BYTES
+	// This works because hex strings are of even size
+	s := ""
+	for i := 0; i < len(escrowTxid)/2; i++ {
+		s = escrowTxid[i*2:i*2+2] + s
+	}
+	escrowTxidBigEn := s
+
+	(*merchState.ChannelStatusMap)[escrowTxidBigEn] = "CustomerInitClose"
+
+	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+
+	err = zkMerchDB.Close()
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+
+	return nil
+}
+
 // TestBreachSpends checks the behavior of the breach arbiter in response to
 // spend events on a channels outputs by asserting that it properly removes or
 // modifies the inputs from the justice txn.
@@ -245,9 +282,10 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// ///////////////////////////////////
-	// CHANGE CHANNEL STATUS TO OPEN
-	// ///////////////////////////////////
+	err = setupMerchChannelState(escrowTxid, brar.cfg.DBPath, "CustomerInitClose")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	breach := &ZkContractBreachEvent{
 		ChanPoint:    *chanPoint,
@@ -305,5 +343,4 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 	if test.sendFinalConf {
 		notifier.confChannel <- &chainntnfs.TxConfirmation{}
 	}
-
 }
