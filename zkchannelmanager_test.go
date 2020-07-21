@@ -769,7 +769,7 @@ func TestMerchClose(t *testing.T) {
 	}
 
 	// Give custState a moment to update
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 	// Check that MerchChannelState has updated.
 	status, err = getMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid)
 	if err != nil {
