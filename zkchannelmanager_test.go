@@ -563,16 +563,6 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 	}
 	_ = merchTxid_LE
 
-	// initiate merch-close-tx
-	signedMerchCloseTx, merchTxid2_BE, merchTxid2_LE, merchState, err := libzkchannels.ForceMerchantCloseTx(escrowTxid_LE, merchState, txFeeInfo.ValCpFp)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	_ = merchState
-	_ = signedMerchCloseTx
-	_ = merchTxid2_BE
-	_ = merchTxid2_LE
-
 	txInfo := libzkchannels.FundingTxInfo{
 		EscrowTxId:    escrowTxid_BE, // big-endian
 		EscrowPrevout: escrowPrevout, // big-endian
@@ -660,6 +650,9 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 		t.Fatalf("%v", err)
 	}
 
+	// ZKLND-11 Merchant support for multiple channels
+	// cannot use this method for storing escrowTxid as it will get
+	// overwritten by new channels
 	err = zkchanneldb.AddMerchField(zkMerchDB, escrowTxid_LE, escrowTxidKey)
 	if err != nil {
 		t.Fatalf("%v", err)
@@ -687,23 +680,41 @@ func TestCloseZkChannel(t *testing.T) {
 	cust, merch := setupZkChannelManagers(t)
 	defer tearDownZkChannelManagers(cust, merch)
 
-	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
-	cust.zkChannelMgr.CloseZkChannel(cust.mockNotifier, "myChannel", false)
+	zkChannelName := "myChannel"
+	setupLibzkChannels(t, zkChannelName, cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
+	cust.zkChannelMgr.CloseZkChannel(cust.mockNotifier, zkChannelName, false)
+
+	// Since CloseZkChannel has been called by the customer, we want to make
+	// sure that the channel has been marked as 'PendingClose', to prevent
+	// the customer making payments on this channel.
+	status, err := getCustChannelState(cust.zkChannelMgr.dbPath, zkChannelName)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	assert.Equal(t, "PendingClose", status)
 
 	// Get and return the cust-close tx cust published to the network.
 	var custCloseTx *wire.MsgTx
 	select {
 	case custCloseTx = <-cust.publTxChan:
+		t.Log("custCloseTx was broadcasted")
 	case <-time.After(time.Second * 5):
 		t.Fatalf("cust did not publish custClose tx")
 	}
-	_ = custCloseTx
 
-	// // TODO ZKLND-11 - make sure channel is removed after channel closure
-	// // has been confirmed on chain
-	// cust.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
-	// 	Tx: custCloseTx,
-	// }
+	cust.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
+		Tx: custCloseTx,
+	}
+
+	// Give custState a moment to update
+	time.Sleep(1 * time.Millisecond)
+	// Check that custStateChannelStatus has updated.
+	status, err = getCustChannelState(cust.zkChannelMgr.dbPath, zkChannelName)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	assert.Equal(t, "ConfirmedClose", status)
+
 }
 
 func TestMerchClose(t *testing.T) {
@@ -730,6 +741,19 @@ func TestMerchClose(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
+	// merchant's channelState must be in "Open" to run merchClose
+	err = updateMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid, "Open")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Check that MerchChannelState has updated.
+	status, err := getMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	assert.Equal(t, "Open", status)
+
 	merch.zkChannelMgr.MerchClose(merch.mockNotifier, escrowTxid)
 
 	// Get and return the merch-close tx merch published to the network.
@@ -739,13 +763,19 @@ func TestMerchClose(t *testing.T) {
 	case <-time.After(time.Second * 5):
 		t.Fatalf("merch did not publish merchClose tx")
 	}
-	_ = merchCloseTx
 
-	// // TODO ZKLND-11 - make sure channel is removed after channel closure
-	// // has been confirmed on chain
-	// merch.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
-	// 	Tx: merchCloseTx,
-	// }
+	merch.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
+		Tx: merchCloseTx,
+	}
+
+	// Give custState a moment to update
+	time.Sleep(1000 * time.Millisecond)
+	// Check that MerchChannelState has updated.
+	status, err = getMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	assert.Equal(t, "ConfirmedClose", status)
 }
 
 func addAmountToTotalReceieved(t *testing.T, dbPath string, amount int64) error {
