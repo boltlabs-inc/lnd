@@ -18,7 +18,6 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/contractcourt"
 	"github.com/lightningnetwork/lnd/htlcswitch"
@@ -184,8 +183,10 @@ func setupMerchChannelState(escrowTxid string, DBPath string, newStatus string) 
 		zkchLog.Error(err)
 		return err
 	}
-	// TEMPORARY CODE TO FLIP BYTES
-	// This works because hex strings are of even size
+
+	// Flip escrowTxid to Big Endian to match how it is stored in
+	// merchState.ChannelStatusMap
+	//This works because hex strings are of even size
 	s := ""
 	for i := 0; i < len(escrowTxid)/2; i++ {
 		s = escrowTxid[i*2:i*2+2] + s
@@ -305,8 +306,8 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 		t.Fatalf("breach arbiter didn't send ack back")
 	}
 
-	notifier := brar.cfg.Notifier.(*mockSpendNotifier)
-	notifier.confChannel <- &chainntnfs.TxConfirmation{}
+	// notifier := brar.cfg.Notifier.(*mockSpendNotifier)
+	// notifier.confChannel <- &chainntnfs.TxConfirmation{}
 
 	var tx *wire.MsgTx
 	select {
@@ -339,8 +340,8 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 		t.Fatalf("disputeTx fee of %v sat is less than minRelayTxFee of %v sat", disputeTxFee, minTxFee)
 	}
 
-	// Deliver confirmation of sweep if the test expects it.
-	if test.sendFinalConf {
-		notifier.confChannel <- &chainntnfs.TxConfirmation{}
-	}
+	// // Deliver confirmation of sweep if the test expects it.
+	// if test.sendFinalConf {
+	// 	notifier.confChannel <- &chainntnfs.TxConfirmation{}
+	// }
 }

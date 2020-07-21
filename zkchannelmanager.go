@@ -1403,7 +1403,7 @@ func (z *zkChannelManager) waitForFundingWithTimeout(notifier chainntnfs.ChainNo
 	// 	return nil, ErrFundingManagerShuttingDown
 
 	case confirmedChannel, ok := <-confChan:
-		zkchLog.Debug("waitForFundingConfirmation: confirmedChannel")
+		zkchLog.Info("waitForFundingConfirmation: confirmedChannel")
 
 		if !ok {
 			return nil, fmt.Errorf("waiting for funding" +
@@ -1440,7 +1440,7 @@ func (z *zkChannelManager) waitForFundingConfirmation(notifier chainntnfs.ChainN
 	// }
 
 	// Print escrowTxid and pkScript
-	zkchLog.Debugf("Waiting for confirmations for txid: %v with pkScript %x", escrowTxid, pkScript)
+	zkchLog.Infof("Waiting for confirmations for txid: %v with pkScript %x", escrowTxid, pkScript)
 
 	var txid chainhash.Hash
 	err := chainhash.Decode(&txid, escrowTxid)
@@ -2484,7 +2484,7 @@ func (z *zkChannelManager) CloseZkChannel(notifier chainntnfs.ChainNotifier, zkC
 	}
 
 	zkchLog.Debug("Signed closeEscrowTx =>:", closeEscrowTx)
-	zkchLog.Debug("closeEscrowTx =>:", closeEscrowTxid)
+	zkchLog.Infof("closeEscrowTx =>:", closeEscrowTxid)
 
 	// Broadcast escrow tx on chain
 	serializedTx, err := hex.DecodeString(closeEscrowTx)
@@ -2513,21 +2513,175 @@ func (z *zkChannelManager) CloseZkChannel(notifier chainntnfs.ChainNotifier, zkC
 		return err
 	}
 
-	// TODO ZKLND-11: Remove channel from channeldb after cust-close has reached 3 confirmations.
+	err = updateCustChannelState(z.dbPath, zkChannelName, "PendingClose")
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
-	// // Start watching for on-chain notifications of  custClose
-	// pkScript := msgTx.TxOut[0].PkScript
-
-	// // ZKCHANNEL TODO: REFACTOR TO WRAP waitForFundingWithTimeout IN GO ROUTINE
-	// // AND PASS REFERENCE TO A CHANNELDB
-	// confChannel, err := z.waitForFundingWithTimeout(notifier, closeEscrowTxid, pkScript)
-	// if err != nil {
-	// 	zkchLog.Infof("error waiting for funding "+
-	// 		"confirmation: %v", err)
-	// 	return err
-	// }
+	// Start watching for on-chain notifications of custClose
+	pkScript := msgTx.TxOut[0].PkScript
+	go z.waitForCustCloseConfirmations(notifier, closeEscrowTxid, pkScript, zkChannelName)
 
 	return nil
+}
+
+func (z *zkChannelManager) waitForCustCloseConfirmations(notifier chainntnfs.ChainNotifier, custCloseTx string, pkScript []byte, zkChannelName string) {
+
+	zkchLog.Infof("waiting for custCloseTx confirmations")
+	// Wait for confirmations
+	confChannel, err := z.waitForFundingWithTimeout(notifier, custCloseTx, pkScript)
+	if err != nil {
+		zkchLog.Infof("error waiting for custCloseTx "+
+			"confirmation: %v", err)
+	}
+
+	err = updateCustChannelState(z.dbPath, zkChannelName, "ConfirmedClose")
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	zkchLog.Debugf("confChannel: %#v\n", confChannel)
+	zkchLog.Infof("CustCloseTx %v has 3 confirmations", custCloseTx)
+}
+
+func updateCustChannelState(DBPath string, zkChannelName string, newStatus string) error {
+
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, DBPath)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+	defer zkCustDB.Close()
+
+	custState, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+
+	switch newStatus {
+	case "Open":
+		custState, err = libzkchannels.CustomerChangeChannelStatusToOpen(custState)
+		if err != nil {
+			zkchLog.Error(err)
+			return err
+		}
+	case "PendingClose":
+		custState, err = libzkchannels.CustomerChangeChannelStatusToPendingClose(custState)
+		if err != nil {
+			zkchLog.Error(err)
+			return err
+		}
+	case "ConfirmedClose":
+		custState, err = libzkchannels.CustomerChangeChannelStatusToConfirmedClose(custState)
+		if err != nil {
+			zkchLog.Error(err)
+			return err
+		}
+	default:
+		return fmt.Errorf("unrecognised status: %v", newStatus)
+	}
+
+	err = zkchanneldb.AddCustState(zkCustDB, zkChannelName, custState)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+	return nil
+}
+
+func getCustChannelState(DBPath string, zkChannelName string) (status string, err error) {
+
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, DBPath)
+	if err != nil {
+		zkchLog.Error(err)
+		return "", err
+	}
+	defer zkCustDB.Close()
+
+	custState, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
+	if err != nil {
+		zkchLog.Error(err)
+		return "", err
+	}
+
+	return custState.ChannelStatus, nil
+}
+
+func updateMerchChannelState(DBPath string, escrowTxid string, newStatus string) error {
+
+	zkMerchDB, err := zkchanneldb.OpenMerchBucket(DBPath)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+	defer zkMerchDB.Close()
+
+	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+
+	switch newStatus {
+	case "Open":
+		merchState, err = libzkchannels.MerchantChangeChannelStatusToOpen(escrowTxid, merchState)
+		if err != nil {
+			zkchLog.Errorf("MerchantChangeChannelStatusToOpen: %v", err)
+			return err
+		}
+	case "PendingClose":
+		merchState, err = libzkchannels.MerchantChangeChannelStatusToPendingClose(escrowTxid, merchState)
+		if err != nil {
+			zkchLog.Errorf("MerchantChangeChannelStatusToPendingClose: %v", err)
+			return err
+		}
+	case "ConfirmedClose":
+		merchState, err = libzkchannels.MerchantChangeChannelStatusToConfirmedClose(escrowTxid, merchState)
+		if err != nil {
+			zkchLog.Errorf("MerchantChangeChannelStatusToConfirmedClose: %v", err)
+			return err
+		}
+	default:
+		return fmt.Errorf("unrecognised status: %v", newStatus)
+	}
+
+	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+	return nil
+}
+
+func getMerchChannelState(DBPath string, escrowTxid string) (status string, err error) {
+
+	zkMerchDB, err := zkchanneldb.OpenMerchBucket(DBPath)
+	if err != nil {
+		zkchLog.Error(err)
+		return "", err
+	}
+	defer zkMerchDB.Close()
+
+	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
+	if err != nil {
+		zkchLog.Error(err)
+		return "", err
+	}
+
+	// Flip bytes from Little Endiand to Big Endian
+	// This works because hex strings are of even size
+	s := ""
+	for i := 0; i < len(escrowTxid)/2; i++ {
+		s = escrowTxid[i*2:i*2+2] + s
+	}
+	escrowTxidBigEn := s
+
+	status, ok := (*merchState.ChannelStatusMap)[escrowTxidBigEn].(string)
+	if ok != true {
+		return "", fmt.Errorf("error in getMerchChannelState")
+	}
+	return status, nil
 }
 
 // GetSignedCustCloseTxs gets the custCloseTx and also sets closeInitiated to true
@@ -2607,18 +2761,24 @@ func (z *zkChannelManager) MerchClose(notifier chainntnfs.ChainNotifier, escrowT
 		return err
 	}
 
-	err = zkMerchDB.Close()
-	if err != nil {
-		zkchLog.Error(err)
-		return err
-	}
-
 	zkchLog.Infof("escrowTxid to close =>:", escrowTxid)
 
 	zkchLog.Debugf("\nmerchState =>:%+v", merchState)
 	zkchLog.Infof("\nCloseTxMap =>:%+v", merchState.CloseTxMap)
 
 	signedMerchCloseTx, _, merchTxid2, merchState, err := libzkchannels.ForceMerchantCloseTx(escrowTxid, merchState, channelState.ValCpfp)
+	if err != nil {
+		zkchLog.Errorf("ForceMerchantCloseTx:", err)
+		return err
+	}
+
+	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+
+	err = zkMerchDB.Close()
 	if err != nil {
 		zkchLog.Error(err)
 		return err
@@ -2674,6 +2834,14 @@ func (z *zkChannelManager) MerchClose(notifier chainntnfs.ChainNotifier, escrowT
 	err = z.PublishTransaction(&msgTx, "")
 	if err != nil {
 		zkchLog.Infof("Couldn't publish transaction: %v", err)
+		return err
+	}
+
+	// March the channel as pending close. This will prevent customer's from
+	// making payments on this channel (for their own safety).
+	err = updateMerchChannelState(z.dbPath, escrowTxid, "PendingClose")
+	if err != nil {
+		zkchLog.Infof("Couldn't updateMerchChannelState: %v", err)
 		return err
 	}
 

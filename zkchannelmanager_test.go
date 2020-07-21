@@ -680,23 +680,41 @@ func TestCloseZkChannel(t *testing.T) {
 	cust, merch := setupZkChannelManagers(t)
 	defer tearDownZkChannelManagers(cust, merch)
 
-	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
-	cust.zkChannelMgr.CloseZkChannel(cust.mockNotifier, "myChannel", false)
+	zkChannelName := "myChannel"
+	setupLibzkChannels(t, zkChannelName, cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
+	cust.zkChannelMgr.CloseZkChannel(cust.mockNotifier, zkChannelName, false)
+
+	// Since CloseZkChannel has been called by the customer, we want to make
+	// sure that the channel has been marked as 'PendingClose', to prevent
+	// the customer making payments on this channel.
+	status, err := getCustChannelState(cust.zkChannelMgr.dbPath, zkChannelName)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	assert.Equal(t, "PendingClose", status)
 
 	// Get and return the cust-close tx cust published to the network.
 	var custCloseTx *wire.MsgTx
 	select {
 	case custCloseTx = <-cust.publTxChan:
+		t.Log("custCloseTx was broadcasted")
 	case <-time.After(time.Second * 5):
 		t.Fatalf("cust did not publish custClose tx")
 	}
-	_ = custCloseTx
 
-	// // TODO ZKLND-11 - make sure channel is removed after channel closure
-	// // has been confirmed on chain
-	// cust.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
-	// 	Tx: custCloseTx,
-	// }
+	cust.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
+		Tx: custCloseTx,
+	}
+
+	// Give custState a moment to update
+	time.Sleep(1 * time.Millisecond)
+	// Check that custStateChannelStatus has updated.
+	status, err = getCustChannelState(cust.zkChannelMgr.dbPath, zkChannelName)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	assert.Equal(t, "ConfirmedClose", status)
+
 }
 
 func TestMerchClose(t *testing.T) {
@@ -712,23 +730,8 @@ func TestMerchClose(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	// TODO ZKLND-4 - Merchant support for multiple channels
-	// Cannot
 	var escrowTxid string
 	err = zkchanneldb.GetMerchField(zkMerchDB, escrowTxidKey, &escrowTxid)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	// Change channel status to open, as if the funding tx was confirmed
-	merchState, err = libzkchannels.MerchantChangeChannelStatusToOpen(escrowTxid, merchState)
-
-	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -737,6 +740,19 @@ func TestMerchClose(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
+
+	// merchant's channelState must be in "Open" to run merchClose
+	err = updateMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid, "Open")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Check that MerchChannelState has updated.
+	status, err := getMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	assert.Equal(t, "Open", status)
 
 	merch.zkChannelMgr.MerchClose(merch.mockNotifier, escrowTxid)
 
@@ -747,13 +763,19 @@ func TestMerchClose(t *testing.T) {
 	case <-time.After(time.Second * 5):
 		t.Fatalf("merch did not publish merchClose tx")
 	}
-	_ = merchCloseTx
 
-	// // TODO ZKLND-11 - make sure channel is removed after channel closure
-	// // has been confirmed on chain
-	// merch.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
-	// 	Tx: merchCloseTx,
-	// }
+	merch.mockNotifier.oneConfChannel <- &chainntnfs.TxConfirmation{
+		Tx: merchCloseTx,
+	}
+
+	// Give custState a moment to update
+	time.Sleep(1000 * time.Millisecond)
+	// Check that MerchChannelState has updated.
+	status, err = getMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	assert.Equal(t, "ConfirmedClose", status)
 }
 
 func addAmountToTotalReceieved(t *testing.T, dbPath string, amount int64) error {
