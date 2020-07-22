@@ -19,6 +19,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnpeer"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/zkchanneldb"
+	"github.com/lightningnetwork/lnd/zkchannels"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -687,7 +688,7 @@ func TestCloseZkChannel(t *testing.T) {
 	// Since CloseZkChannel has been called by the customer, we want to make
 	// sure that the channel has been marked as 'PendingClose', to prevent
 	// the customer making payments on this channel.
-	status, err := getCustChannelState(cust.zkChannelMgr.dbPath, zkChannelName)
+	status, err := zkchannels.GetCustChannelState(cust.zkChannelMgr.dbPath, zkChannelName)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -709,7 +710,7 @@ func TestCloseZkChannel(t *testing.T) {
 	// Give custState a moment to update
 	time.Sleep(1 * time.Millisecond)
 	// Check that custStateChannelStatus has updated.
-	status, err = getCustChannelState(cust.zkChannelMgr.dbPath, zkChannelName)
+	status, err = zkchannels.GetCustChannelState(cust.zkChannelMgr.dbPath, zkChannelName)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -742,13 +743,13 @@ func TestMerchClose(t *testing.T) {
 	}
 
 	// merchant's channelState must be in "Open" to run merchClose
-	err = updateMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid, "Open")
+	err = zkchannels.UpdateMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid, "Open")
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// Check that MerchChannelState has updated.
-	status, err := getMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid)
+	status, err := zkchannels.GetMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -771,7 +772,7 @@ func TestMerchClose(t *testing.T) {
 	// Give custState a moment to update
 	time.Sleep(1 * time.Millisecond)
 	// Check that MerchChannelState has updated.
-	status, err = getMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid)
+	status, err = zkchannels.GetMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid)
 	if err != nil {
 		t.Errorf("%v", err)
 	}

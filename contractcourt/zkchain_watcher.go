@@ -12,6 +12,7 @@ import (
 	"github.com/lightningnetwork/lnd/libzkchannels"
 	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/zkchanneldb"
+	"github.com/lightningnetwork/lnd/zkchannels"
 )
 
 // ZkMerchCloseInfo provides the information needed for the customer to retrieve
@@ -119,10 +120,8 @@ type ZkChainWatcherConfig struct {
 	// For the merchant, this field will be left blank
 	CustChannelName string
 
-	// // chanState is a snapshot of the persistent state of the channel that
-	// // we're watching. In the event of an on-chain event, we'll query the
-	// // database to ensure that we act using the most up to date state.
-	// chanState *channeldb.OpenChannel
+	// DBPath is the path to the customer or merchant's DB.
+	DBPath string
 
 	// notifier is a reference to the channel notifier that we'll use to be
 	// notified of output spends and when transactions are confirmed.
@@ -388,6 +387,11 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 		case isMerchCloseTx && !isMerch:
 			log.Debug("Merch-close-tx detected")
 
+			// Mark the channel as pending close to prevent further payments on it
+			err := zkchannels.UpdateCustChannelState(c.cfg.DBPath, c.cfg.CustChannelName, "PendingClose")
+			if err != nil {
+				log.Error(err)
+			}
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
 
 			zkBreachInfo := ZkBreachInfo{
@@ -402,7 +406,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 				Amount: amount,
 			}
 
-			err := c.zkDispatchBreach(zkBreachInfo)
+			err = c.zkDispatchBreach(zkBreachInfo)
 
 			if err != nil {
 				log.Errorf("unable to handle remote "+
@@ -436,8 +440,6 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 				log.Debug("zkDispatchCustClose")
 				err = c.zkDispatchCustClose(inputTxid, closeTxid, ClosePkScript, revLock, custClosePk, amount)
-				// custClose is not the latest state. The customer has attempted to
-				// close on a previous state, possibly a double spend.
 
 				if err != nil {
 					log.Errorf("unable to handle remote "+
@@ -450,6 +452,11 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			// checking if we have seen the revocation lock before.
 			if isMerch {
 
+				// Mark the channel as pending close to prevent further payments on it
+				err := zkchannels.UpdateMerchChannelState(c.cfg.DBPath, inputTxid.String(), "PendingClose")
+				if err != nil {
+					log.Error(err)
+				}
 				// open the zkchanneldb to load merchState and channelState
 				zkMerchDB, err := zkchanneldb.OpenMerchBucket("zkmerch.db")
 				if err != nil {
@@ -497,8 +504,6 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 				} else {
 					log.Debug("Latest Cust-close-tx detected")
 
-					// custClose is not the latest state. The customer has attempted to
-					// close on a previous state, possibly a double spend.
 					err := c.zkDispatchCustClose(inputTxid, closeTxid, ClosePkScript, revLock, custClosePk, amount)
 
 					if err != nil {

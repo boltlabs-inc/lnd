@@ -6,7 +6,7 @@ require (
 	github.com/NebulousLabs/go-upnp v0.0.0-20180202185039-29b680b06c82
 	github.com/Yawning/aez v0.0.0-20180114000226-4dad034d9db2
 	github.com/boltdb/bolt v1.3.1
-	github.com/boltlabs-inc/libzkchannels v0.0.0-20200705180713-bc43e4f6de3f // indirect
+	github.com/boltlabs-inc/libzkchannels v0.0.0-20200722180833-e086d1a0e3e4 // indirect
 	github.com/btcsuite/btcd v0.20.1-beta.0.20200515232429-9f0179fd2c46
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
 	github.com/btcsuite/btcutil v1.0.2
