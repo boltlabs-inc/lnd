@@ -2526,6 +2526,49 @@ func (z *zkChannelManager) CloseZkChannel(notifier chainntnfs.ChainNotifier, zkC
 	pkScript := msgTx.TxOut[0].PkScript
 	go z.waitForCustCloseConfirmations(notifier, closeEscrowTxid, pkScript, zkChannelName)
 
+func updateCustChannelState(DBPath string, zkChannelName string, newStatus string) error {
+
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, DBPath)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+	defer zkCustDB.Close()
+
+	custState, err := zkchanneldb.GetCustState(zkCustDB, zkChannelName)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+
+	switch newStatus {
+	case "Open":
+		custState, err = libzkchannels.CustomerChangeChannelStatusToOpen(custState)
+		if err != nil {
+			zkchLog.Error(err)
+			return err
+		}
+	case "PendingClose":
+		custState, err = libzkchannels.CustomerChangeChannelStatusToPendingClose(custState)
+		if err != nil {
+			zkchLog.Error(err)
+			return err
+		}
+	case "ConfirmedClose":
+		custState, err = libzkchannels.CustomerChangeChannelStatusToConfirmedClose(custState)
+		if err != nil {
+			zkchLog.Error(err)
+			return err
+		}
+	default:
+		return fmt.Errorf("unrecognised status: %v", newStatus)
+	}
+
+	err = zkchanneldb.AddCustState(zkCustDB, zkChannelName, custState)
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
 	return nil
 }
 
