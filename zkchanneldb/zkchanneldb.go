@@ -21,6 +21,7 @@ func SetupMerchDB(path string) (*bolt.DB, error) {
 	return SetupWithBucketNameDB(path, MerchBucket)
 }
 
+// SetupWithBucketNameDB creates the zkchanneldb with a bucket name
 func SetupWithBucketNameDB(path string, bucketName string) (*bolt.DB, error) {
 	db, err := bolt.Open(path, 0600, nil)
 	if err != nil {
