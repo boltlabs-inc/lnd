@@ -18,6 +18,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/contractcourt"
 	"github.com/lightningnetwork/lnd/htlcswitch"
@@ -123,12 +124,6 @@ func initZkBreachedState(t *testing.T) (*zkBreachArbiter,
 		cleanUpArb
 }
 
-var zkBreachTests = []breachTest{
-	{
-		name: "revokedCustClose",
-	},
-}
-
 func initTestMerchState(DBPath string, skM string, payoutSkM string, disputeSkM string) error {
 	dbURL := "redis://127.0.0.1/"
 	selfDelay := int16(1487)
@@ -210,6 +205,12 @@ func setupMerchChannelState(escrowTxid string, DBPath string, newStatus string) 
 	return nil
 }
 
+var zkBreachTests = []breachTest{
+	{
+		name: "revokedCustClose",
+	},
+}
+
 // TestBreachSpends checks the behavior of the breach arbiter in response to
 // spend events on a channels outputs by asserting that it properly removes or
 // modifies the inputs from the justice txn.
@@ -269,6 +270,7 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 
 	// Load hard coded example
 	ZkCustBreachInfo := contractcourt.ZkBreachInfo{
+		IsMerchClose:  false,
 		EscrowTxid:    escrowTxidHash,
 		CloseTxid:     custCloseTxidHash,
 		ClosePkScript: ClosePkScript,
@@ -306,8 +308,8 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 		t.Fatalf("breach arbiter didn't send ack back")
 	}
 
-	// notifier := brar.cfg.Notifier.(*mockSpendNotifier)
-	// notifier.confChannel <- &chainntnfs.TxConfirmation{}
+	notifier := brar.cfg.Notifier.(*mockSpendNotifier)
+	notifier.confChannel <- &chainntnfs.TxConfirmation{}
 
 	var tx *wire.MsgTx
 	select {
