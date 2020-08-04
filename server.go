@@ -334,7 +334,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr, chanDB *channeldb.DB,
 	nodeKeyDesc *keychain.KeyDescriptor,
 	chansToRestore walletunlocker.ChannelsToRecover,
 	chanPredicate chanacceptor.ChannelAcceptor,
-	torController *tor.Controller, zkMode bool, isZkMerchant bool) (*server, error) {
+	torController *tor.Controller, isZkMerchant bool) (*server, error) {
 
 	var (
 		err           error
@@ -989,7 +989,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr, chanDB *channeldb.DB,
 		Clock:                         clock.NewDefaultClock(),
 	}, chanDB)
 
-	if zkMode {
+	if cfg.zkMode {
 		zkChainWatcherFunc := func(z contractcourt.ZkChainWatcherConfig) error {
 			return s.chainArb.WatchNewZkChannel(z)
 		}
@@ -1315,7 +1315,7 @@ func (s *server) Started() bool {
 // Start starts the main daemon server, all requested listeners, and any helper
 // goroutines.
 // NOTE: This function is safe for concurrent access.
-func (s *server) Start(zkMode bool) error {
+func (s *server) Start() error {
 	var startErr error
 	s.start.Do(func() {
 		if s.torController != nil {
@@ -1389,7 +1389,7 @@ func (s *server) Start(zkMode bool) error {
 			startErr = err
 			return
 		}
-		if zkMode {
+		if s.cfg.zkMode {
 			if err := s.zkBreachArbiter.Start(); err != nil {
 				startErr = err
 				return
@@ -1512,7 +1512,7 @@ func (s *server) Start(zkMode bool) error {
 // any active goroutines, or helper objects to exit, then blocks until they've
 // all successfully exited. Additionally, any/all listeners are closed.
 // NOTE: This function is safe for concurrent access.
-func (s *server) Stop(zkMode bool) error {
+func (s *server) Stop() error {
 	s.stop.Do(func() {
 		atomic.StoreInt32(&s.stopping, 1)
 
@@ -1525,7 +1525,7 @@ func (s *server) Stop(zkMode bool) error {
 		s.htlcSwitch.Stop()
 		s.sphinx.Stop()
 		s.utxoNursery.Stop()
-		if zkMode {
+		if s.cfg.zkMode {
 			s.zkBreachArbiter.Stop()
 		} else {
 			s.breachArbiter.Stop()

@@ -615,7 +615,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 	server, err := newServer(cfg,
 		cfg.Listeners, chanDB, towerClientDB, activeChainControl,
 		&idKeyDesc, walletInitParams.ChansToRestore, chainedAcceptor,
-		torController, cfg.zkMode, cfg.ZkMerchant,
+		torController, cfg.ZkMerchant,
 	)
 	if err != nil {
 		err := fmt.Errorf("unable to create server: %v", err)
@@ -731,12 +731,12 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 
 	// With all the relevant chains initialized, we can finally start the
 	// server itself.
-	if err := server.Start(cfg.zkMode); err != nil {
+	if err := server.Start(); err != nil {
 		err := fmt.Errorf("unable to start server: %v", err)
 		ltndLog.Error(err)
 		return err
 	}
-	defer server.Stop(cfg.zkMode)
+	defer server.Stop()
 
 	// Now that the server has started, if the autopilot mode is currently
 	// active, then we'll start the autopilot agent immediately. It will be
