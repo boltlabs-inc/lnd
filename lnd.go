@@ -615,8 +615,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 	server, err := newServer(cfg,
 		cfg.Listeners, chanDB, towerClientDB, activeChainControl,
 		&idKeyDesc, walletInitParams.ChansToRestore, chainedAcceptor,
-		torController, cfg.ZkMerchant,
-	)
+		torController)
 	if err != nil {
 		err := fmt.Errorf("unable to create server: %v", err)
 		ltndLog.Error(err)
