@@ -11,6 +11,7 @@ import (
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/libzkchannels"
 	"github.com/lightningnetwork/lnd/lnwallet"
+	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 	"github.com/lightningnetwork/lnd/zkchanneldb"
 	"github.com/lightningnetwork/lnd/zkchannels"
 )
@@ -664,6 +665,13 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 	}
 
 	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
+
+	estimator := chainfee.NewStaticEstimator(12500, 0)
+	feePerKw, err := estimator.EstimateFeePerKW(1)
+	if err != nil {
+		return err
+	}
+	log.Info("feePerKw:", feePerKw)
 
 	// TODO: ZKLND-33 Generate a fresh outputPk for the claimed outputs. For now this is just
 	// reusing the custClosePk
