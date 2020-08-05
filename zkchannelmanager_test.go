@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"regexp"
 	"testing"
 	"time"
 
@@ -501,7 +502,7 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 	feeMC := txFeeInfo.FeeMC
 
 	custBal := int64(1000000)
-	merchBal := int64(1000000)
+	merchBal := int64(5000)
 
 	merchPKM := fmt.Sprintf("%v", *merchState.PkM)
 
@@ -806,7 +807,49 @@ func addAmountToTotalReceieved(t *testing.T, dbPath string, amount int64) error 
 	return err
 }
 
-func addDummyChannelToken(t *testing.T, dbPath string) error {
+func TestZkInfo(t *testing.T) {
+
+	cust, merch := setupZkChannelManagers(t)
+	defer tearDownZkChannelManagers(cust, merch)
+
+	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
+
+	// Test that ZkInfo returns pubkey (hex) of len 66
+	merchPk, err := merch.zkChannelMgr.ZkInfo()
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+
+	re := regexp.MustCompile(`^[0-9a-fA-F]+$`)
+	slice := (re.FindAllString(merchPk, -1))
+	assert.Equal(t, 66, len(slice[0]), "ZkInfo returned an invalid pubkey (not 33 byte hex string)")
+}
+
+func TestTotalReceived(t *testing.T) {
+
+	cust, merch := setupZkChannelManagers(t)
+	defer tearDownZkChannelManagers(cust, merch)
+
+	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
+
+	// Test that TotalReceived updates correctly
+	paymentAmount := int64(1000)
+	amount0, err := merch.zkChannelMgr.TotalReceived()
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+
+	addAmountToTotalReceieved(t, merch.zkChannelMgr.dbPath, paymentAmount)
+
+	amount1, err := merch.zkChannelMgr.TotalReceived()
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+
+	assert.Equal(t, paymentAmount, amount1-amount0, "TotalReceived failed to update amount correctly")
+}
+
+func addDummyChannelToken(t *testing.T, dbPath string) (libzkchannels.ChannelToken, error) {
 	zkchannels := make(map[string]libzkchannels.ChannelToken)
 
 	channelToken := libzkchannels.ChannelToken{
@@ -835,39 +878,15 @@ func addDummyChannelToken(t *testing.T, dbPath string) error {
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
-	return nil
+	return channelToken, nil
 }
 
-func TestCliCommands(t *testing.T) {
+func TestListZkChannels(t *testing.T) {
 
 	cust, merch := setupZkChannelManagers(t)
 	defer tearDownZkChannelManagers(cust, merch)
 
 	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
-
-	// Test that ZkInfo returns pubkey (hex) of len 66
-	merchPk, err := merch.zkChannelMgr.ZkInfo()
-	if err != nil {
-		t.Errorf("%v", err)
-	}
-
-	assert.Equal(t, 66, len(merchPk), "ZkInfo returned a pubkey (hex) with bad length")
-
-	// Test that TotalReceived updates correctly
-	paymentAmount := int64(1000)
-	amount0, err := merch.zkChannelMgr.TotalReceived()
-	if err != nil {
-		t.Errorf("%v", err)
-	}
-
-	addAmountToTotalReceieved(t, merch.zkChannelMgr.dbPath, paymentAmount)
-
-	amount1, err := merch.zkChannelMgr.TotalReceived()
-	if err != nil {
-		t.Errorf("%v", err)
-	}
-
-	assert.Equal(t, paymentAmount, amount1-amount0, "TotalReceived failed to update amount correctly")
 
 	// Test ListZkChannels
 	ListOfZkChannels, err := merch.zkChannelMgr.ListZkChannels()
@@ -877,15 +896,22 @@ func TestCliCommands(t *testing.T) {
 	numChannels0 := len(ListOfZkChannels.ChannelID)
 	assert.Equal(t, 0, numChannels0, "Non-empty list of zkchannels when Merchant is initialized")
 
-	addDummyChannelToken(t, merch.zkChannelMgr.dbPath)
+	addedChannelToken, err := addDummyChannelToken(t, merch.zkChannelMgr.dbPath)
 
 	ListOfZkChannels, err = merch.zkChannelMgr.ListZkChannels()
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	numChannels1 := len(ListOfZkChannels.ChannelID)
 
-	assert.Equal(t, 1, numChannels1, "ListZkChannels did not return the added channel")
+	assert.Equal(t, addedChannelToken, ListOfZkChannels.ChannelToken[0], "ListZkChannels did not return the added channel")
+}
+
+func TestZkChannelBalance(t *testing.T) {
+
+	cust, merch := setupZkChannelManagers(t)
+	defer tearDownZkChannelManagers(cust, merch)
+
+	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
 
 	// Test ZkChannelBalance
 	escrowTxid, localBalance, remoteBalance, err := cust.zkChannelMgr.ZkChannelBalance("myChannel")
@@ -893,6 +919,12 @@ func TestCliCommands(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 	t.Log("escrowTxid", escrowTxid)
-	t.Log("localBalance", localBalance)
-	t.Log("remoteBalance", remoteBalance)
+
+	// Check that escrowTxid is a 32 byte hex string
+	re := regexp.MustCompile(`^[0-9a-fA-F]+$`)
+	slice := (re.FindAllString(escrowTxid, -1))
+	assert.Equal(t, 64, len(slice[0]), "ZkInfo returned an invalid pubkey (not 33 byte hex string)")
+
+	assert.Equal(t, int64(1000000), localBalance, "ZkChannelBalance returned incorrect local balance")
+	assert.Equal(t, int64(5000), remoteBalance, "ZkChannelBalance returned incorrect remote balance")
 }
