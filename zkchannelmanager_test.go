@@ -10,14 +10,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/contractcourt"
 	"github.com/lightningnetwork/lnd/libzkchannels"
 	"github.com/lightningnetwork/lnd/lncfg"
 	"github.com/lightningnetwork/lnd/lnpeer"
+	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/zkchanneldb"
 	"github.com/lightningnetwork/lnd/zkchannels"
@@ -104,7 +107,9 @@ func createTestZkChannelManager(t *testing.T, isMerchant bool) (*zkTestNode, err
 		sixConfChannel: make(chan *chainntnfs.TxConfirmation, 1),
 		epochChan:      make(chan *chainntnfs.BlockEpoch, 2),
 	}
-	manager := newZkChannelManager(isMerchant, zkChainWatcher, testDir, publishTransaction, disconnectPeer, lncfg.SelfDelay, lncfg.MinFee, lncfg.MaxFee, lncfg.ValCpfp, lncfg.BalMinCust, lncfg.BalMinMerch)
+	feeEstimator := zkchannels.NewMockFeeEstimator(10000, chainfee.FeePerKwFloor)
+
+	manager := newZkChannelManager(isMerchant, zkChainWatcher, testDir, publishTransaction, disconnectPeer, lncfg.SelfDelay, lncfg.MinFee, lncfg.MaxFee, lncfg.ValCpfp, lncfg.BalMinCust, lncfg.BalMinMerch, feeEstimator)
 	return &zkTestNode{
 		zkChannelMgr:   manager,
 		msgChan:        sentMessages,
@@ -201,8 +206,8 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 
 	custBal := int64(1000000)
 	merchBal := int64(1000000)
-	feeCC := int64(1000)
-	feeMC := int64(1000)
+	feeCC := int64(0)
+	feeMC := int64(0)
 
 	go cust.zkChannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePk, merchPk, zkChannelName, custBal, merchBal, feeCC, feeMC, merch)
 
@@ -350,6 +355,15 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 	var fundingTx *wire.MsgTx
 	select {
 	case fundingTx = <-cust.publTxChan:
+		// Compare weight of publishedTx vs value used for calculating txFee
+		expected := int64(escrowTxKW * 1000) // (upper bound)
+		actual := blockchain.GetTransactionWeight(btcutil.NewTx(fundingTx))
+		// allow for 1 byte variation in scriptSig signature length
+		if d := expected - actual; d > 1 || d < 0 {
+			t.Errorf("escrow Tx did not have the expected weight. Expected: %v, got: %v", expected, actual)
+
+		}
+
 	case <-time.After(time.Second * 5):
 		t.Fatalf("cust did not publish funding tx")
 	}
@@ -700,6 +714,14 @@ func TestCloseZkChannel(t *testing.T) {
 	select {
 	case custCloseTx = <-cust.publTxChan:
 		t.Log("custCloseTx was broadcasted")
+		// Compare weight of publishedTx vs value used for calculating txFee
+		expected := int64(custCloseTxKW * 1000) // (upper bound)
+		actual := blockchain.GetTransactionWeight(btcutil.NewTx(custCloseTx))
+		// allow for 2 byte variation in scriptSig signature length (2
+		// signatures for multisig).
+		if d := expected - actual; d > 2 || d < 0 {
+			t.Errorf("custCloseTx did not have the expected weight. Expected: %v, got: %v", expected, actual)
+		}
 	case <-time.After(time.Second * 5):
 		t.Fatalf("cust did not publish custClose tx")
 	}
@@ -762,6 +784,14 @@ func TestMerchClose(t *testing.T) {
 	var merchCloseTx *wire.MsgTx
 	select {
 	case merchCloseTx = <-merch.publTxChan:
+		// Compare weight of publishedTx vs value used for calculating txFee
+		expected := int64(merchCloseTxKW * 1000) // (upper bound)
+		actual := blockchain.GetTransactionWeight(btcutil.NewTx(merchCloseTx))
+		// allow for 2 byte variation in scriptSig signature length (2
+		// signatures for multisig).
+		if d := expected - actual; d > 2 || d < 0 {
+			t.Errorf("merchCloseTx did not have the expected weight. Expected: %v, got: %v", expected, actual)
+		}
 	case <-time.After(time.Second * 5):
 		t.Fatalf("merch did not publish merchClose tx")
 	}

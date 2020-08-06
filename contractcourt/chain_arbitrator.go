@@ -991,6 +991,7 @@ func (c *ChainArbitrator) WatchNewZkChannel(zkCfg ZkChainWatcherConfig) error {
 		IsMerch:         zkCfg.IsMerch,
 		CustChannelName: zkCfg.CustChannelName,
 		DBPath:          zkCfg.DBPath,
+		Estimator:       zkCfg.Estimator,
 		Notifier:        zkCfg.Notifier,
 		zkContractBreach: func(zkInfo *ZkBreachInfo) error {
 			return c.cfg.CustContractBreach(zkInfo)

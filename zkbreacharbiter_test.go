@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"io/ioutil"
 	"log"
-	"math"
 	"os"
 	"path"
 	"sync"
@@ -311,39 +310,30 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 	notifier := brar.cfg.Notifier.(*mockSpendNotifier)
 	notifier.confChannel <- &chainntnfs.TxConfirmation{}
 
-	var tx *wire.MsgTx
+	var disputeTx *wire.MsgTx
 	select {
-	case tx = <-publTx:
+	case disputeTx = <-publTx:
 	case <-time.After(5 * time.Second):
-		t.Fatalf("tx was not published")
+		t.Fatalf("disputeTx was not published")
 	}
 
 	// All outputs should initially spend from the force closed txn.
 	forceTxID := custCloseTxid
-	for _, txIn := range tx.TxIn {
+	for _, txIn := range disputeTx.TxIn {
 		if txIn.PreviousOutPoint.Hash.String() != forceTxID {
 			t.Fatalf("dispute tx not spending commitment %v", forceTxID)
 		}
 	}
 
-	if len(tx.TxOut) != 1 {
-		t.Fatalf("dispute tx should only have 1 output, but it has %v", len(tx.TxOut))
+	if len(disputeTx.TxOut) != 1 {
+		t.Fatalf("dispute tx should only have 1 output, but it has %v", len(disputeTx.TxOut))
+	}
+	// Compare weight of publishedTx vs value used for calculating txFee
+	expected := int64(disputeTxKW * 1000) // (upper bound)
+	actual := blockchain.GetTransactionWeight(btcutil.NewTx(disputeTx))
+	// allow for 1 byte variation in scriptSig signature length.
+	if d := expected - actual; d > 1 || d < 0 {
+		t.Errorf("disputeTx did not have the expected weight. Expected: %v, got: %v", expected, actual)
 	}
 
-	// TODO ZKC-15: Add the check below when txFee has been added to MerchantSignDisputeTx
-	// Calculate appropriate minimum tx fee and check it is large enough
-	expectedWeight := blockchain.GetTransactionWeight(btcutil.NewTx(tx))
-
-	// a minRelayTxFee of 1 satoshi per vbyte is equal to 0.253 satoshi per weight unit
-	minTxFee := int64(math.Ceil(float64(expectedWeight) * 0.253))
-
-	disputeTxFee := ZkCustBreachInfo.Amount - tx.TxOut[0].Value
-	if disputeTxFee < minTxFee {
-		t.Fatalf("disputeTx fee of %v sat is less than minRelayTxFee of %v sat", disputeTxFee, minTxFee)
-	}
-
-	// // Deliver confirmation of sweep if the test expects it.
-	// if test.sendFinalConf {
-	// 	notifier.confChannel <- &chainntnfs.TxConfirmation{}
-	// }
 }

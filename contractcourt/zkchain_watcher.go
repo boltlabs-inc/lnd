@@ -16,6 +16,12 @@ import (
 	"github.com/lightningnetwork/lnd/zkchannels"
 )
 
+var (
+	// ZKLND-XX: calculate Tx weight units dynamically
+	merchClaimTxKW = 0.520 // 520 weight units
+	custClaimTxKW  = 0.518 // 518 weight units
+)
+
 // ZkMerchCloseInfo provides the information needed for the customer to retrieve
 // the relevant CloseMerch transaction for that channel.
 type ZkMerchCloseInfo struct {
@@ -123,6 +129,11 @@ type ZkChainWatcherConfig struct {
 
 	// DBPath is the path to the customer or merchant's DB.
 	DBPath string
+
+	// Estimator is used by the zk breach arbiter to determine an appropriate
+	// fee level when generating, signing, and broadcasting sweep
+	// transactions.
+	Estimator chainfee.Estimator
 
 	// notifier is a reference to the channel notifier that we'll use to be
 	// notified of output spends and when transactions are confirmed.
@@ -593,7 +604,12 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 	log.Debugf("outputPk: %#v", outputPk)
 	log.Debugf("merchState: %#v", merchState)
 
-	txFee := int64(1000) // TODO ZKLND-49: Use fee estimator
+	feePerKw, err := c.cfg.Estimator.EstimateFeePerKW(1)
+	if err != nil {
+		return err
+	} // 520 weight units
+	txFee := int64(merchClaimTxKW*float64(feePerKw) + 1) // round down to int64\
+
 	inAmt := amount
 	outAmt := int64(inAmt - txFee)
 	signedMerchClaimTx, err := libzkchannels.MerchantSignMerchClaimTx(closeTxidLittleEn, index, inAmt, outAmt, toSelfDelay, custClosePk, outputPk, merchState)
@@ -666,18 +682,16 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 
 	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
 
-	estimator := chainfee.NewStaticEstimator(12500, 0)
-	feePerKw, err := estimator.EstimateFeePerKW(1)
+	feePerKw, err := c.cfg.Estimator.EstimateFeePerKW(1)
 	if err != nil {
 		return err
 	}
-	log.Info("feePerKw:", feePerKw)
+	txFee := int64(custClaimTxKW*float64(feePerKw) + 1) // round down to int64\
 
 	// TODO: ZKLND-33 Generate a fresh outputPk for the claimed outputs. For now this is just
 	// reusing the custClosePk
 	outputPk := custClosePk
 	index := uint32(0)
-	txFee := int64(1000) // TODO ZKLND-49: Use fee estimator
 	inAmt := custState.CustBalance
 	outAmt := int64(inAmt - txFee)
 	signedCustClaimTx, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, index, inAmt, outAmt, toSelfDelay, outputPk, custState.RevLock, custClosePk, custState)

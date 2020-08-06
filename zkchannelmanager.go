@@ -27,6 +27,7 @@ import (
 	"github.com/lightningnetwork/lnd/libzkchannels"
 	"github.com/lightningnetwork/lnd/lnpeer"
 	"github.com/lightningnetwork/lnd/lnwallet"
+	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 	"github.com/lightningnetwork/lnd/lnwire"
 	"github.com/lightningnetwork/lnd/zkchanneldb"
 	"github.com/lightningnetwork/lnd/zkchannels"
@@ -46,6 +47,10 @@ type zkChannelManager struct {
 	WatchNewZkChannel func(contractcourt.ZkChainWatcherConfig) error
 
 	dbPath string
+
+	// FeeEstimator calculates appropriate fee rates based on historical
+	// transaction information.
+	FeeEstimator chainfee.Estimator
 
 	// PublishTransaction facilitates the process of broadcasting a
 	// transaction to the network.
@@ -100,7 +105,18 @@ var (
 	totalReceivedKey  = "totalReceivedKey"
 )
 
-func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, disconnectMerchant func(*btcec.PublicKey) error, selfDelay int16, minFee int64, maxFee int64, valCpfp int64, balMinCust int64, balMinMerch int64) *zkChannelManager {
+var (
+	// ZKC-25: calculate Tx weight units dynamically
+	// ZKC-25: This assumes the escrowTx will have one np2wkh input and
+	// one p2wkh output. In the future, when the escrow can be funded with
+	// any form or number of inputs, the weight will have to be calculated
+	// dynamically.
+	escrowTxKW     = 0.702 // 702 weight units
+	custCloseTxKW  = 1.150 // 1150 weight units
+	merchCloseTxKW = 0.722 // 772 weight units
+)
+
+func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, disconnectMerchant func(*btcec.PublicKey) error, selfDelay int16, minFee int64, maxFee int64, valCpfp int64, balMinCust int64, balMinMerch int64, feeEstimator chainfee.Estimator) *zkChannelManager {
 	var dbPath string
 	if isZkMerchant {
 		dbPath = path.Join(dbDirPath, "zkmerch.db")
@@ -111,6 +127,7 @@ func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.
 		WatchNewZkChannel:  zkChainWatcher,
 		isMerchant:         isZkMerchant,
 		dbPath:             dbPath,
+		FeeEstimator:       feeEstimator,
 		PublishTransaction: publishTx,
 		DisconnectMerchant: disconnectMerchant,
 		SelfDelay:          selfDelay,
@@ -268,14 +285,16 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 
 	zkchLog.Debug("Variables going into InitCustomer :=> ", merchPubKey, custBal, merchBal, "cust")
 
-	// If no fee for cust-close or merch-close were passed in, then use the fee estimator to determine them
-	if feeCC == 0 {
-		// ZKLND-49: Query LND fee estimator to get latest fee
-		feeCC = int64(1000)
+	commitFeePerKw, err := z.FeeEstimator.EstimateFeePerKW(3)
+	if err != nil {
+		return err
 	}
-	if feeMC == 0 {
-		// ZKLND-49: Query LND fee estimator to get latest fee
-		feeMC = int64(1000)
+
+	if feeCC == 0 {
+		feeCC = int64(custCloseTxKW*float64(commitFeePerKw) + 1) // round down to int64\
+	}
+	if feeMC == 0 { // 722 weight units
+		feeMC = int64(merchCloseTxKW*float64(commitFeePerKw) + 1) // round down to int64
 	}
 
 	txFeeInfo := libzkchannels.TransactionFeeInfo{
@@ -301,13 +320,11 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 
 	custPk := fmt.Sprintf("%v", custState.PkC)
 	revLock := fmt.Sprintf("%v", custState.RevLock)
-
 	merchPk := fmt.Sprintf("%v", merchPubKey)
+	changePkIsHash := false
 
-	changePkIsHash := true
+	txFee := int64(escrowTxKW*float64(commitFeePerKw) + 1) // round down to int64
 
-	// TODO ZKLND-49: Query fee estimator to determine escrowTx fee
-	txFee := int64(1000)
 	outputSats := custBal + merchBal
 	// _, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxIdLe, index, custInputSk, inputSats, outputSats, custPk, merchPk, changePubKey, changePkIsHash, txFee)
 	// if err != nil {

@@ -37,6 +37,10 @@ var (
 	errZkBrarShuttingDown = errors.New("breacharbiter shutting down")
 )
 
+var (
+	disputeTxKW = 0.552 // 522 weight units
+)
+
 // ZkContractBreachEvent is an event the zkBreachArbiter will receive in case a
 // contract breach is observed on-chain. It contains the necessary information
 // to handle the breach, and a ProcessACK channel we will use to ACK the event
@@ -574,7 +578,14 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	// 	sweepAmt := int64(totalAmt - txFee)
 
 	// with all the info needed, create and sign the Dispute/Justice Tx.
-	txFee := int64(1000) // TODO ZKLND-49: Use fee estimator
+	commitFeePerKw, err := b.cfg.Estimator.EstimateFeePerKW(3)
+	if err != nil {
+		zkchLog.Errorf("Error estimating fee for merchDisputeTx: %v", err)
+		return
+	}
+	disputeTxKW := 0.552                                    // 552 weight units
+	txFee := int64(disputeTxKW*float64(commitFeePerKw) + 1) // round down
+
 	inAmt := amount
 	outAmt := int64(inAmt - txFee)
 	zkchLog.Info(escrowTxid, breachTxid, index, inAmt, outAmt, toSelfDelay, outputPk, revLock, revSecret, custClosePk, merchState)
