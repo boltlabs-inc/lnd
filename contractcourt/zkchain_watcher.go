@@ -343,10 +343,12 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 			err := c.zkDispatchMerchClaim(inputTxid, closeTxid, closePkScript, amount)
 			if err != nil {
-				log.Errorf("unable to handle remote "+
-					"close for channel=%v",
+				log.Errorf("unable to handle merchClaimTx "+
+					"for channel=%v",
 					inputTxid, err)
 			}
+
+			// TODO ZKLND-39 - Mark channel as closed. For merch and cust
 
 		case isMerchCloseTx && isMerch:
 			log.Debug("Merch-close-tx detected")
@@ -462,7 +464,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					log.Error(err)
 				}
 				// open the zkchanneldb to load merchState and channelState
-				zkMerchDB, err := zkchanneldb.OpenMerchBucket("zkmerch.db")
+				zkMerchDB, err := zkchanneldb.OpenMerchBucket(c.cfg.DBPath)
 				if err != nil {
 					log.Error(err)
 					return
