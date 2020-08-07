@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/btcsuite/btcd/wire"
+	"github.com/prometheus/common/log"
 
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
@@ -17,6 +18,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 	"github.com/lightningnetwork/lnd/zkchanneldb"
+	"github.com/lightningnetwork/lnd/zkchannels"
 )
 
 var (
@@ -524,6 +526,12 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 		"revoked funds", breachInfo.CloseTxid)
 
 	escrowTxid := breachInfo.EscrowTxid.String()
+
+	err := zkchannels.UpdateMerchChannelState(b.cfg.DBPath, escrowTxid, "ConfirmedClose")
+	if err != nil {
+		log.Error(err)
+	}
+
 	breachTxid := breachInfo.CloseTxid.String()
 	index := uint32(0)
 
@@ -692,6 +700,11 @@ func (b *zkBreachArbiter) exactZkCloseMerch(confChan *chainntnfs.ConfirmationEve
 	}
 
 	zkbaLog.Debugf("Merch Close transaction %v has been confirmed. ", breachInfo.CloseTxid)
+
+	err := zkchannels.UpdateCustChannelState(b.cfg.DBPath, breachInfo.CustChannelName, "ConfirmedClose")
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
 	closeFromEscrow := false
 	closeMerchTx, _, err := GetSignedCustCloseTxs(breachInfo.CustChannelName, closeFromEscrow, b.cfg.DBPath)

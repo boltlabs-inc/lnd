@@ -348,8 +348,6 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					inputTxid, err)
 			}
 
-			// TODO ZKLND-39 - Mark channel as closed. For merch and cust
-
 		case isMerchCloseTx && isMerch:
 			log.Debug("Merch-close-tx detected")
 
@@ -463,6 +461,15 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 				if err != nil {
 					log.Error(err)
 				}
+
+				// TODO ZKLND-XX: This is here temporarily, under the assumpiton
+				// that any tx detected will be confirmed eventually. We will
+				// have to figure out what to do if custClose disappeares/never gets confirmed.
+				err = zkchannels.UpdateMerchChannelState(c.cfg.DBPath, inputTxid.String(), "ConfirmedClose")
+				if err != nil {
+					log.Error(err)
+				}
+
 				// open the zkchanneldb to load merchState and channelState
 				zkMerchDB, err := zkchanneldb.OpenMerchBucket(c.cfg.DBPath)
 				if err != nil {
@@ -552,7 +559,7 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 
 	// Load the current merchState and channelState so that it can be retrieved
 	// later when it is needed to sign the claim tx.
-	zkMerchDB, err := zkchanneldb.OpenMerchBucket("zkmerch.db")
+	zkMerchDB, err := zkchanneldb.OpenMerchBucket(c.cfg.DBPath)
 	if err != nil {
 		log.Error(err)
 		return err
