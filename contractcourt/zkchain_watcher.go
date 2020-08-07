@@ -346,6 +346,8 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					inputTxid, err)
 			}
 
+			// TODO ZKLND-39 - Mark channel as closed. For merch and cust
+
 		case isMerchCloseTx && isMerch:
 			log.Debug("Merch-close-tx detected")
 
