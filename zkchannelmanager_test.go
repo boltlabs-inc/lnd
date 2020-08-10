@@ -2,7 +2,6 @@ package lnd
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
@@ -479,226 +478,13 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 
 }
 
-func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, merchDBPath string) {
-
-	// Load MerchState and ChannelState
-	zkMerchDB, err := zkchanneldb.SetupMerchDB(merchDBPath)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	var channelState libzkchannels.ChannelState
-	err = zkchanneldb.GetMerchField(zkMerchDB, channelStateKey, &channelState)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	err = zkMerchDB.Close()
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	txFeeInfo := libzkchannels.TransactionFeeInfo{
-		BalMinCust:  lncfg.BalMinCust,
-		BalMinMerch: lncfg.BalMinMerch,
-		ValCpFp:     lncfg.ValCpfp,
-		FeeCC:       1000,
-		FeeMC:       1000,
-		MinFee:      lncfg.MinFee,
-		MaxFee:      lncfg.MaxFee,
-	}
-	feeCC := txFeeInfo.FeeCC
-	feeMC := txFeeInfo.FeeMC
-
-	custBal := int64(1000000)
-	merchBal := int64(5000)
-
-	merchPKM := fmt.Sprintf("%v", *merchState.PkM)
-
-	skC := "1a1971e1379beec67178509e25b6772c66cb67bb04d70df2b4bcdb8c08a01827"
-	payoutSk := "4157697b6428532758a9d0f9a73ce58befe3fd665797427d1c5bb3d33f6a132e"
-
-	channelToken, custState, err := libzkchannels.InitCustomer(merchPKM, custBal, merchBal, txFeeInfo, "cust")
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	channelToken, custState, err = libzkchannels.LoadCustomerWallet(custState, channelToken, skC, payoutSk)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	// details about input utxo
-	inputSats := int64(100000000)
-	cust_utxo_txid := "e8aed42b9f07c74a3ce31a9417146dc61eb8611a1e66d345fd69be06b644278d"
-	cust_utxo_index := uint32(0)
-	custInputSk := "5511111111111111111111111111111100000000000000000000000000000000"
-
-	custSk := fmt.Sprintf("%v", custState.SkC)
-	custPk := fmt.Sprintf("%v", custState.PkC)
-	// merchSk := fmt.Sprintf("%v", *merchState.SkM)
-	merchPk := fmt.Sprintf("%v", *merchState.PkM)
-	t.Log("merchPk", merchPk)
-	// changeSk := "4157697b6428532758a9d0f9a73ce58befe3fd665797427d1c5bb3d33f6a132e"
-	changePk := "037bed6ab680a171ef2ab564af25eff15c0659313df0bbfb96414da7c7d1e65882"
-
-	merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
-	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
-	t.Log("toSelfDelay", toSelfDelay)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	outputSats := custBal + merchBal
-	// escrowTxid_BE, escrowTxid_LE, escrowPrevout, err := FormEscrowTx(cust_utxo_txid, 0, custSk, inputSats, outputSats, custPk, merchPk, changePk, false)
-	txFee := int64(500)
-	signedEscrowTx, escrowTxid_BE, escrowTxid_LE, escrowPrevout, err := libzkchannels.SignEscrowTx(cust_utxo_txid, cust_utxo_index, custInputSk, inputSats, outputSats, custPk, merchPk, changePk, false, txFee)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	_ = signedEscrowTx
-	merchChildPk := fmt.Sprintf("%v", *channelState.MerchChildPk)
-
-	merchTxPreimage, err := libzkchannels.FormMerchCloseTx(escrowTxid_LE, custPk, merchPk, merchClosePk, merchChildPk, custBal, merchBal, feeMC, txFeeInfo.ValCpFp, toSelfDelay)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	custSig, err := libzkchannels.CustomerSignMerchCloseTx(custSk, merchTxPreimage)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	isOk, merchTxid_BE, merchTxid_LE, merchPrevout, merchState, err := libzkchannels.MerchantVerifyMerchCloseTx(escrowTxid_LE, custPk, custBal, merchBal, feeMC, txFeeInfo.ValCpFp, toSelfDelay, custSig, merchState)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	_ = merchTxid_LE
-
-	txInfo := libzkchannels.FundingTxInfo{
-		EscrowTxId:    escrowTxid_BE, // big-endian
-		EscrowPrevout: escrowPrevout, // big-endian
-		MerchTxId:     merchTxid_BE,  // big-endian
-		MerchPrevout:  merchPrevout,  // big-endian
-		InitCustBal:   custBal,
-		InitMerchBal:  merchBal,
-	}
-
-	custClosePk := custState.PayoutPk
-	escrowSig, merchSig, err := libzkchannels.MerchantSignInitCustCloseTx(txInfo, custState.RevLock, custState.PkC, custClosePk, toSelfDelay, merchState, feeCC, feeMC, txFeeInfo.ValCpFp)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	isOk, channelToken, custState, err = libzkchannels.CustomerVerifyInitCustCloseTx(txInfo, txFeeInfo, channelState, channelToken, escrowSig, merchSig, custState)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	initCustState, initHash, err := libzkchannels.CustomerGetInitialState(custState)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	isOk, merchState, err = libzkchannels.MerchantValidateInitialState(channelToken, initCustState, initHash, merchState)
-	if !isOk {
-		fmt.Println("error: ", err)
-	}
-
-	CloseEscrowTx, CloseEscrowTxId_LE, custState, err := libzkchannels.ForceCustomerCloseTx(channelState, channelToken, true, custState)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	_ = CloseEscrowTx
-	_ = CloseEscrowTxId_LE
-
-	CloseMerchTx, CloseMerchTxId_LE, custState, err := libzkchannels.ForceCustomerCloseTx(channelState, channelToken, false, custState)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	_ = CloseMerchTx
-	_ = CloseMerchTxId_LE
-	// End of libzkchannels_test.go
-
-	// Save variables needed to create cust close in zkcust.db
-	zkCustDB, err := zkchanneldb.CreateZkChannelBucket(zkChannelName, custDBPath)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	err = zkchanneldb.AddCustState(zkCustDB, zkChannelName, custState)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	err = zkchanneldb.AddField(zkCustDB, zkChannelName, channelState, channelStateKey)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	err = zkchanneldb.AddField(zkCustDB, zkChannelName, channelToken, channelTokenKey)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	err = zkchanneldb.AddField(zkCustDB, zkChannelName, escrowTxid, escrowTxidKey)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	err = zkCustDB.Close()
-	if err != nil {
-		zkchLog.Error(err)
-	}
-
-	// Save variables needed to create merch close in zkmerch.db
-	zkMerchDB, err = zkchanneldb.OpenMerchBucket(merchDBPath)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	// ZKLND-11 Merchant support for multiple channels
-	// cannot use this method for storing escrowTxid as it will get
-	// overwritten by new channels
-	err = zkchanneldb.AddMerchField(zkMerchDB, escrowTxid_LE, escrowTxidKey)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	err = zkchanneldb.AddMerchField(zkMerchDB, channelState, channelStateKey)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	err = zkchanneldb.AddMerchField(zkMerchDB, channelToken, channelTokenKey)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	err = zkMerchDB.Close()
-	if err != nil {
-		zkchLog.Error(err)
-	}
-
-}
-
 func TestCloseZkChannel(t *testing.T) {
 
 	cust, merch := setupZkChannelManagers(t)
 	defer tearDownZkChannelManagers(cust, merch)
 
 	zkChannelName := "myChannel"
-	setupLibzkChannels(t, zkChannelName, cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
+	zkchannels.SetupLibzkChannels(zkChannelName, cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
 	cust.zkChannelMgr.CloseZkChannel(cust.mockNotifier, zkChannelName, false)
 
 	// Since CloseZkChannel has been called by the customer, we want to make
@@ -747,7 +533,7 @@ func TestMerchClose(t *testing.T) {
 	cust, merch := setupZkChannelManagers(t)
 	defer tearDownZkChannelManagers(cust, merch)
 
-	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
+	zkchannels.SetupLibzkChannels("myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
 
 	// open the zkchanneldb to load merchState
 	zkMerchDB, err := zkchanneldb.OpenMerchBucket(merch.zkChannelMgr.dbPath)
@@ -843,7 +629,7 @@ func TestZkInfo(t *testing.T) {
 	cust, merch := setupZkChannelManagers(t)
 	defer tearDownZkChannelManagers(cust, merch)
 
-	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
+	zkchannels.SetupLibzkChannels("myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
 
 	// Test that ZkInfo returns pubkey (hex) of len 66
 	merchPk, err := merch.zkChannelMgr.ZkInfo()
@@ -861,7 +647,7 @@ func TestTotalReceived(t *testing.T) {
 	cust, merch := setupZkChannelManagers(t)
 	defer tearDownZkChannelManagers(cust, merch)
 
-	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
+	zkchannels.SetupLibzkChannels("myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
 
 	// Test that TotalReceived updates correctly
 	paymentAmount := int64(1000)
@@ -917,7 +703,7 @@ func TestListZkChannels(t *testing.T) {
 	cust, merch := setupZkChannelManagers(t)
 	defer tearDownZkChannelManagers(cust, merch)
 
-	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
+	zkchannels.SetupLibzkChannels("myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
 
 	// Test ListZkChannels
 	ListOfZkChannels, err := merch.zkChannelMgr.ListZkChannels()
@@ -942,7 +728,7 @@ func TestZkChannelBalance(t *testing.T) {
 	cust, merch := setupZkChannelManagers(t)
 	defer tearDownZkChannelManagers(cust, merch)
 
-	setupLibzkChannels(t, "myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
+	zkchannels.SetupLibzkChannels("myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
 
 	// Test ZkChannelBalance
 	escrowTxid, localBalance, remoteBalance, err := cust.zkChannelMgr.ZkChannelBalance("myChannel")

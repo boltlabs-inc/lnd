@@ -219,13 +219,12 @@ func newZkChainWatcher(cfg ZkChainWatcherConfig) (*zkChainWatcher, error) {
 // duties.
 func (c *zkChainWatcher) Start() error {
 	log.Debug("Starting new zkChainWatcher")
-
 	// // zkch TODO: What does this do? It is blocking
 	// if !atomic.CompareAndSwapInt32(&c.started, 0, 1) {
 	// 	return nil
 	// }
 
-	log.Debugf("watching for escrow: %#v\n", c.cfg.ZkFundingInfo.FundingOut.Hash.String())
+	log.Infof("watching for escrow: %#v\n", c.cfg.ZkFundingInfo.FundingOut.Hash.String())
 
 	spendNtfn, err := c.cfg.Notifier.RegisterSpendNtfn(
 		&c.cfg.ZkFundingInfo.FundingOut,
@@ -302,7 +301,7 @@ func (c *zkChainWatcher) SubscribeChannelEvents() *ZkChainEventSubscription {
 func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 	defer c.wg.Done()
 
-	log.Debug("zkCloseObserver is running")
+	log.Info("zkCloseObserver is running")
 	// determine if this node is a merchant
 	isMerch := c.cfg.IsMerch
 
@@ -310,7 +309,6 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 	// We've detected a spend of the channel onchain! Depending on the type
 	// of spend, we'll act accordingly , so we'll examine the spending
 	// transaction to determine what we should do.
-
 	case commitSpend, ok := <-spendNtfn.Spend:
 		// If the channel was closed, then this means that the notifier
 		// exited, so we will as well.
@@ -462,7 +460,6 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			// check to see if custCloseTx corresponds to a revoked state by
 			// checking if we have seen the revocation lock before.
 			if isMerch {
-
 				// Mark the channel as pending close to prevent further payments on it
 				err := zkchannels.UpdateMerchChannelState(c.cfg.DBPath, inputTxid.String(), "PendingClose")
 				if err != nil {
@@ -523,7 +520,6 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					// a payment with it.
 				} else {
 					log.Debug("Latest Cust-close-tx detected")
-
 					err := c.zkDispatchCustClose(inputTxid, closeTxid, ClosePkScript, revLock, custClosePk, amount)
 
 					if err != nil {

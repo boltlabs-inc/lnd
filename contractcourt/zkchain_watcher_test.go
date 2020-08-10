@@ -3,8 +3,6 @@ package contractcourt
 import (
 	"bytes"
 	"encoding/hex"
-	"io/ioutil"
-	"path"
 	"testing"
 	"time"
 
@@ -33,7 +31,7 @@ const (
 	merchClaimTxid = "dd1acbde4ab98446d08fda6aeabd9bd118710e11f3e128661cf26d2c2f7835d5"
 )
 
-func setupTestMerchChainWatcher(t *testing.T) (*zkChainWatcher, *wire.OutPoint, *mockNotifier, error) {
+func setupTestMerchChainWatcher(t *testing.T, isWatchingMerchClose bool, merchDBPath string) (*zkChainWatcher, *wire.OutPoint, *mockNotifier, error) {
 	var escrowTxidHash chainhash.Hash
 	err := chainhash.Decode(&escrowTxidHash, escrowTxid)
 	if err != nil {
@@ -71,24 +69,23 @@ func setupTestMerchChainWatcher(t *testing.T) (*zkChainWatcher, *wire.OutPoint, 
 		spendChan: make(chan *chainntnfs.SpendDetail),
 	}
 
-	testDir, err := ioutil.TempDir("", "zkchanneldb")
-	if err != nil {
-		t.Fatalf("unable to create temp directory: %v", err)
-	}
-
 	feeEstimator := zkchannels.NewMockFeeEstimator(10000, chainfee.FeePerKwFloor)
 	merchChainWatcher, err := newZkChainWatcher(ZkChainWatcherConfig{
-		IsMerch:       true,
-		DBPath:        path.Join(testDir, "zkmerch.db"),
-		Estimator:     feeEstimator,
-		ZkFundingInfo: ZkFundingInfo,
-		Notifier:      merchNotifier,
+		IsMerch:            true,
+		DBPath:             merchDBPath,
+		Estimator:          feeEstimator,
+		ZkFundingInfo:      ZkFundingInfo,
+		Notifier:           merchNotifier,
+		WatchingMerchClose: isWatchingMerchClose,
+		zkContractBreach: func(zkInfo *ZkBreachInfo) error {
+			return nil
+		},
 	})
 
 	return merchChainWatcher, outPoint, merchNotifier, err
 }
 
-func setupTestCustChainWatcher(t *testing.T) (*zkChainWatcher, *wire.OutPoint, *mockNotifier, error) {
+func setupTestCustChainWatcher(t *testing.T, isWatchingMerchClose bool, custDBPath string) (*zkChainWatcher, *wire.OutPoint, *mockNotifier, error) {
 	var escrowTxidHash chainhash.Hash
 	err := chainhash.Decode(&escrowTxidHash, escrowTxid)
 	if err != nil {
@@ -122,42 +119,48 @@ func setupTestCustChainWatcher(t *testing.T) (*zkChainWatcher, *wire.OutPoint, *
 
 	// With the channels created, we'll now create a chain watcher instance
 	// which will be watching for any closes of Alice's channel.
-	merchNotifier := &mockNotifier{
+	custNotifier := &mockNotifier{
 		spendChan: make(chan *chainntnfs.SpendDetail),
 	}
 
-	testDir, err := ioutil.TempDir("", "zkchanneldb")
-	if err != nil {
-		t.Fatalf("unable to create temp directory: %v", err)
-	}
 	feeEstimator := zkchannels.NewMockFeeEstimator(10000, chainfee.FeePerKwFloor)
-	merchChainWatcher, err := newZkChainWatcher(ZkChainWatcherConfig{
-		IsMerch:       false,
-		DBPath:        path.Join(testDir, "zkcust.db"),
-		Estimator:     feeEstimator,
-		ZkFundingInfo: ZkFundingInfo,
-		Notifier:      merchNotifier,
+
+	custChainWatcher, err := newZkChainWatcher(ZkChainWatcherConfig{
+		IsMerch:            false,
+		DBPath:             custDBPath,
+		Estimator:          feeEstimator,
+		ZkFundingInfo:      ZkFundingInfo,
+		Notifier:           custNotifier,
+		WatchingMerchClose: isWatchingMerchClose,
+		zkContractBreach: func(zkInfo *ZkBreachInfo) error {
+			return nil
+		},
 	})
 
-	return merchChainWatcher, outPoint, merchNotifier, err
+	return custChainWatcher, outPoint, custNotifier, err
 }
 
-// TestChainWatcherMerchClose tests that the chain watcher is able
-// to properly detect a unilateral closure initiated by the merchant.
-func TestZkChainWatcherMerchClose(t *testing.T) {
-	t.Parallel()
+// TestChainWatcherLocalMerchClose tests that the chain watcher is able
+// to properly detect a local closure initiated by the merchant.
+func TestChainWatcherLocalMerchClose(t *testing.T) {
+	// t.Parallel()
 
-	merchChainWatcher, fundingOut, merchNotifier, err := setupTestMerchChainWatcher(t)
+	_, merchDBPath, err := zkchannels.SetupTempDBPaths()
+	if err != nil {
+		t.Fatalf("SetupTempDBPaths: %v", err)
+	}
+
+	merchChainWatcher, fundingOut, merchNotifier, err := setupTestMerchChainWatcher(t, false, merchDBPath)
 	if err != nil {
 		t.Fatalf("unable to create merchChainWatcher: %v", err)
 	}
 	err = merchChainWatcher.Start()
 	if err != nil {
-		t.Fatalf("unable to start chain watcher: %v", err)
+		t.Fatalf("unable to start merchChainWatcher: %v", err)
 	}
 	defer merchChainWatcher.Stop()
 
-	// We'll request a new channel event subscription from Alice's chain
+	// We'll request a new channel event subscription from merchant's chain
 	// watcher.
 	chanEvents := merchChainWatcher.SubscribeChannelEvents()
 
@@ -185,40 +188,102 @@ func TestZkChainWatcherMerchClose(t *testing.T) {
 	}
 	merchNotifier.spendChan <- merchSpend
 
-	// We should get a new spend event over the remote unilateral close
+	// We should get a new spend event over the local unilateral close
 	// event channel.
 	var uniClose *ZkMerchCloseInfo
 	select {
 	case uniClose = <-chanEvents.ZkMerchClosure:
 		t.Logf("amount: %#v\n", uniClose.amount)
 	case <-time.After(time.Second * 5):
-		t.Fatalf("didn't receive unilateral close event")
+		t.Fatalf("didn't receive ZkMerchClosure event")
 	}
 
-	// The unilateral close should have properly located Alice's output in
-	// the commitment transaction.
 	if uniClose == nil {
-		t.Fatalf("unable to find alice's commit resolution")
+		t.Fatalf("Did not receive ZkMerchCloseInfo for local closure")
 	}
 }
 
-// TestZkChainWatcherCustClose tests that the chain watcher is able
-// to properly detect a unilateral closure initiated by the customer.
-// Note that this should cover custCloseTx from Escrow and from merchClose.
-func TestZkChainWatcherCustClose(t *testing.T) {
-	t.Parallel()
-
-	custChainWatcher, fundingOut, custNotifier, err := setupTestCustChainWatcher(t)
+// TestChainWatcherRemoteMerchClose tests that the chain watcher is able
+// to properly detect a remote closure initiated by the merchant.
+func TestChainWatcherRemoteMerchClose(t *testing.T) {
+	// t.Parallel()
+	custDBPath, _, err := zkchannels.SetupTempDBPaths()
 	if err != nil {
-		t.Fatalf("unable to create merchChainWatcher: %v", err)
+		t.Fatalf("SetupTempDBPaths: %v", err)
+	}
+	custChainWatcher, fundingOut, custNotifier, err := setupTestCustChainWatcher(t, false, custDBPath)
+	if err != nil {
+		t.Fatalf("unable to create custChainWatcher: %v", err)
 	}
 	err = custChainWatcher.Start()
 	if err != nil {
-		t.Fatalf("unable to start chain watcher: %v", err)
+		t.Fatalf("unable to start custChainWatcher: %v", err)
 	}
 	defer custChainWatcher.Stop()
 
-	// We'll request a new channel event subscription from Alice's chain
+	// We'll request a new channel event subscription from customer's chain
+	// watcher.
+	chanEvents := custChainWatcher.SubscribeChannelEvents()
+
+	var merchCloseTxidHash chainhash.Hash
+	err = chainhash.Decode(&merchCloseTxidHash, merchCloseTxid)
+	if err != nil {
+		t.Error(err)
+	}
+
+	serializedMerchCTx, err := hex.DecodeString(merchCloseTx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var msgMerchCTx wire.MsgTx
+	err = msgMerchCTx.Deserialize(bytes.NewReader(serializedMerchCTx))
+	if err != nil {
+		t.Error(err)
+	}
+
+	merchSpend := &chainntnfs.SpendDetail{
+		SpentOutPoint: fundingOut,
+		SpenderTxHash: &merchCloseTxidHash,
+		SpendingTx:    &msgMerchCTx,
+	}
+	custNotifier.spendChan <- merchSpend
+
+	// We should get a new spend event over the remote merchClose
+	// event channel.
+	var uniClose *ZkBreachInfo
+	select {
+	case uniClose = <-chanEvents.ZkContractBreach:
+		t.Logf("amount: %#v\n", uniClose.Amount)
+	case <-time.After(time.Second * 5):
+		t.Fatalf("didn't receive ZkContractBreach event")
+	}
+
+	if uniClose == nil {
+		t.Fatalf("Did not receive ZkBreachInfo for remote merchClose")
+	}
+}
+
+// TestZkChainWatcherLocalCustClose tests that the chain watcher is able
+// to properly detect a local closure initiated by the customer.
+// Note that this is used in both custCloseTx from Escrow and from merchClose.
+func TestZkChainWatcherLocalCustClose(t *testing.T) {
+	// t.Parallel()/
+	custDBPath, _, err := zkchannels.SetupTempDBPaths()
+	if err != nil {
+		t.Fatalf("SetupTempDBPaths: %v", err)
+	}
+	custChainWatcher, fundingOut, custNotifier, err := setupTestCustChainWatcher(t, false, custDBPath)
+	if err != nil {
+		t.Fatalf("unable to create custChainWatcher: %v", err)
+	}
+	err = custChainWatcher.Start()
+	if err != nil {
+		t.Fatalf("unable to start custChainWatcher: %v", err)
+	}
+	defer custChainWatcher.Stop()
+
+	// We'll request a new channel event subscription from customer's chain
 	// watcher.
 	chanEvents := custChainWatcher.SubscribeChannelEvents()
 
@@ -246,39 +311,106 @@ func TestZkChainWatcherCustClose(t *testing.T) {
 	}
 	custNotifier.spendChan <- custSpend
 
-	// We should get a new spend event over the remote unilateral close
+	// We should get a new spend event over the local unilateral close
 	// event channel.
 	var uniClose *ZkCustCloseInfo
 	select {
 	case uniClose = <-chanEvents.ZkCustClosure:
 		t.Logf("ZkBreachInfo: %#v", *uniClose)
 	case <-time.After(time.Second * 5):
-		t.Fatalf("didn't receive unilateral close event")
+		t.Fatalf("didn't receive ZkCustClosure event")
 	}
 
-	// The unilateral close should have properly located Alice's output in
-	// the commitment transaction.
 	if uniClose == nil {
-		t.Fatalf("unable to find alice's commit resolution")
+		t.Fatalf("unable to find ZkCustCloseInfo")
 	}
 }
 
-// TestZkChainWatcherMerchClaim tests that the chain watcher is
-// able to properly detect a merchClaim tx which is spent from merchClose.
-func TestZkChainWatcherMerchClaim(t *testing.T) {
-	t.Parallel()
+// // TestZkChainWatcherRemoteValidCustClose tests that the chain watcher is able
+// // to properly detect a local closure initiated by the customer.
+// // 'Valid' custClose refers to the fact that it is the latest state, i.e. the
+// // customer is not closing with a revoked state.
+// // Note that this is used in both custCloseTx from Escrow and from merchClose.
+// func TestZkChainWatcherRemoteValidCustClose(t *testing.T) {
+// 	// t.Parallel()
 
-	merchChainWatcher, outPoint, merchNotifier, err := setupTestMerchChainWatcher(t)
+// 	// This wont work until the zkmerch.db and zkcust.db have been setup
+// 	zkchannels.SetupLibzkChannels("myChannel", custDBPath, merchDBPath)
+
+// 	merchChainWatcher, fundingOut, merchNotifier, err := setupTestMerchChainWatcher(t, false, merchDBPath)
+
+// 	if err != nil {
+// 		t.Fatalf("unable to create merchChainWatcher: %v", err)
+// 	}
+// 	err = merchChainWatcher.Start()
+// 	if err != nil {
+// 		t.Fatalf("unable to start merchChainWatcher: %v", err)
+// 	}
+// 	defer merchChainWatcher.Stop()
+
+// 	// We'll request a new channel event subscription from customer's chain
+// 	// watcher.
+// 	chanEvents := merchChainWatcher.SubscribeChannelEvents()
+
+// 	var closeTxidHash chainhash.Hash
+// 	err = chainhash.Decode(&closeTxidHash, custCloseTxid)
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	serializedCustCTx, err := hex.DecodeString(custCloseTx)
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	var msgCustCTx wire.MsgTx
+// 	err = msgCustCTx.Deserialize(bytes.NewReader(serializedCustCTx))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	custSpend := &chainntnfs.SpendDetail{
+// 		SpentOutPoint: fundingOut,
+// 		SpenderTxHash: &closeTxidHash,
+// 		SpendingTx:    &msgCustCTx,
+// 	}
+// 	merchNotifier.spendChan <- custSpend
+
+// 	// We should get a new spend event over the event channel.
+// 	var uniClose *ZkCustCloseInfo
+// 	select {
+// 	case uniClose = <-chanEvents.ZkCustClosure:
+// 		t.Logf("amount: %#v\n", uniClose.amount)
+// 	case <-time.After(time.Second * 5):
+// 		t.Fatalf("didn't receive ZkCustClosure event")
+// 	}
+
+// 	if uniClose == nil {
+// 		t.Fatalf("Did not receive ZkCustCloseInfo for remote custClose")
+// 	}
+// }
+
+// TestZkChainWatcherLocalMerchClaim tests that the chain watcher is
+// able to properly detect a local merchClaim tx which is spent from merchClose.
+func TestZkChainWatcherLocalMerchClaim(t *testing.T) {
+	// t.Parallel()
+
+	_, merchDBPath, err := zkchannels.SetupTempDBPaths()
+	if err != nil {
+		t.Fatalf("SetupTempDBPaths: %v", err)
+	}
+
+	merchChainWatcher, outPoint, merchNotifier, err := setupTestMerchChainWatcher(t, true, merchDBPath)
 	if err != nil {
 		t.Fatalf("unable to create merchChainWatcher: %v", err)
 	}
 	err = merchChainWatcher.Start()
 	if err != nil {
-		t.Fatalf("unable to start chain watcher: %v", err)
+		t.Fatalf("unable to start merchChainWatcher: %v", err)
 	}
 	defer merchChainWatcher.Stop()
 
-	// We'll request a new channel event subscription from Alice's chain
+	// We'll request a new channel event subscription from merchant's chain
 	// watcher.
 	chanEvents := merchChainWatcher.SubscribeChannelEvents()
 
@@ -310,21 +442,82 @@ func TestZkChainWatcherMerchClaim(t *testing.T) {
 	var uniClose *ZkMerchClaimInfo
 	select {
 	case uniClose = <-chanEvents.ZkMerchClaim:
-		t.Logf("ZkBreachInfo: %#v", *uniClose)
+		t.Logf("ZkMerchClaimInfo: %#v", *uniClose)
 	case <-time.After(time.Second * 5):
-		t.Fatalf("didn't receive merchClaim event")
+		t.Fatalf("didn't receive ZkMerchClaim event")
+	}
+
+	if uniClose == nil {
+		t.Fatalf("unable to find ZkMerchClaimInfo")
+	}
+}
+
+// TestZkChainWatcherRemoteMerchClaim tests that the chain watcher is
+// able to properly detect a remote merchClaim tx which is spent from merchClose.
+func TestZkChainWatcherRemoteMerchClaim(t *testing.T) {
+	// t.Parallel()
+	custDBPath, _, err := zkchannels.SetupTempDBPaths()
+	if err != nil {
+		t.Fatalf("SetupTempDBPaths: %v", err)
+	}
+
+	custChainWatcher, outPoint, merchNotifier, err := setupTestCustChainWatcher(t, true, custDBPath)
+	if err != nil {
+		t.Fatalf("unable to create custChainWatcher: %v", err)
+	}
+	err = custChainWatcher.Start()
+	if err != nil {
+		t.Fatalf("unable to start custChainWatcher: %v", err)
+	}
+	defer custChainWatcher.Stop()
+
+	// We'll request a new channel event subscription from merchant's chain
+	// watcher.
+	chanEvents := custChainWatcher.SubscribeChannelEvents()
+
+	var claimTxidHash chainhash.Hash
+	err = chainhash.Decode(&claimTxidHash, merchClaimTxid)
+	if err != nil {
+		t.Error(err)
+	}
+
+	serializedMerchClaimTx, err := hex.DecodeString(merchClaimTx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var msgMerchClaimTx wire.MsgTx
+	err = msgMerchClaimTx.Deserialize(bytes.NewReader(serializedMerchClaimTx))
+	if err != nil {
+		t.Error(err)
+	}
+
+	merchClaimSpend := &chainntnfs.SpendDetail{
+		SpentOutPoint: outPoint,
+		SpenderTxHash: &claimTxidHash,
+		SpendingTx:    &msgMerchClaimTx,
+	}
+	merchNotifier.spendChan <- merchClaimSpend
+
+	// We should get a new spend event for merchClaim
+	var uniClose *ZkMerchClaimInfo
+	select {
+	case uniClose = <-chanEvents.ZkMerchClaim:
+		t.Logf("ZkMerchClaimInfo: %#v", *uniClose)
+	case <-time.After(time.Second * 5):
+		t.Fatalf("didn't receive ZkMerchClaim event")
 	}
 
 	// The unilateral close should have properly located Alice's output in
 	// the commitment transaction.
 	if uniClose == nil {
-		t.Fatalf("unable to find alice's commit resolution")
+		t.Fatalf("unable to find ZkMerchClaimInfo")
 	}
 }
 
-// TestZkChainWatcherCustClose tests that the chain watcher is able
-// to properly detect a local unilateral closure initiated by the customer.
-// Note that this should cover custCloseTx from Escrow and from merchClose.
+// // TestZkChainWatcherCustClose tests that the chain watcher is able
+// // to properly detect a local unilateral closure initiated by the customer.
+// // Note that this should cover custCloseTx from Escrow and from merchClose.
 // func TestZkChainWatcherLocalCustClose(t *testing.T) {
 // 	t.Parallel()
 
@@ -425,4 +618,5 @@ func TestZkChainWatcherMerchClaim(t *testing.T) {
 // 	if uniClose == nil {
 // 		t.Fatalf("unable to find alice's commit resolution")
 // 	}
+// 	t.Log("END", uniClose)
 // }
