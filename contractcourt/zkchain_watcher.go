@@ -17,7 +17,6 @@ import (
 )
 
 var (
-	// ZKLND-XX: calculate Tx weight units dynamically
 	merchClaimTxKW = 0.520 // 520 weight units
 	custClaimTxKW  = 0.518 // 518 weight units
 )

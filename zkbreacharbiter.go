@@ -583,7 +583,6 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 		zkchLog.Errorf("Error estimating fee for merchDisputeTx: %v", err)
 		return
 	}
-	disputeTxKW := 0.552                                    // 552 weight units
 	txFee := int64(disputeTxKW*float64(commitFeePerKw) + 1) // round down
 
 	inAmt := amount
