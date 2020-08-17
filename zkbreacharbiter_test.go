@@ -31,6 +31,7 @@ import (
 const (
 	skM        = "e6e0c5310bb03809e1b2a1595a349f002125fa557d481e51f401ddaf3287e6ae"
 	payoutSkM  = "5611111111111111111111111111111100000000000000000000000000000000"
+	childSkM   = "5811111111111111111111111111111100000000000000000000000000000000"
 	disputeSkM = "5711111111111111111111111111111100000000000000000000000000000000"
 
 	// escrowTx   = "020000000001018d2744b606be69fd45d3661e1a61b81ec66d1417941ae33c4ac7079f2bd4aee80000000017160014d83e1345c76dc160630937746d2d2693562e9c58ffffffff0280841e000000000022002092eeef2d000b5585d8809fb56bd0d9df7d6f6a337acbb2261a08f1f38ba958328c5ad7050000000016001461492b43be394b9e6eeb077f17e73665bbfd455b02483045022100a7577e466b875da137bd1d5503dedf91b5833ed47002026bafacf4b8632dedce0220276ca6b5dadb7a08d5d53830c81109a3da9059cb4f80f7ceeda15c2ac3cd0e660121032581c94e62b16c1f5fc36c5ff6ddc5c3e7cc4e7e70e2ec3ab3f663cff9d9b7d000000000"
@@ -123,7 +124,7 @@ func initZkBreachedState(t *testing.T) (*zkBreachArbiter,
 		cleanUpArb
 }
 
-func initTestMerchState(DBPath string, skM string, payoutSkM string, disputeSkM string) error {
+func initTestMerchState(DBPath, skM, payoutSkM, childSkM, disputeSkM string) error {
 	dbURL := "redis://127.0.0.1/"
 	selfDelay := int16(1487)
 	channelState, err := libzkchannels.ChannelSetup("channel", selfDelay, 546, 546, 1000, false)
@@ -136,7 +137,7 @@ func initTestMerchState(DBPath string, skM string, payoutSkM string, disputeSkM 
 		return err
 	}
 
-	channelState, merchState, err = libzkchannels.LoadMerchantWallet(merchState, channelState, skM, payoutSkM, disputeSkM)
+	channelState, merchState, err = libzkchannels.LoadMerchantWallet(merchState, channelState, skM, payoutSkM, childSkM, disputeSkM)
 	if err != nil {
 		return err
 	}
@@ -280,7 +281,7 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 	}
 
 	// Set up merchState and channelState in a temporary db
-	err = initTestMerchState(brar.cfg.DBPath, skM, payoutSkM, disputeSkM)
+	err = initTestMerchState(brar.cfg.DBPath, skM, payoutSkM, childSkM, disputeSkM)
 	if err != nil {
 		log.Fatal(err)
 	}

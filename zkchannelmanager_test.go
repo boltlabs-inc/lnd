@@ -139,7 +139,7 @@ func setupZkChannelManagers(t *testing.T) (*zkTestNode, *zkTestNode) {
 	skM := "e6e0c5310bb03809e1b2a1595a349f002125fa557d481e51f401ddaf3287e6ae"
 	payoutSkM := "5611111111111111111111111111111100000000000000000000000000000000"
 	disputeSkM := "5711111111111111111111111111111100000000000000000000000000000000"
-	err = merch.zkChannelMgr.initMerchant("Merchant", skM, payoutSkM, disputeSkM)
+	err = merch.zkChannelMgr.initMerchant("Merchant", skM, payoutSkM, childSkM, disputeSkM)
 	if err != nil {
 		t.Fatalf("failed creating fundingManager: %v", err)
 	}
@@ -562,8 +562,9 @@ func setupLibzkChannels(t *testing.T, zkChannelName string, custDBPath string, m
 		t.Fatalf("%v", err)
 	}
 	_ = signedEscrowTx
+	merchChildPk := fmt.Sprintf("%v", *channelState.MerchChildPk)
 
-	merchTxPreimage, err := libzkchannels.FormMerchCloseTx(escrowTxid_LE, custPk, merchPk, merchClosePk, custBal, merchBal, feeMC, txFeeInfo.ValCpFp, toSelfDelay)
+	merchTxPreimage, err := libzkchannels.FormMerchCloseTx(escrowTxid_LE, custPk, merchPk, merchClosePk, merchChildPk, custBal, merchBal, feeMC, txFeeInfo.ValCpFp, toSelfDelay)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}

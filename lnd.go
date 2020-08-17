@@ -770,18 +770,21 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 				return err
 			}
 			payoutSkM, err := server.cc.wallet.NewPrivKey()
-			ltndLog.Debugf("payoutSkM: %v", payoutSkM)
 			if err != nil {
 				ltndLog.Errorf("unable to generate privkey payoutSkM: %v", err)
 				return err
 			}
 			disputeSkM, err := server.cc.wallet.NewPrivKey()
-			ltndLog.Debugf("disputeSkM: %v", disputeSkM)
 			if err != nil {
 				ltndLog.Errorf("unable to generate privkey disputeSkM: %v", err)
 				return err
 			}
-			err = server.zkchannelMgr.initMerchant(cfg.Alias, skM, payoutSkM, disputeSkM)
+			childSkM, err := server.cc.wallet.NewPrivKey()
+			if err != nil {
+				ltndLog.Errorf("unable to generate privkey childSkM: %v", err)
+				return err
+			}
+			err = server.zkchannelMgr.initMerchant(cfg.Alias, skM, payoutSkM, childSkM, disputeSkM)
 			if err != nil {
 				return err
 			}

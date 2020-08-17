@@ -646,10 +646,10 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 
 // storeCustClaimTx creates a signed custClaimTx for the given closeTx
 func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid string,
-	revLock string, custClosePk string, amount int64, spendHeight int32) error {
+	revLock string, custClosePk string, inputAmount int64, spendHeight int32) error {
 
 	log.Debugf("storeCustClaimTx inputs: ", escrowTxidLittleEn, closeTxid,
-		revLock, custClosePk, amount, spendHeight)
+		revLock, custClosePk, inputAmount, spendHeight)
 
 	channelName := c.cfg.CustChannelName
 
@@ -692,14 +692,24 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 	// reusing the custClosePk
 	outputPk := custClosePk
 	index := uint32(0)
-	inAmt := custState.CustBalance
-	outAmt := int64(inAmt - txFee)
-	signedCustClaimTx, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, index, inAmt, outAmt, toSelfDelay, outputPk, custState.RevLock, custClosePk, custState)
+	// note that "inputAmount" is taken from the UTXO observed on chain, so
+	// feeCC/feeMC have already been factored in
+	cpfpIndex := uint32(3)
+	cpfpAmount := channelState.ValCpfp
+	outAmt := inputAmount + cpfpAmount - txFee
+	signedCustClaimWithChild, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, index, inputAmount, cpfpIndex, cpfpAmount, outAmt, toSelfDelay, outputPk, custState.RevLock, custClosePk, custState)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	log.Debugf("signedCustClaimTx: %#v", signedCustClaimTx)
+	log.Debugf("signedCustClaimWithChild: %#v", signedCustClaimWithChild)
+
+	signedCustClaimWithoutChild, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, index, inputAmount, uint32(0), int64(0), outAmt, toSelfDelay, outputPk, custState.RevLock, custClosePk, custState)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	log.Debugf("signedCustClaimWithoutChild: %#v", signedCustClaimWithoutChild)
 
 	// use escrowTxid as the bucket name
 	bucketEscrowTxid := escrowTxidLittleEn
@@ -709,7 +719,12 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 		log.Error(err)
 		return err
 	}
-	err = zkchanneldb.AddField(zkCustClaimDB, bucketEscrowTxid, signedCustClaimTx, "signedCustClaimTxKey")
+	err = zkchanneldb.AddField(zkCustClaimDB, bucketEscrowTxid, signedCustClaimWithChild, "signedCustClaimWithChildKey")
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	err = zkchanneldb.AddField(zkCustClaimDB, bucketEscrowTxid, signedCustClaimWithoutChild, "signedCustClaimWithoutChildKey")
 	if err != nil {
 		log.Error(err)
 		return err

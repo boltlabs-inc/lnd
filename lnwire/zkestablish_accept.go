@@ -7,6 +7,7 @@ type ZkEstablishAccept struct {
 	// Payment contains the payment from generatePaymentProof
 	ToSelfDelay   ZkMsgType
 	MerchPayoutPk ZkMsgType
+	MerchChildPk  ZkMsgType
 	ChannelState  ZkMsgType
 }
 
@@ -21,6 +22,7 @@ func (p *ZkEstablishAccept) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
 		&p.ToSelfDelay,
 		&p.MerchPayoutPk,
+		&p.MerchChildPk,
 		&p.ChannelState)
 }
 
@@ -32,6 +34,7 @@ func (p *ZkEstablishAccept) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
 		p.ToSelfDelay,
 		p.MerchPayoutPk,
+		p.MerchChildPk,
 		p.ChannelState)
 }
 

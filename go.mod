@@ -6,7 +6,7 @@ require (
 	github.com/NebulousLabs/go-upnp v0.0.0-20180202185039-29b680b06c82
 	github.com/Yawning/aez v0.0.0-20180114000226-4dad034d9db2
 	github.com/boltdb/bolt v1.3.1
-	github.com/boltlabs-inc/libzkchannels v0.0.0-20200801155453-cf7ddb14aa0f // indirect
+	github.com/boltlabs-inc/libzkchannels v0.0.0-20200813065325-658f1f156668 // indirect
 	github.com/btcsuite/btcd v0.20.1-beta.0.20200515232429-9f0179fd2c46
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
 	github.com/btcsuite/btcutil v1.0.2
@@ -57,6 +57,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/miekg/dns v0.0.0-20171125082028-79bfde677fa8
 	github.com/modern-go/reflect2 v1.0.1 // indirect
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/onsi/gomega v1.4.3 // indirect
 	github.com/prometheus/client_golang v0.9.3

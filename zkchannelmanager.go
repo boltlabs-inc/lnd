@@ -204,7 +204,7 @@ func (z *zkChannelManager) initCustomer() error {
 	return nil
 }
 
-func (z *zkChannelManager) initMerchant(merchName, skM, payoutSkM, disputeSkM string) error {
+func (z *zkChannelManager) initMerchant(merchName, skM, payoutSkM, childSkM, disputeSkM string) error {
 	isCust, err := DetermineIfCust()
 	if err != nil {
 		return fmt.Errorf("could not determine if this is a Customer or Merchant: %v", err)
@@ -234,7 +234,7 @@ func (z *zkChannelManager) initMerchant(merchName, skM, payoutSkM, disputeSkM st
 		channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")
 		zkchLog.Debugf("libzkchannels.InitMerchant done")
 
-		channelState, merchState, err = libzkchannels.LoadMerchantWallet(merchState, channelState, skM, payoutSkM, disputeSkM)
+		channelState, merchState, err = libzkchannels.LoadMerchantWallet(merchState, channelState, skM, payoutSkM, childSkM, disputeSkM)
 
 		// zkDB add merchState & channelState
 		zkMerchDB, err := zkchanneldb.SetupMerchDB(z.dbPath)
@@ -496,6 +496,7 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 	zkchLog.Debug("channelState MerchDisputePk => ", *channelState.MerchDisputePk)
 
 	merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
+	merchChildPk := fmt.Sprintf("%v", *channelState.MerchChildPk)
 	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
 	if err != nil {
 		z.failEstablishFlow(p, err)
@@ -504,6 +505,7 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 
 	// Convert fields into bytes
 	merchClosePkBytes := []byte(merchClosePk)
+	merchChildPkBytes := []byte(merchChildPk)
 	toSelfDelayBytes := []byte(toSelfDelay)
 	channelStateBytes, err := json.Marshal(channelState)
 	if err != nil {
@@ -514,6 +516,7 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 	zkEstablishAccept := lnwire.ZkEstablishAccept{
 		ToSelfDelay:   toSelfDelayBytes,
 		MerchPayoutPk: merchClosePkBytes,
+		MerchChildPk:  merchChildPkBytes,
 		ChannelState:  channelStateBytes,
 	}
 	err = p.SendMessage(false, &zkEstablishAccept)
@@ -529,6 +532,7 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 
 	toSelfDelay := string(msg.ToSelfDelay)
 	merchClosePk := string(msg.MerchPayoutPk)
+	merchChildPk := string(msg.MerchChildPk)
 
 	var channelState libzkchannels.ChannelState
 	err := json.Unmarshal(msg.ChannelState, &channelState)
@@ -628,7 +632,7 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 	custClosePk := fmt.Sprintf("%v", custState.PayoutPk)
 
 	zkchLog.Debugf("variables going into FormMerchCloseTx: %#v", escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, toSelfDelay)
-	merchTxPreimage, err := libzkchannels.FormMerchCloseTx(escrowTxid, custPk, merchPk, merchClosePk, custBal, merchBal, feeMC, channelState.ValCpfp, toSelfDelay)
+	merchTxPreimage, err := libzkchannels.FormMerchCloseTx(escrowTxid, custPk, merchPk, merchClosePk, merchChildPk, custBal, merchBal, feeMC, channelState.ValCpfp, toSelfDelay)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
@@ -2951,8 +2955,8 @@ func (z *zkChannelManager) CustClaim(wallet *lnwallet.LightningWallet, notifier 
 		return err
 	}
 
-	var signedCustClaimTx string
-	err = zkchanneldb.GetField(zkCustDB, escrowTxid, "signedCustClaimTxKey", &signedCustClaimTx)
+	var signedCustClaimWithChild string
+	err = zkchanneldb.GetField(zkCustDB, escrowTxid, "signedCustClaimWithChildKey", &signedCustClaimWithChild)
 	if err != nil {
 		zkchLog.Error("GetField: ", err)
 		return err
@@ -2960,10 +2964,10 @@ func (z *zkChannelManager) CustClaim(wallet *lnwallet.LightningWallet, notifier 
 
 	err = zkCustDB.Close()
 
-	zkchLog.Debugf("signedCustClaimTx: %#v", signedCustClaimTx)
+	zkchLog.Debugf("signedCustClaimWithChild: %#v", signedCustClaimWithChild)
 
 	// Broadcast escrow tx on chain
-	serializedTx, err := hex.DecodeString(signedCustClaimTx)
+	serializedTx, err := hex.DecodeString(signedCustClaimWithChild)
 	if err != nil {
 		zkchLog.Error(err)
 		return err
