@@ -16,7 +16,8 @@ fi
 
 if [ -d "$LND_PATH/libzkchannels" ]; then
   cd libzkchannels/
-  git pull
+  git fetch --all
+  git reset --hard origin/master
 else
   git clone https://github.com/boltlabs-inc/libzkchannels.git
   cd libzkchannels/
