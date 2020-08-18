@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"path"
 
 	"github.com/lightningnetwork/lnd/libzkchannels"
@@ -43,6 +44,84 @@ func SetupTempDBPaths() (string, string, error) {
 	merchDBPath := path.Join(testDir, "zkmerch.db")
 
 	return custDBPath, merchDBPath, nil
+}
+
+func SetupTestZkDBs(txf libzkchannels.TransactionFeeInfo, skM, payoutSkM, childSkM, disputeSkM string) (custDBpath string, merchDBpath string, err error) {
+
+	custDBPath, merchDBPath, err := SetupTempDBPaths()
+	if err != nil {
+		return "", "", err
+	}
+
+	dbUrl := "redis://127.0.0.1/"
+	selfDelay := int16(1487) // used to be 1487
+
+	channelState, err := libzkchannels.ChannelSetup("channel", selfDelay, txf.BalMinCust, txf.BalMinMerch, txf.ValCpFp, false)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Init Merchant DB
+	channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")
+	if err != nil {
+		return "", "", err
+	}
+
+	channelState, merchState, err = libzkchannels.LoadMerchantWallet(merchState, channelState, skM, payoutSkM, childSkM, disputeSkM)
+
+	// zkDB add merchState & channelState
+	zkMerchDB, err := zkchanneldb.SetupMerchDB(merchDBPath)
+	if err != nil {
+		return "", "", err
+	}
+
+	// save merchStateBytes in zkMerchDB
+	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
+	if err != nil {
+		return "", "", err
+	}
+
+	// save channelStateBytes in zkMerchDB
+	err = zkchanneldb.AddMerchField(zkMerchDB, channelState, channelStateKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	zkchannels := make(map[string]libzkchannels.ChannelToken)
+
+	err = zkchanneldb.AddMerchField(zkMerchDB, zkchannels, zkChannelsKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	err = zkMerchDB.Close()
+	if err != nil {
+		return "", "", err
+	}
+
+	// Init Cust DB
+	err = zkchanneldb.InitDB(custDBPath)
+	if err != nil {
+		return "", "", err
+	}
+
+	return custDBPath, merchDBPath, nil
+}
+
+func TearDownZkDBs(custDBPath, merchDBPath string) error {
+	if custDBPath != "" {
+		err := os.RemoveAll(custDBPath)
+		if err != nil {
+			return err
+		}
+	}
+	if merchDBPath != "" {
+		err := os.RemoveAll(merchDBPath)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func SetupLibzkChannels(zkChannelName string, custDBPath string, merchDBPath string) {
@@ -108,13 +187,12 @@ func SetupLibzkChannels(zkChannelName string, custDBPath string, merchDBPath str
 	custPk := fmt.Sprintf("%v", custState.PkC)
 	// merchSk := fmt.Sprintf("%v", *merchState.SkM)
 	merchPk := fmt.Sprintf("%v", *merchState.PkM)
-	fmt.Println("merchPk", merchPk)
 	// changeSk := "4157697b6428532758a9d0f9a73ce58befe3fd665797427d1c5bb3d33f6a132e"
 	changePk := "037bed6ab680a171ef2ab564af25eff15c0659313df0bbfb96414da7c7d1e65882"
 
 	merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
+	merchChildPk := fmt.Sprintf("%v", *merchState.ChildPk)
 	toSelfDelay, err := libzkchannels.GetSelfDelayBE(channelState)
-	fmt.Println("toSelfDelay", toSelfDelay)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -128,7 +206,7 @@ func SetupLibzkChannels(zkChannelName string, custDBPath string, merchDBPath str
 	}
 	_ = signedEscrowTx
 
-	merchTxPreimage, err := libzkchannels.FormMerchCloseTx(escrowTxid_LE, custPk, merchPk, merchClosePk, custBal, merchBal, feeMC, txFeeInfo.ValCpFp, toSelfDelay)
+	merchTxPreimage, err := libzkchannels.FormMerchCloseTx(escrowTxid_LE, custPk, merchPk, merchClosePk, merchChildPk, custBal, merchBal, feeMC, txFeeInfo.ValCpFp, toSelfDelay)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -171,7 +249,7 @@ func SetupLibzkChannels(zkChannelName string, custDBPath string, merchDBPath str
 
 	isOk, merchState, err = libzkchannels.MerchantValidateInitialState(channelToken, initCustState, initHash, merchState)
 	if !isOk {
-		fmt.Println("error: ", err)
+		log.Fatalf("%v", err)
 	}
 
 	CloseEscrowTx, CloseEscrowTxId_LE, custState, err := libzkchannels.ForceCustomerCloseTx(channelState, channelToken, true, custState)
