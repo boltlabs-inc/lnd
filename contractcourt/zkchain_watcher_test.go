@@ -9,6 +9,8 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/lightningnetwork/lnd/chainntnfs"
+	"github.com/lightningnetwork/lnd/libzkchannels"
+	"github.com/lightningnetwork/lnd/lncfg"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 	"github.com/lightningnetwork/lnd/zkchannels"
 )
@@ -21,8 +23,11 @@ const (
 	merchCloseTx   = "0200000000010180ac1ade33d7bf47f27046b4e79ffe737f42cf79cce116a96f5b2612d3ed81740000000000ffffffff02b07c1e00000000002200204bbedbfa9d195e8fc160e6a237d0d702fdae3b5a2d9494beb048452c4647095ae80300000000000016001430d0e52d62063f511cf71bdd8ae633bd514503af04004830450221008bd7b4c25dcbaeb624776adc3e9851b5b5c5ee54d845ed6749c2e12d917e0a550220316529e58b8ac6a0eaf0fee04d3c4bd2d67316951cb8d29c4466c17ac3e4a94f01483045022100be920e94fd52426ff8e09e46132211ace0ad3115e97ff3f0f9209b225124c6db02206bc923bfa19bd9db9cc20269881969586f383b8689bb20728790b853109d111301475221038c2add1dc8cf2c57bac6e19d1f963e0c42103554e8b35e425bc2a78f4c22b273210217d55a1e3ecdd220fde4bddbbfd485a1596c0c5cb7ef11dbfcdb2dd9cf4b85af52ae00000000"
 	merchCloseTxid = "7e4e51a76aaa9f23d6ada1522bfdb4ccefb5cd8875a4982bbb1bf02b6a99e203"
 
-	custCloseTx   = "0200000000010180ac1ade33d7bf47f27046b4e79ffe737f42cf79cce116a96f5b2612d3ed81740000000000ffffffff04703a0f0000000000220020b69ac2024f8d340320003dbe14fb02cf604680839eb0d6cac70dfce31aefa02f40420f000000000016001403d761347fe4398f4ab398266a830ead7c9c2f300000000000000000436a41e6b488e5fcf772078a79ecfc6a787a4aa13cab1782d317d09c84b013f5be48ff027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddbe803000000000000160014a496306b960746361e3528534d04b1ac4726655a04004730440220295696291e81970a3db52d124add3c45981fb47970e29e9bc3e2b8d8637af7c80220774a1c04a34b3a35cf05d86f1f0138aa2feda3882ac3ab23158310a3c9c7b4530147304402203f323da32dfd40e7b248236e2f86f264fc6ad3d298867049461066a48d6b5cf302206efae4371cfd6fa20e6ede9a8414d6184b129bf4d972520639c5b9863c4a53a901475221038c2add1dc8cf2c57bac6e19d1f963e0c42103554e8b35e425bc2a78f4c22b273210217d55a1e3ecdd220fde4bddbbfd485a1596c0c5cb7ef11dbfcdb2dd9cf4b85af52ae00000000"
-	custCloseTxid = "13b04a68e5bc678d71f7533392d83ec7e6f1dd247e9ed68e4bfd0a28436250f3"
+	revokedCustCloseTx   = "0200000000010180ac1ade33d7bf47f27046b4e79ffe737f42cf79cce116a96f5b2612d3ed81740000000000ffffffff04703a0f0000000000220020b69ac2024f8d340320003dbe14fb02cf604680839eb0d6cac70dfce31aefa02f40420f000000000016001403d761347fe4398f4ab398266a830ead7c9c2f300000000000000000436a41e6b488e5fcf772078a79ecfc6a787a4aa13cab1782d317d09c84b013f5be48ff027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddbe803000000000000160014a496306b960746361e3528534d04b1ac4726655a04004730440220295696291e81970a3db52d124add3c45981fb47970e29e9bc3e2b8d8637af7c80220774a1c04a34b3a35cf05d86f1f0138aa2feda3882ac3ab23158310a3c9c7b4530147304402203f323da32dfd40e7b248236e2f86f264fc6ad3d298867049461066a48d6b5cf302206efae4371cfd6fa20e6ede9a8414d6184b129bf4d972520639c5b9863c4a53a901475221038c2add1dc8cf2c57bac6e19d1f963e0c42103554e8b35e425bc2a78f4c22b273210217d55a1e3ecdd220fde4bddbbfd485a1596c0c5cb7ef11dbfcdb2dd9cf4b85af52ae00000000"
+	revokedCustCloseTxid = "13b04a68e5bc678d71f7533392d83ec7e6f1dd247e9ed68e4bfd0a28436250f3"
+
+	latestCustCloseTx   = "0200000000010115d8c38d1f31fea71b358e7315fe4609b1cde1758414fe90cb902bb087f4a3190000000000ffffffff040e3d0f0000000000220020a97c0ba2d9d85b434e59b67112f30b4f697b16ef9293359e93a1995d4c7f9ccb881300000000000016001403d761347fe4398f4ab398266a830ead7c9c2f300000000000000000436a41a79d68960d7fae77fd8dfee3a03dc7324b09229cd1074b9c50146fc5c87796b1027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddb4a01000000000000160014a496306b960746361e3528534d04b1ac4726655a0400483045022100ebcb62389d231c3483b9e4fd2ccf62865ff7533386cbfe2cc1eafe89441c850002201dc10e474c293d07b2bdd74825cdd30371dcc984b8f7a75d434a6d2115626361014730440220502e884192441357d4bcfceca004f9a4bd37d12324c27b9a9aea6b05b1ae044602204698b55f1901f6f413f3904958e8c51a3bf312aab1d216d53dc2ccfa4506c90501475221038c2add1dc8cf2c57bac6e19d1f963e0c42103554e8b35e425bc2a78f4c22b273210217d55a1e3ecdd220fde4bddbbfd485a1596c0c5cb7ef11dbfcdb2dd9cf4b85af52ae00000000"
+	latestCustCloseTxid = "c3fc727faa847adf55a08ce1844dc801bca4442016b060781f2adbfa5cb8db6c"
 
 	// custCloseMerchTx = "0200000000010103e2996a2bf01bbb2b98a47588cdb5efccb4fd2b52a1add6239faa6aa7514e7e0000000000ffffffff04703a0f0000000000220020b69ac2024f8d340320003dbe14fb02cf604680839eb0d6cac70dfce31aefa02f703a0f000000000016001403d761347fe4398f4ab398266a830ead7c9c2f300000000000000000436a41e6b488e5fcf772078a79ecfc6a787a4aa13cab1782d317d09c84b013f5be48ff027160fb5e48252f02a00066dfa823d15844ad93e04f9c9b746e1f28ed4a1eaddbe803000000000000160014a496306b960746361e3528534d04b1ac4726655a05004830450221008fa4d30c116228934de9aa9636b0bf7331ecee4a785ae91417acba8df2400b5e02206e9fa60df1f4aa55a86970ad4cdc5b15b70fd98d4694b51af025b738465fed7e01483045022100d537d055947db9f5fc4971c17f65fca754c6caff89bb455c746f803adcb478ab0220451f6e92cea5ab72c672b79964000914aefd8c0c7ae6fd7a3d6e5cd08a8a02e601010172635221038c2add1dc8cf2c57bac6e19d1f963e0c42103554e8b35e425bc2a78f4c22b273210217d55a1e3ecdd220fde4bddbbfd485a1596c0c5cb7ef11dbfcdb2dd9cf4b85af52ae6702cf05b2752103780cd60a7ffeb777ec337e2c177e783625c4de907a4aee0f41269cc612fba457ac6800000000"
 	// custCloseMerchTxid = "2259fb14bf4a4a30ca0bbb98e9c1bfc9aac8d887c024f395abae9071cc77f141"
@@ -288,12 +293,12 @@ func TestZkChainWatcherLocalCustClose(t *testing.T) {
 	chanEvents := custChainWatcher.SubscribeChannelEvents()
 
 	var closeTxidHash chainhash.Hash
-	err = chainhash.Decode(&closeTxidHash, custCloseTxid)
+	err = chainhash.Decode(&closeTxidHash, revokedCustCloseTxid)
 	if err != nil {
 		t.Error(err)
 	}
 
-	serializedCustCTx, err := hex.DecodeString(custCloseTx)
+	serializedCustCTx, err := hex.DecodeString(revokedCustCloseTx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -326,69 +331,182 @@ func TestZkChainWatcherLocalCustClose(t *testing.T) {
 	}
 }
 
-// // TestZkChainWatcherRemoteValidCustClose tests that the chain watcher is able
-// // to properly detect a local closure initiated by the customer.
-// // 'Valid' custClose refers to the fact that it is the latest state, i.e. the
-// // customer is not closing with a revoked state.
-// // Note that this is used in both custCloseTx from Escrow and from merchClose.
-// func TestZkChainWatcherRemoteValidCustClose(t *testing.T) {
-// 	// t.Parallel()
+// TestZkChainWatcherRemoteValidCustClose tests that the chain watcher is able
+// to properly detect a remote closure initiated by the customer.
+// 'Valid' custClose refers to the fact that it is the latest state, i.e. the
+// customer is not closing with a revoked state.
+// Note that this is used in both custCloseTx from Escrow and from merchClose.
+func TestZkChainWatcherRemoteValidCustClose(t *testing.T) {
+	// t.Parallel()
 
-// 	// This wont work until the zkmerch.db and zkcust.db have been setup
-// 	zkchannels.SetupLibzkChannels("myChannel", custDBPath, merchDBPath)
+	skM := "e6e0c5310bb03809e1b2a1595a349f002125fa557d481e51f401ddaf3287e6ae"
+	payoutSkM := "5611111111111111111111111111111100000000000000000000000000000000"
+	childSkM := "5811111111111111111111111111111100000000000000000000000000000000"
+	disputeSkM := "5711111111111111111111111111111100000000000000000000000000000000"
 
-// 	merchChainWatcher, fundingOut, merchNotifier, err := setupTestMerchChainWatcher(t, false, merchDBPath)
+	// valCpfp := int64(1000)
+	// minThreshold := int64(546)
 
-// 	if err != nil {
-// 		t.Fatalf("unable to create merchChainWatcher: %v", err)
-// 	}
-// 	err = merchChainWatcher.Start()
-// 	if err != nil {
-// 		t.Fatalf("unable to start merchChainWatcher: %v", err)
-// 	}
-// 	defer merchChainWatcher.Stop()
+	txFeeInfo := libzkchannels.TransactionFeeInfo{
+		BalMinCust:  lncfg.BalMinCust,
+		BalMinMerch: lncfg.BalMinMerch,
+		ValCpFp:     lncfg.ValCpfp,
+		FeeCC:       1000,
+		FeeMC:       1000,
+		MinFee:      lncfg.MinFee,
+		MaxFee:      lncfg.MaxFee,
+	}
 
-// 	// We'll request a new channel event subscription from customer's chain
-// 	// watcher.
-// 	chanEvents := merchChainWatcher.SubscribeChannelEvents()
+	custDBPath, merchDBPath, err := zkchannels.SetupTestZkDBs(txFeeInfo, skM, payoutSkM, childSkM, disputeSkM)
+	if err != nil {
+		t.Fatalf("SetupTestZkDBs: %v", err)
+	}
+	defer zkchannels.TearDownZkDBs(custDBPath, merchDBPath)
 
-// 	var closeTxidHash chainhash.Hash
-// 	err = chainhash.Decode(&closeTxidHash, custCloseTxid)
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
+	// This wont work until the zkmerch.db and zkcust.db have been setup
+	zkchannels.SetupLibzkChannels("myChannel", custDBPath, merchDBPath)
 
-// 	serializedCustCTx, err := hex.DecodeString(custCloseTx)
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
+	merchChainWatcher, fundingOut, merchNotifier, err := setupTestMerchChainWatcher(t, false, merchDBPath)
 
-// 	var msgCustCTx wire.MsgTx
-// 	err = msgCustCTx.Deserialize(bytes.NewReader(serializedCustCTx))
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
+	if err != nil {
+		t.Fatalf("unable to create merchChainWatcher: %v", err)
+	}
+	err = merchChainWatcher.Start()
+	if err != nil {
+		t.Fatalf("unable to start merchChainWatcher: %v", err)
+	}
+	defer merchChainWatcher.Stop()
 
-// 	custSpend := &chainntnfs.SpendDetail{
-// 		SpentOutPoint: fundingOut,
-// 		SpenderTxHash: &closeTxidHash,
-// 		SpendingTx:    &msgCustCTx,
-// 	}
-// 	merchNotifier.spendChan <- custSpend
+	// We'll request a new channel event subscription from customer's chain
+	// watcher.
+	chanEvents := merchChainWatcher.SubscribeChannelEvents()
 
-// 	// We should get a new spend event over the event channel.
-// 	var uniClose *ZkCustCloseInfo
-// 	select {
-// 	case uniClose = <-chanEvents.ZkCustClosure:
-// 		t.Logf("amount: %#v\n", uniClose.amount)
-// 	case <-time.After(time.Second * 5):
-// 		t.Fatalf("didn't receive ZkCustClosure event")
-// 	}
+	var closeTxidHash chainhash.Hash
+	err = chainhash.Decode(&closeTxidHash, latestCustCloseTxid)
+	if err != nil {
+		t.Error(err)
+	}
 
-// 	if uniClose == nil {
-// 		t.Fatalf("Did not receive ZkCustCloseInfo for remote custClose")
-// 	}
-// }
+	serializedCustCTx, err := hex.DecodeString(latestCustCloseTx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var msgCustCTx wire.MsgTx
+	err = msgCustCTx.Deserialize(bytes.NewReader(serializedCustCTx))
+	if err != nil {
+		t.Error(err)
+	}
+
+	custSpend := &chainntnfs.SpendDetail{
+		SpentOutPoint: fundingOut,
+		SpenderTxHash: &closeTxidHash,
+		SpendingTx:    &msgCustCTx,
+	}
+	merchNotifier.spendChan <- custSpend
+
+	// We should get a new spend event over the event channel.
+	var uniClose *ZkCustCloseInfo
+	select {
+	case uniClose = <-chanEvents.ZkCustClosure:
+		t.Logf("amount: %#v\n", uniClose.amount)
+	case <-time.After(time.Second * 5):
+		t.Fatalf("didn't receive ZkCustClosure event")
+	}
+
+	if uniClose == nil {
+		t.Fatalf("Did not receive ZkCustCloseInfo for remote custClose")
+	}
+}
+
+// TestZkChainWatcherRemoteRevokedCustClose tests that the chain watcher is able
+// to properly detect a remote closure initiated by the customer.
+// 'Revoked' custClose refers to the fact that it is not the latest state, i.e.
+// the customer is closing with a revoked state.
+// Note that this is used in both custCloseTx from Escrow and from merchClose.
+func TestZkChainWatcherRemoteRevokedCustClose(t *testing.T) {
+	// t.Parallel()
+
+	skM := "e6e0c5310bb03809e1b2a1595a349f002125fa557d481e51f401ddaf3287e6ae"
+	payoutSkM := "5611111111111111111111111111111100000000000000000000000000000000"
+	childSkM := "5811111111111111111111111111111100000000000000000000000000000000"
+	disputeSkM := "5711111111111111111111111111111100000000000000000000000000000000"
+
+	// valCpfp := int64(1000)
+	// minThreshold := int64(546)
+
+	txFeeInfo := libzkchannels.TransactionFeeInfo{
+		BalMinCust:  lncfg.BalMinCust,
+		BalMinMerch: lncfg.BalMinMerch,
+		ValCpFp:     lncfg.ValCpfp,
+		FeeCC:       1000,
+		FeeMC:       1000,
+		MinFee:      lncfg.MinFee,
+		MaxFee:      lncfg.MaxFee,
+	}
+
+	custDBPath, merchDBPath, err := zkchannels.SetupTestZkDBs(txFeeInfo, skM, payoutSkM, childSkM, disputeSkM)
+	if err != nil {
+		t.Fatalf("SetupTestZkDBs: %v", err)
+	}
+	defer zkchannels.TearDownZkDBs(custDBPath, merchDBPath)
+
+	// This wont work until the zkmerch.db and zkcust.db have been setup
+	zkchannels.SetupLibzkChannels("myChannel", custDBPath, merchDBPath)
+
+	merchChainWatcher, fundingOut, merchNotifier, err := setupTestMerchChainWatcher(t, false, merchDBPath)
+
+	if err != nil {
+		t.Fatalf("unable to create merchChainWatcher: %v", err)
+	}
+	err = merchChainWatcher.Start()
+	if err != nil {
+		t.Fatalf("unable to start merchChainWatcher: %v", err)
+	}
+	defer merchChainWatcher.Stop()
+
+	// We'll request a new channel event subscription from customer's chain
+	// watcher.
+	chanEvents := merchChainWatcher.SubscribeChannelEvents()
+
+	var closeTxidHash chainhash.Hash
+	err = chainhash.Decode(&closeTxidHash, revokedCustCloseTxid)
+	if err != nil {
+		t.Error(err)
+	}
+
+	serializedCustCTx, err := hex.DecodeString(revokedCustCloseTx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var msgCustCTx wire.MsgTx
+	err = msgCustCTx.Deserialize(bytes.NewReader(serializedCustCTx))
+	if err != nil {
+		t.Error(err)
+	}
+
+	custSpend := &chainntnfs.SpendDetail{
+		SpentOutPoint: fundingOut,
+		SpenderTxHash: &closeTxidHash,
+		SpendingTx:    &msgCustCTx,
+	}
+	merchNotifier.spendChan <- custSpend
+
+	// We should get a new spend event over the remote merchClose
+	// event channel.
+	var uniClose *ZkBreachInfo
+	select {
+	case uniClose = <-chanEvents.ZkContractBreach:
+		t.Logf("amount: %#v\n", uniClose.Amount)
+	case <-time.After(time.Second * 5):
+		t.Fatalf("didn't receive ZkContractBreach event for revoked custClose")
+	}
+	if uniClose == nil {
+		t.Fatalf("Did not receive ZkBreachInfo for revoked custClose")
+	}
+
+}
 
 // TestZkChainWatcherLocalMerchClaim tests that the chain watcher is
 // able to properly detect a local merchClaim tx which is spent from merchClose.

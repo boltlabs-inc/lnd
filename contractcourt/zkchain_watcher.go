@@ -308,7 +308,6 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 		if !ok {
 			return
 		}
-
 		if c.cfg.WatchingMerchClose {
 			log.Debug("Spend from merchClose detected")
 		} else {
@@ -487,8 +486,6 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 				// state. We must send the relevant transaction information
 				// to the breachArbiter to broadcast the dispute/justice tx.
 				if isOldRevLock {
-					log.Debug("Revoked Cust-close-tx detected")
-
 					zkBreachInfo := ZkBreachInfo{
 						IsMerchClose:  false,
 						EscrowTxid:    inputTxid,
