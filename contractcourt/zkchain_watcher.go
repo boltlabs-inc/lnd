@@ -696,14 +696,14 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 	cpfpIndex := uint32(3)
 	cpfpAmount := channelState.ValCpfp
 	outAmt := inputAmount + cpfpAmount - txFee
-	signedCustClaimWithChild, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, index, inputAmount, cpfpIndex, cpfpAmount, outAmt, toSelfDelay, outputPk, custState.RevLock, custClosePk, custState)
+	signedCustClaimWithChild, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, index, inputAmount, outAmt, toSelfDelay, outputPk, custState.RevLock, custClosePk, cpfpIndex, cpfpAmount, custState)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 	log.Debugf("signedCustClaimWithChild: %#v", signedCustClaimWithChild)
 
-	signedCustClaimWithoutChild, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, index, inputAmount, uint32(0), int64(0), outAmt, toSelfDelay, outputPk, custState.RevLock, custClosePk, custState)
+	signedCustClaimWithoutChild, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, index, inputAmount, outAmt, toSelfDelay, outputPk, custState.RevLock, custClosePk, uint32(0), int64(0), custState)
 	if err != nil {
 		log.Error(err)
 		return err
