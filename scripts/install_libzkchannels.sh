@@ -14,9 +14,13 @@ else
    echo "Did not specify correct path to zklnd..."
 fi
 
-git clone https://github.com/boltlabs-inc/libzkchannels.git
-
-cd libzkchannels/
+if [ -d "$LND_PATH/libzkchannels" ]; then
+  cd libzkchannels/
+  git pull
+else
+  git clone https://github.com/boltlabs-inc/libzkchannels.git
+  cd libzkchannels/
+fi
 
 unset ZK_DEPS_INSTALL
 
