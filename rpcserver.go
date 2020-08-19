@@ -6712,7 +6712,6 @@ func (r *rpcServer) ListZkChannels(ctx context.Context,
 	resp := &lnrpc.ListZkChannelsResponse{
 		ZkChannel: make([]*lnrpc.ListZkChannelsInfo, 0, numChannels),
 	}
-
 	for i := 0; i < numChannels; i++ {
 		channelToken := ListOfZkChannels.ChannelToken[i]
 		channelTokenResp := &lnrpc.ChannelToken{PkC: channelToken.PkC, PkM: channelToken.PkM,

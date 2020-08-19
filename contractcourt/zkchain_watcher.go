@@ -611,7 +611,7 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 
 	inAmt := amount
 	outAmt := int64(inAmt - txFee)
-	signedMerchClaimTx, err := libzkchannels.MerchantSignMerchClaimTx(closeTxidLittleEn, index, inAmt, outAmt, toSelfDelay, custClosePk, outputPk, merchState)
+	signedMerchClaimTx, err := libzkchannels.MerchantSignMerchClaimTx(closeTxidLittleEn, index, inAmt, outAmt, toSelfDelay, custClosePk, outputPk, 0, 0, merchState)
 	if err != nil {
 		log.Errorf("libzkchannels.MerchantSignMerchClaimTx: ", err)
 		return err

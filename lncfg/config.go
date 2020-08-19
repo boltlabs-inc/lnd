@@ -68,7 +68,7 @@ const (
 	MinFee = 100
 
 	// MaxFee is the maximum allowed tx fee for closing transactions (zkChannels).
-	MaxFee = 10000
+	MaxFee = 50000
 
 	// ValCpfp is the value in satoshis of the child (aka anchor) output in closing transaction (zkChannels).
 	ValCpfp = 330
