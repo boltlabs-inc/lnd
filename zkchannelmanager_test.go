@@ -591,12 +591,6 @@ func TestMerchClose(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	// merchant's channelState must be in "Open" to run merchClose
-	err = zkchannels.UpdateMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid, "Open")
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
 	// Check that MerchChannelState has updated.
 	status, err := zkchannels.GetMerchChannelState(merch.zkChannelMgr.dbPath, escrowTxid)
 	if err != nil {
@@ -633,7 +627,7 @@ func TestMerchClose(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	assert.Equal(t, "ConfirmedClose", status)
+	assert.Equal(t, "PendingClose", status)
 }
 
 func addAmountToTotalReceieved(t *testing.T, dbPath string, amount int64) error {

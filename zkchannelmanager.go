@@ -1222,19 +1222,6 @@ func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chain
 		return
 	}
 
-	if confirmOpen == true {
-		merchState, err = libzkchannels.MerchantChangeChannelStatusToOpen(escrowTxid, merchState)
-		if err != nil {
-			zkchLog.Error(err)
-			return
-		}
-	} else {
-		merchState, err = libzkchannels.MerchantChangeChannelStatusToConfirmedClose(escrowTxid, merchState)
-		if err != nil {
-			zkchLog.Error(err)
-			return
-		}
-	}
 	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
 	if err != nil {
 		zkchLog.Error(err)
@@ -1246,6 +1233,19 @@ func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chain
 		zkchLog.Error(err)
 	}
 
+	if confirmOpen == true {
+		err = zkchannels.UpdateMerchChannelState(z.dbPath, escrowTxid, "Open")
+		if err != nil {
+			zkchLog.Errorf("Couldn't updateMerchChannelState: %v", err)
+			return
+		}
+	} else {
+		err = zkchannels.UpdateMerchChannelState(z.dbPath, escrowTxid, "PendingClose")
+		if err != nil {
+			zkchLog.Errorf("Couldn't updateMerchChannelState: %v", err)
+			return
+		}
+	}
 }
 
 func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstablishStateValidated, p lnpeer.Peer, zkChannelName string, notifier chainntnfs.ChainNotifier) {
@@ -1390,18 +1390,17 @@ func (z *zkChannelManager) advanceCustomerStateAfterConfirmations(notifier chain
 		return
 	}
 
-	custState, err = libzkchannels.CustomerChangeChannelStatusToOpen(custState)
-	if err != nil {
-		zkchLog.Error(err)
-		return
-	}
-
 	err = zkchanneldb.AddCustState(zkCustDB, zkChannelName, custState)
 	if err != nil {
 		z.failEstablishFlow(p, err)
 		return
 	}
 	err = zkCustDB.Close()
+	if err != nil {
+		zkchLog.Error(err)
+	}
+
+	err = zkchannels.UpdateCustChannelState(z.dbPath, zkChannelName, "Open")
 	if err != nil {
 		zkchLog.Error(err)
 	}
@@ -2797,7 +2796,7 @@ func (z *zkChannelManager) MerchClose(notifier chainntnfs.ChainNotifier, escrowT
 		return err
 	}
 
-	// March the channel as pending close. This will prevent customer's from
+	// Mark the channel as pending close. This will prevent customer's from
 	// making payments on this channel (for their own safety).
 	err = zkchannels.UpdateMerchChannelState(z.dbPath, escrowTxid, "PendingClose")
 	if err != nil {

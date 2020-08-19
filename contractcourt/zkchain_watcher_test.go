@@ -11,6 +11,7 @@ import (
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 	"github.com/lightningnetwork/lnd/zkchannels"
+	"github.com/stretchr/testify/assert"
 )
 
 func setupTestMerchChainWatcher(t *testing.T, isWatchingMerchClose bool, merchDBPath string) (*zkChainWatcher, *wire.OutPoint, *mockNotifier, error) {
@@ -73,7 +74,7 @@ func setupTestMerchChainWatcher(t *testing.T, isWatchingMerchClose bool, merchDB
 	return merchChainWatcher, outPoint, merchNotifier, err
 }
 
-func setupTestCustChainWatcher(t *testing.T, isWatchingMerchClose bool, custDBPath string) (*zkChainWatcher, *wire.OutPoint, *mockNotifier, error) {
+func setupTestCustChainWatcher(t *testing.T, isWatchingMerchClose bool, custDBPath string, zkChannelName string) (*zkChainWatcher, *wire.OutPoint, *mockNotifier, error) {
 
 	escrowTx, escrowTxid, err := zkchannels.HardcodedTxs("escrow")
 	if err != nil {
@@ -121,6 +122,7 @@ func setupTestCustChainWatcher(t *testing.T, isWatchingMerchClose bool, custDBPa
 
 	custChainWatcher, err := newZkChainWatcher(ZkChainWatcherConfig{
 		IsMerch:            false,
+		CustChannelName:    zkChannelName,
 		DBPath:             custDBPath,
 		Estimator:          feeEstimator,
 		ZkFundingInfo:      ZkFundingInfo,
@@ -203,11 +205,17 @@ func TestChainWatcherLocalMerchClose(t *testing.T) {
 // TestChainWatcherRemoteMerchClose tests that the chain watcher is able
 // to properly detect a remote closure initiated by the merchant.
 func TestChainWatcherRemoteMerchClose(t *testing.T) {
-	custDBPath, _, err := zkchannels.SetupTempDBPaths()
+	custDBPath, merchDBPath, err := zkchannels.SetupTestZkDBs()
 	if err != nil {
-		t.Fatalf("SetupTempDBPaths: %v", err)
+		t.Fatalf("SetupTestZkDBs: %v", err)
 	}
-	custChainWatcher, fundingOut, custNotifier, err := setupTestCustChainWatcher(t, false, custDBPath)
+	defer zkchannels.TearDownZkDBs(custDBPath, merchDBPath)
+
+	zkChannelName := "myChannel"
+	// This wont work until the zkmerch.db and zkcust.db have been setup
+	zkchannels.SetupLibzkChannels(zkChannelName, custDBPath, merchDBPath)
+
+	custChainWatcher, fundingOut, custNotifier, err := setupTestCustChainWatcher(t, false, custDBPath, zkChannelName)
 	if err != nil {
 		t.Fatalf("unable to create custChainWatcher: %v", err)
 	}
@@ -225,7 +233,6 @@ func TestChainWatcherRemoteMerchClose(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
 	var merchCloseTxidHash chainhash.Hash
 	err = chainhash.Decode(&merchCloseTxidHash, merchCloseTxid)
 	if err != nil {
@@ -249,6 +256,14 @@ func TestChainWatcherRemoteMerchClose(t *testing.T) {
 		SpendingTx:    &msgMerchCTx,
 	}
 	custNotifier.spendChan <- merchSpend
+	// Give custState a moment to update
+	time.Sleep(1 * time.Millisecond)
+
+	status, err := zkchannels.GetCustChannelState(custDBPath, zkChannelName)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	assert.Equal(t, "ConfirmedClose", status)
 
 	// We should get a new spend event over the remote merchClose
 	// event channel.
@@ -273,7 +288,9 @@ func TestZkChainWatcherLocalCustClose(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SetupTempDBPaths: %v", err)
 	}
-	custChainWatcher, fundingOut, custNotifier, err := setupTestCustChainWatcher(t, false, custDBPath)
+
+	zkChannelName := "myChannel"
+	custChainWatcher, fundingOut, custNotifier, err := setupTestCustChainWatcher(t, false, custDBPath, zkChannelName)
 	if err != nil {
 		t.Fatalf("unable to create custChainWatcher: %v", err)
 	}
@@ -287,18 +304,18 @@ func TestZkChainWatcherLocalCustClose(t *testing.T) {
 	// watcher.
 	chanEvents := custChainWatcher.SubscribeChannelEvents()
 
-	revokedCustCloseTx, revokedCustCloseTxid, err := zkchannels.HardcodedTxs("revokedCustClose")
+	latestCloseEscrowTx, latestCloseEscrowTxid, err := zkchannels.HardcodedTxs("latestCloseEscrow")
 	if err != nil {
 		t.Error(err)
 	}
 
 	var closeTxidHash chainhash.Hash
-	err = chainhash.Decode(&closeTxidHash, revokedCustCloseTxid)
+	err = chainhash.Decode(&closeTxidHash, latestCloseEscrowTxid)
 	if err != nil {
 		t.Error(err)
 	}
 
-	serializedCustCTx, err := hex.DecodeString(revokedCustCloseTx)
+	serializedCustCTx, err := hex.DecodeString(latestCloseEscrowTx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -343,9 +360,9 @@ func TestZkChainWatcherRemoteValidCustClose(t *testing.T) {
 	}
 	defer zkchannels.TearDownZkDBs(custDBPath, merchDBPath)
 
+	zkChannelName := "myChannel"
 	// This wont work until the zkmerch.db and zkcust.db have been setup
-	zkchannels.SetupLibzkChannels("myChannel", custDBPath, merchDBPath)
-
+	zkchannels.SetupLibzkChannels(zkChannelName, custDBPath, merchDBPath)
 	merchChainWatcher, fundingOut, merchNotifier, err := setupTestMerchChainWatcher(t, false, merchDBPath)
 
 	if err != nil {
@@ -361,7 +378,7 @@ func TestZkChainWatcherRemoteValidCustClose(t *testing.T) {
 	// watcher.
 	chanEvents := merchChainWatcher.SubscribeChannelEvents()
 
-	latestCustCloseTx, latestCustCloseTxid, err := zkchannels.HardcodedTxs("latestCustClose")
+	latestCustCloseTx, latestCustCloseTxid, err := zkchannels.HardcodedTxs("latestCloseEscrow")
 	if err != nil {
 		t.Error(err)
 	}
@@ -389,6 +406,15 @@ func TestZkChainWatcherRemoteValidCustClose(t *testing.T) {
 		SpendingTx:    &msgCustCTx,
 	}
 	merchNotifier.spendChan <- custSpend
+	// Give merchState a moment to update
+	time.Sleep(1 * time.Millisecond)
+
+	txid := fundingOut.Hash.String()
+	status, err := zkchannels.GetMerchChannelState(merchDBPath, txid)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	assert.Equal(t, "ConfirmedClose", status)
 
 	// We should get a new spend event over the event channel.
 	var uniClose *ZkCustCloseInfo
@@ -416,9 +442,9 @@ func TestZkChainWatcherRemoteRevokedCustClose(t *testing.T) {
 	}
 	defer zkchannels.TearDownZkDBs(custDBPath, merchDBPath)
 
+	zkChannelName := "myChannel"
 	// This wont work until the zkmerch.db and zkcust.db have been setup
-	zkchannels.SetupLibzkChannels("myChannel", custDBPath, merchDBPath)
-
+	zkchannels.SetupLibzkChannels(zkChannelName, custDBPath, merchDBPath)
 	merchChainWatcher, fundingOut, merchNotifier, err := setupTestMerchChainWatcher(t, false, merchDBPath)
 
 	if err != nil {
@@ -434,18 +460,18 @@ func TestZkChainWatcherRemoteRevokedCustClose(t *testing.T) {
 	// watcher.
 	chanEvents := merchChainWatcher.SubscribeChannelEvents()
 
-	revokedCustCloseTx, revokedCustCloseTxid, err := zkchannels.HardcodedTxs("revokedCustClose")
+	revokedCustEscrowTx, revokedCustEscrowTxid, err := zkchannels.HardcodedTxs("revokedCloseEscrow")
 	if err != nil {
 		t.Error(err)
 	}
 
 	var closeTxidHash chainhash.Hash
-	err = chainhash.Decode(&closeTxidHash, revokedCustCloseTxid)
+	err = chainhash.Decode(&closeTxidHash, revokedCustEscrowTxid)
 	if err != nil {
 		t.Error(err)
 	}
 
-	serializedCustCTx, err := hex.DecodeString(revokedCustCloseTx)
+	serializedCustCTx, err := hex.DecodeString(revokedCustEscrowTx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -462,6 +488,15 @@ func TestZkChainWatcherRemoteRevokedCustClose(t *testing.T) {
 		SpendingTx:    &msgCustCTx,
 	}
 	merchNotifier.spendChan <- custSpend
+	// Give merchState a moment to update
+	time.Sleep(1 * time.Millisecond)
+
+	txid := fundingOut.Hash.String()
+	status, err := zkchannels.GetMerchChannelState(merchDBPath, txid)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	assert.Equal(t, "ConfirmedClose", status)
 
 	// We should get a new spend event over the remote merchClose
 	// event channel.
@@ -549,8 +584,8 @@ func TestZkChainWatcherRemoteMerchClaim(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SetupTempDBPaths: %v", err)
 	}
-
-	custChainWatcher, outPoint, merchNotifier, err := setupTestCustChainWatcher(t, true, custDBPath)
+	zkChannelName := "myChannel"
+	custChainWatcher, outPoint, merchNotifier, err := setupTestCustChainWatcher(t, true, custDBPath, zkChannelName)
 	if err != nil {
 		t.Fatalf("unable to create custChainWatcher: %v", err)
 	}

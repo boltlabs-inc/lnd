@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/btcsuite/btcd/wire"
-	"github.com/prometheus/common/log"
 
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
@@ -526,12 +525,6 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 		"revoked funds", breachInfo.CloseTxid)
 
 	escrowTxid := breachInfo.EscrowTxid.String()
-
-	err := zkchannels.UpdateMerchChannelState(b.cfg.DBPath, escrowTxid, "ConfirmedClose")
-	if err != nil {
-		log.Error(err)
-	}
-
 	breachTxid := breachInfo.CloseTxid.String()
 	index := uint32(0)
 
