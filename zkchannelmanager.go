@@ -141,7 +141,7 @@ func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.
 
 func (z *zkChannelManager) failEstablishFlow(peer lnpeer.Peer,
 	zkChanErr error) {
-	zkchLog.Debugf("Failing zkEstablish flow: %v", zkChanErr)
+	zkchLog.Warnf("Failing zkEstablish flow: %v", zkChanErr)
 
 	//Generic error messages: In some cases we might want specific error messages
 	//so that they can be handled differently
@@ -161,7 +161,7 @@ func (z *zkChannelManager) failEstablishFlow(peer lnpeer.Peer,
 func (z *zkChannelManager) failZkPayFlow(peer lnpeer.Peer,
 	zkChanErr error) {
 
-	zkchLog.Debugf("Failing zkPay flow: %v", zkChanErr)
+	zkchLog.Warnf("Failing zkPay flow: %v", zkChanErr)
 
 	//Generic error messages: In some cases we might want specific error messages
 	//so that they can be handled differently
@@ -171,7 +171,7 @@ func (z *zkChannelManager) failZkPayFlow(peer lnpeer.Peer,
 		Data: msg,
 	}
 
-	zkchLog.Debugf("Sending zkPay error to peer (%x): %v",
+	zkchLog.Warnf("Sending zkPay error to peer (%x): %v",
 		peer.IdentityKey().SerializeCompressed(), errMsg)
 	if err := peer.SendMessage(false, errMsg); err != nil {
 		zkchLog.Errorf("unable to send error message to peer %v", err)
@@ -315,7 +315,7 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 		return err
 	}
 
-	zkchLog.Debug("Generated channelToken and custState")
+	zkchLog.Info("Generated channelToken and custState")
 
 	custPk := fmt.Sprintf("%v", custState.PkC)
 	revLock := fmt.Sprintf("%v", custState.RevLock)
@@ -455,7 +455,7 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 
 func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p lnpeer.Peer) {
 
-	zkchLog.Debug("Just received ZkEstablishOpen")
+	zkchLog.Info("Just received ZkEstablishOpen")
 
 	// TODO ZKLND-51: Merchant should check ZkEstablishOpen message before proceeding
 	// escrowTxid := string(msg.EscrowTxid)
@@ -527,7 +527,7 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 
 func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccept, p lnpeer.Peer, zkChannelName string) {
 
-	zkchLog.Debugf("Just received ZkEstablishAccept for %v", zkChannelName)
+	zkchLog.Infof("Just received ZkEstablishAccept for %v", zkChannelName)
 
 	toSelfDelay := string(msg.ToSelfDelay)
 	merchClosePk := string(msg.MerchPayoutPk)
@@ -693,7 +693,7 @@ func (z *zkChannelManager) processZkEstablishAccept(msg *lnwire.ZkEstablishAccep
 
 func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablishMCloseSigned, p lnpeer.Peer) {
 
-	zkchLog.Debug("Just received MCloseSigned")
+	zkchLog.Info("Just received MCloseSigned")
 
 	custPk := string(msg.CustPk)
 	custBal := int64(binary.LittleEndian.Uint64(msg.CustBal))
@@ -858,7 +858,7 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 
 func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablishCCloseSigned, p lnpeer.Peer, zkChannelName string) {
 
-	zkchLog.Debugf("Just received CCloseSigned for %v", zkChannelName)
+	zkchLog.Infof("Just received CCloseSigned for %v", zkChannelName)
 
 	// Convert variables received
 	escrowSig := string(msg.EscrowSig)
@@ -1139,7 +1139,7 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 		z.failEstablishFlow(p, err)
 		return
 	}
-	zkchLog.Debugf("escrowTxidHash: %v", escrowTxidHash.String())
+	zkchLog.Infof("escrowTxidHash: %v", escrowTxidHash.String())
 
 	fundingOut := &wire.OutPoint{
 		Hash:  escrowTxidHash,
@@ -1177,7 +1177,7 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 
 func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chainntnfs.ChainNotifier, confirmOpen bool, escrowTxid string, closeTxid string, pkScript []byte) {
 
-	zkchLog.Debugf("waitForFundingWithTimeout\npkScript: %#x\n", pkScript)
+	zkchLog.Infof("waitForFundingWithTimeout\npkScript: %#x\n", pkScript)
 
 	var txid string
 	if confirmOpen == true {
@@ -1192,6 +1192,7 @@ func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chain
 			"confirmation: %v", err)
 	}
 
+	zkchLog.Debugf("confChannel: %#v\n", confChannel)
 	zkchLog.Infof("Transaction %v has 3 confirmations", txid)
 
 	// Now that the tx has been confirmed, update the status of the channel in
@@ -1236,7 +1237,7 @@ func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chain
 
 func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstablishStateValidated, p lnpeer.Peer, zkChannelName string, notifier chainntnfs.ChainNotifier) {
 
-	zkchLog.Debugf("Just received ZkEstablishStateValidated for %v", zkChannelName)
+	zkchLog.Infof("Just received ZkEstablishStateValidated for %v", zkChannelName)
 
 	// TODO: For now, we assume isOk is true
 	// Add alternative path for when isOk is false
@@ -1309,7 +1310,7 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 			"arbitration: %v", escrowTxid, err)
 	}
 
-	zkchLog.Debugf("Broadcasting signedEscrowTx: %#v\n", signedEscrowTx)
+	zkchLog.Infof("Broadcasting signedEscrowTx: %#v\n", signedEscrowTx)
 
 	err = z.PublishTransaction(&msgTx, "")
 	if err != nil {
@@ -1332,6 +1333,7 @@ func (z *zkChannelManager) advanceCustomerStateAfterConfirmations(notifier chain
 		zkchLog.Infof("error waiting for funding "+
 			"confirmation: %v", err)
 	}
+	zkchLog.Debugf("confChannel: %#v\n", confChannel)
 
 	// TEMPORARY DUMMY MESSAGE
 	fundingLockedBytes := []byte("Funding Locked")
@@ -1603,7 +1605,7 @@ func (z *zkChannelManager) waitForTimeout(notifier chainntnfs.ChainNotifier,
 
 func (z *zkChannelManager) processZkEstablishFundingLocked(msg *lnwire.ZkEstablishFundingLocked, p lnpeer.Peer) {
 
-	zkchLog.Debug("Just received FundingLocked: ", msg.FundingLocked)
+	zkchLog.Info("Just received FundingLocked: ", msg.FundingLocked)
 
 	// TODO: Check (local) channel status has gone from pending to confirmed.
 	// Use same channel state from advanceStateAfterConfirmations.
@@ -1622,7 +1624,7 @@ func (z *zkChannelManager) processZkEstablishFundingLocked(msg *lnwire.ZkEstabli
 
 func (z *zkChannelManager) processZkEstablishFundingConfirmed(msg *lnwire.ZkEstablishFundingConfirmed, p lnpeer.Peer, zkChannelName string) {
 
-	zkchLog.Debugf("Just received FundingConfirmed for %v", zkChannelName)
+	zkchLog.Infof("Just received FundingConfirmed for %v", zkChannelName)
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
@@ -1701,7 +1703,6 @@ func (z *zkChannelManager) processZkEstablishCustActivated(msg *lnwire.ZkEstabli
 		z.failEstablishFlow(p, err)
 		return
 	}
-	zkchLog.Debug("Just received ActivateCustomer, state =>:", state)
 
 	var channelToken libzkchannels.ChannelToken
 	err = json.Unmarshal(msg.ChannelToken, &channelToken)
@@ -1709,7 +1710,7 @@ func (z *zkChannelManager) processZkEstablishCustActivated(msg *lnwire.ZkEstabli
 		z.failEstablishFlow(p, err)
 		return
 	}
-	zkchLog.Debug("Just received ActivateCustomer, channelToken =>:", channelToken)
+	zkchLog.Info("Just received ActivateCustomer for channel:", channelToken.EscrowTxId)
 
 	// open the zkchanneldb to load merchState
 	zkMerchDB, err := zkchanneldb.OpenMerchBucket(z.dbPath)
@@ -1751,12 +1752,14 @@ func (z *zkChannelManager) processZkEstablishCustActivated(msg *lnwire.ZkEstabli
 		zkchLog.Error(err)
 		return
 	}
+	zkchLog.Infof("Sending PayToken0 for %v: ", channelToken.EscrowTxId)
+
 }
 
 func (z *zkChannelManager) processZkEstablishPayToken(msg *lnwire.ZkEstablishPayToken, p lnpeer.Peer, zkChannelName string) {
 
+	zkchLog.Infof("Just received PayToken0 for %v: ", zkChannelName)
 	payToken0 := string(msg.PayToken0)
-	zkchLog.Debugf("Just received PayToken0 for %v: ", zkChannelName, payToken0)
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
@@ -1918,7 +1921,7 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 	amount := int64(binary.LittleEndian.Uint64(msg.Amount))
 	revLockCom := string(msg.RevLockCom)
 
-	zkchLog.Debug("Just received ZkPayNonce for sessionID:", sessionID)
+	zkchLog.Info("Just received ZkPayNonce for sessionID:", sessionID)
 
 	paySession := PaySession{
 		Amount: amount,
@@ -1986,7 +1989,7 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 }
 
 func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpeer.Peer, zkChannelName string) {
-	zkchLog.Debug("Just received ZkPayMaskCom")
+	zkchLog.Info("Just received ZkPayMaskCom")
 
 	// TODO ZKLND-53: match up sessionID to appropriate bucket
 	sessionID := string(msg.SessionID)
@@ -2110,7 +2113,7 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	sessionID := string(msg.SessionID)
 	payTokenMaskCom := string(msg.PayTokenMaskCom)
 
-	zkchLog.Debug("Just received ZkPayMPC from sessionID:", sessionID)
+	zkchLog.Info("Just received ZkPayMPC from sessionID:", sessionID)
 
 	// open the zkchanneldb to load merchState
 	zkMerchDB, err := zkchanneldb.OpenMerchBucket(z.dbPath)
@@ -2155,7 +2158,7 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 
 	// TODO: Handle this case properly
 	if !isOk {
-		zkchLog.Debug("MPC unsuccessful")
+		zkchLog.Warn("MPC unsuccessful")
 	}
 	if err != nil {
 		z.failZkPayFlow(p, err)
@@ -2198,7 +2201,7 @@ func (z *zkChannelManager) processZkPayMPCResult(msg *lnwire.ZkPayMPCResult, p l
 		return
 	}
 
-	zkchLog.Debug("Just received ZkPayMPCResult. isOk: ", isOk)
+	zkchLog.Info("Just received ZkPayMPCResult. isOk: ", isOk)
 
 	if !isOk {
 		// TODO: Handle the case where MPC was unsuccessful, reinitiate UpdateMerchant?
@@ -2261,7 +2264,7 @@ func (z *zkChannelManager) processZkPayMaskedTxInputs(msg *lnwire.ZkPayMaskedTxI
 		return
 	}
 
-	zkchLog.Debugf("Just received ZkPayMaskedTxInputs from sessionID: %s", sessionID)
+	zkchLog.Infof("Just received ZkPayMaskedTxInputs from sessionID: %s", sessionID)
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
@@ -2558,6 +2561,7 @@ func (z *zkChannelManager) waitForCustCloseConfirmations(notifier chainntnfs.Cha
 		zkchLog.Infof("error waiting for custCloseTx "+
 			"confirmation: %v", err)
 	}
+	zkchLog.Debugf("confChannel: %#v\n", confChannel)
 
 	err = zkchannels.UpdateCustChannelState(z.dbPath, zkChannelName, "ConfirmedClose")
 	if err != nil {
