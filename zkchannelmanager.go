@@ -194,7 +194,7 @@ func (z *zkChannelManager) initCustomer() error {
 	}
 	if !isCust {
 
-		zkchLog.Infof("Creating customer zkchannel db")
+		zkchLog.Info("Creating customer zkchannel db")
 
 		err := zkchanneldb.InitDB(z.dbPath)
 		if err != nil {
@@ -220,7 +220,7 @@ func (z *zkChannelManager) initMerchant(merchName, skM, payoutSkM, childSkM, dis
 	}
 	if !isMerch {
 
-		zkchLog.Infof("Initializing merchant setup")
+		zkchLog.Info("Initializing merchant setup")
 
 		if merchName == "" {
 			merchName = "Merchant"
@@ -229,10 +229,10 @@ func (z *zkChannelManager) initMerchant(merchName, skM, payoutSkM, childSkM, dis
 		dbUrl := "redis://127.0.0.1/"
 
 		channelState, err := libzkchannels.ChannelSetup("channel", z.SelfDelay, z.BalMinCust, z.BalMinMerch, z.ValCpfp, false)
-		zkchLog.Debugf("libzkchannels.ChannelSetup done")
+		zkchLog.Debug("libzkchannels.ChannelSetup done")
 
 		channelState, merchState, err := libzkchannels.InitMerchant(dbUrl, channelState, "merch")
-		zkchLog.Debugf("libzkchannels.InitMerchant done")
+		zkchLog.Debug("libzkchannels.InitMerchant done")
 
 		channelState, merchState, err = libzkchannels.LoadMerchantWallet(merchState, channelState, skM, payoutSkM, childSkM, disputeSkM)
 
@@ -316,7 +316,6 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 	}
 
 	zkchLog.Debug("Generated channelToken and custState")
-	zkchLog.Debugf("%#v", channelToken)
 
 	custPk := fmt.Sprintf("%v", custState.PkC)
 	revLock := fmt.Sprintf("%v", custState.RevLock)
@@ -1193,7 +1192,6 @@ func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chain
 			"confirmation: %v", err)
 	}
 
-	zkchLog.Debugf("confChannel: %#v\n", confChannel)
 	zkchLog.Infof("Transaction %v has 3 confirmations", txid)
 
 	// Now that the tx has been confirmed, update the status of the channel in
@@ -1335,8 +1333,6 @@ func (z *zkChannelManager) advanceCustomerStateAfterConfirmations(notifier chain
 			"confirmation: %v", err)
 	}
 
-	zkchLog.Debugf("%#v\n", confChannel)
-
 	// TEMPORARY DUMMY MESSAGE
 	fundingLockedBytes := []byte("Funding Locked")
 	zkEstablishFundingLocked := lnwire.ZkEstablishFundingLocked{
@@ -1384,7 +1380,6 @@ func (z *zkChannelManager) advanceCustomerStateAfterConfirmations(notifier chain
 		return
 	}
 
-	zkchLog.Debugf("confChannel: %#v\n", confChannel)
 	zkchLog.Infof("Transaction %v has 3 confirmations", escrowTxid)
 }
 
@@ -2513,7 +2508,7 @@ func (z *zkChannelManager) CloseZkChannel(notifier chainntnfs.ChainNotifier, zkC
 	}
 
 	zkchLog.Debug("Signed closeEscrowTx =>:", closeEscrowTx)
-	zkchLog.Infof("closeEscrowTx =>:", closeEscrowTxid)
+	zkchLog.Debug("closeEscrowTx =>:", closeEscrowTxid)
 
 	// Broadcast escrow tx on chain
 	serializedTx, err := hex.DecodeString(closeEscrowTx)
@@ -2530,7 +2525,7 @@ func (z *zkChannelManager) CloseZkChannel(notifier chainntnfs.ChainNotifier, zkC
 	}
 
 	if dryRun {
-		zkchLog.Infof("DryRun: Not Broadcasting close transaction:",
+		zkchLog.Info("DryRun: Not Broadcasting close transaction:",
 			closeEscrowTx)
 		return nil
 	}
@@ -2556,7 +2551,7 @@ func (z *zkChannelManager) CloseZkChannel(notifier chainntnfs.ChainNotifier, zkC
 
 func (z *zkChannelManager) waitForCustCloseConfirmations(notifier chainntnfs.ChainNotifier, custCloseTx string, pkScript []byte, zkChannelName string) {
 
-	zkchLog.Infof("waiting for custCloseTx confirmations")
+	zkchLog.Info("waiting for custCloseTx confirmations")
 	// Wait for confirmations
 	confChannel, err := z.waitForFundingWithTimeout(notifier, custCloseTx, pkScript)
 	if err != nil {
@@ -2569,7 +2564,6 @@ func (z *zkChannelManager) waitForCustCloseConfirmations(notifier chainntnfs.Cha
 		zkchLog.Error(err)
 	}
 
-	zkchLog.Debugf("confChannel: %#v\n", confChannel)
 	zkchLog.Infof("CustCloseTx %v has 3 confirmations", custCloseTx)
 }
 
@@ -2650,10 +2644,10 @@ func (z *zkChannelManager) MerchClose(notifier chainntnfs.ChainNotifier, escrowT
 		return err
 	}
 
-	zkchLog.Infof("escrowTxid to close =>:", escrowTxid)
+	zkchLog.Info("escrowTxid to close =>:", escrowTxid)
 
-	zkchLog.Debugf("\nmerchState =>:%+v", merchState)
-	zkchLog.Infof("\nCloseTxMap =>:%+v", merchState.CloseTxMap)
+	zkchLog.Debugf("merchState =>:%+v", merchState)
+	zkchLog.Debugf("CloseTxMap =>:%+v", merchState.CloseTxMap)
 
 	signedMerchCloseTx, _, merchTxid2, merchState, err := libzkchannels.ForceMerchantCloseTx(escrowTxid, merchState, channelState.ValCpfp)
 	if err != nil {
@@ -2775,7 +2769,6 @@ func (z *zkChannelManager) ZkChannelBalance(zkChannelName string) (string, int64
 
 	var escrowTxid string
 	err = zkchanneldb.GetField(zkCustDB, zkChannelName, escrowTxidKey, &escrowTxid)
-	zkchLog.Infof("escrowTxid: ", escrowTxid)
 
 	if err != nil {
 		zkchLog.Error("GetField: ", err)
@@ -2950,7 +2943,7 @@ func ChannelExists(zkChannelName string) bool {
 // CustClaim sweeps a customer's output from a close tx.
 func (z *zkChannelManager) CustClaim(wallet *lnwallet.LightningWallet, notifier chainntnfs.ChainNotifier, escrowTxid string) error {
 
-	zkchLog.Debugf("zkChannelManager CustClaim inputs: ", escrowTxid)
+	zkchLog.Debug("zkChannelManager CustClaim inputs: ", escrowTxid)
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkClaimBucket(escrowTxid, "zkclaim.db")
