@@ -1161,6 +1161,7 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 		CustChannelName: "",
 		DBPath:          z.dbPath,
 		Notifier:        notifier,
+		Estimator:       z.FeeEstimator,
 	}
 	zkchLog.Debugf("notifier: %v", notifier)
 
@@ -1302,6 +1303,7 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 		CustChannelName: zkChannelName,
 		DBPath:          z.dbPath,
 		Notifier:        notifier,
+		Estimator:       z.FeeEstimator,
 	}
 	zkchLog.Debugf("notifier: %v", notifier)
 
@@ -1758,7 +1760,7 @@ func (z *zkChannelManager) processZkEstablishCustActivated(msg *lnwire.ZkEstabli
 
 func (z *zkChannelManager) processZkEstablishPayToken(msg *lnwire.ZkEstablishPayToken, p lnpeer.Peer, zkChannelName string) {
 
-	zkchLog.Infof("Just received PayToken0 for %v: ", zkChannelName)
+	zkchLog.Infof("Just received PayToken0 for %v", zkChannelName)
 	payToken0 := string(msg.PayToken0)
 
 	// open the zkchanneldb to load custState
@@ -2710,6 +2712,7 @@ func (z *zkChannelManager) MerchClose(notifier chainntnfs.ChainNotifier, escrowT
 		CustChannelName:    "",
 		DBPath:             z.dbPath,
 		Notifier:           notifier,
+		Estimator:          z.FeeEstimator,
 	}
 	zkchLog.Debugf("notifier: %v", notifier)
 

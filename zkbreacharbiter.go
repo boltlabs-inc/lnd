@@ -691,7 +691,7 @@ func (b *zkBreachArbiter) exactZkCloseMerch(confChan *chainntnfs.ConfirmationEve
 	zkbaLog.Debugf("Merch Close transaction %v has been confirmed. ", breachInfo.CloseTxid)
 
 	closeFromEscrow := false
-	closeMerchTx, _, err := GetSignedCustCloseTxs(breachInfo.CustChannelName, closeFromEscrow, "zkcust.db")
+	closeMerchTx, _, err := GetSignedCustCloseTxs(breachInfo.CustChannelName, closeFromEscrow, b.cfg.DBPath)
 
 	zkchLog.Warnf("closeMerchTx: %#v\n", closeMerchTx)
 

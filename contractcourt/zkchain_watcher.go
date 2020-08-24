@@ -654,7 +654,7 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 
 	// Load the current custState and channelState so that it can be retrieved
 	// later when it is needed to sign the claim tx.
-	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(channelName, "zkcust.db")
+	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(channelName, c.cfg.DBPath)
 	if err != nil {
 		log.Error(err)
 		return err
