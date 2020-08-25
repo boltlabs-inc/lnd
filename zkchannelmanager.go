@@ -116,26 +116,27 @@ var (
 	merchCloseTxKW = 0.722 // 772 weight units
 )
 
-func newZkChannelManager(isZkMerchant bool, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, disconnectMerchant func(*btcec.PublicKey) error, selfDelay int16, minFee int64, maxFee int64, valCpfp int64, balMinCust int64, balMinMerch int64, feeEstimator chainfee.Estimator) *zkChannelManager {
+func newZkChannelManager(cfg *Config, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, disconnectMerchant func(*btcec.PublicKey) error, feeEstimator chainfee.Estimator) *zkChannelManager {
+
 	var dbPath string
-	if isZkMerchant {
+	if cfg.ZkMerchant {
 		dbPath = path.Join(dbDirPath, "zkmerch.db")
 	} else {
 		dbPath = path.Join(dbDirPath, "zkcust.db")
 	}
 	return &zkChannelManager{
 		WatchNewZkChannel:  zkChainWatcher,
-		isMerchant:         isZkMerchant,
+		isMerchant:         cfg.ZkMerchant,
 		dbPath:             dbPath,
 		FeeEstimator:       feeEstimator,
 		PublishTransaction: publishTx,
 		DisconnectMerchant: disconnectMerchant,
-		SelfDelay:          selfDelay,
-		MinFee:             minFee,
-		MaxFee:             maxFee,
-		ValCpfp:            valCpfp,
-		BalMinCust:         balMinCust,
-		BalMinMerch:        balMinMerch,
+		SelfDelay:          cfg.selfDelay,
+		MinFee:             cfg.minFee,
+		MaxFee:             cfg.maxFee,
+		ValCpfp:            cfg.valCpfp,
+		BalMinCust:         cfg.balMinCust,
+		BalMinMerch:        cfg.balMinMerch,
 	}
 }
 
