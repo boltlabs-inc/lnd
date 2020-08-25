@@ -762,8 +762,8 @@ func (z *zkChannelManager) processZkEstablishMCloseSigned(msg *lnwire.ZkEstablis
 	// TEMPORARY CODE TO FLIP BYTES
 	// This works because hex strings are of even size
 	s := ""
-	for i := 0; i < len(escrowTxid)/2; i++ {
-		s = escrowTxid[i*2:i*2+2] + s
+	for i := 0; i < len(escrowTxid); i += 2 {
+		s = escrowTxid[i:i+2] + s
 	}
 	escrowTxid_BE := s
 
@@ -942,8 +942,8 @@ func (z *zkChannelManager) processZkEstablishCCloseSigned(msg *lnwire.ZkEstablis
 	// TEMPORARY CODE TO FLIP BYTES
 	// This works because hex strings are of even size
 	s := ""
-	for i := 0; i < len(escrowTxid)/2; i++ {
-		s = escrowTxid[i*2:i*2+2] + s
+	for i := 0; i < len(escrowTxid); i += 2 {
+		s = escrowTxid[i:i+2] + s
 	}
 	escrowTxid_BE := s
 

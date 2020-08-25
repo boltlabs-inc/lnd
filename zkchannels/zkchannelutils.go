@@ -133,8 +133,8 @@ func GetMerchChannelState(DBPath string, escrowTxid string) (status string, err 
 	// Flip bytes from Little Endiand to Big Endian
 	// This works because hex strings are of even size
 	s := ""
-	for i := 0; i < len(escrowTxid)/2; i++ {
-		s = escrowTxid[i*2:i*2+2] + s
+	for i := 0; i < len(escrowTxid); i += 2 {
+		s = escrowTxid[i:i+2] + s
 	}
 	escrowTxidBigEn := s
 
