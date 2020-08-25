@@ -300,7 +300,7 @@ Check that Alice<–>Bob zkchannel was created:
 
 Finally, to the exciting part - sending unlinkable payments! Let’s send a payment from Alice to Bob.
 
-    alice$ lncli-alice zkpay <BOB_ID_PUBKEY>@localhost:10012 --node_key=<BOB_PUBKEY> --channel_name=<CHANNEL_NAME> --amt=1000
+    alice$ lncli-alice zkpay <BOB_ID_PUBKEY>@localhost:10012 --channel_name=<CHANNEL_NAME> --amt=1000
     {
 
     }

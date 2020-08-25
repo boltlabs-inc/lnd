@@ -3197,7 +3197,7 @@ var openZkChannelCommand = cli.Command{
 	Usage:    "Open a zk-channel to a node or an existing peer.",
 	Description: `
 	Create a zk-channel with an ln-mpc node.`,
-	ArgsUsage: "<pubkey>@host merch_pubkey cust_balance merch_balance",
+	ArgsUsage: "<pubkey>@host --merch_pubkey=<hexstring> --cust_balance=<satoshis> --merch_balance=<satoshis>",
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name: "merch_pubkey",
@@ -3353,7 +3353,7 @@ var zkPayCommand = cli.Command{
 	Usage:    "Send a zero-knowledge payment over zkChannel.",
 	Description: `
 	Send a zkPayment to a merchant over an already established zkChannel.`,
-	ArgsUsage: "<pubkey>@host --amt=A --channel_name=",
+	ArgsUsage: "<pubkey>@host --amt=<satoshis> --channel_name=<string>",
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "channel_name",

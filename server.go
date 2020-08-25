@@ -3610,13 +3610,7 @@ func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index ui
 		return err
 	}
 
-	// peer.server.zkchannelMgr.zkChannelName = zkChannelName
-	err = peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, merchPubKey, zkChannelName, custBalance, merchBalance, feeCC, feeMC, peer)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, merchPubKey, zkChannelName, custBalance, merchBalance, feeCC, feeMC, peer)
 }
 
 // ZkPay sends the request to server to close the connection with peer
