@@ -1193,7 +1193,7 @@ func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chain
 	zkchLog.Infof("waitForFundingWithTimeout\npkScript: %#x\n", pkScript)
 
 	var txid string
-	if confirmOpen == true {
+	if confirmOpen {
 		txid = escrowTxid
 	} else {
 		txid = closeTxid
@@ -1233,7 +1233,7 @@ func (z *zkChannelManager) advanceMerchantStateAfterConfirmations(notifier chain
 		zkchLog.Error(err)
 	}
 
-	if confirmOpen == true {
+	if confirmOpen {
 		err = zkchannels.UpdateMerchChannelState(z.dbPath, escrowTxid, "Open")
 		if err != nil {
 			zkchLog.Errorf("Couldn't updateMerchChannelState: %v", err)
