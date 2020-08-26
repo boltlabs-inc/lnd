@@ -62,7 +62,7 @@ func setupTestMerchChainWatcher(t *testing.T) (*zkChainWatcher, *wire.OutPoint, 
 	ZkFundingInfo := ZkFundingInfo{
 		FundingOut:      *outPoint,
 		PkScript:        pkScript,
-		BroadcastHeight: uint32(0), // TODO ZKLND-50: Replace with actual fundingtx confirm height
+		BroadcastHeight: uint32(0),
 	}
 
 	// With the channels created, we'll now create a chain watcher instance
@@ -117,7 +117,7 @@ func setupTestCustChainWatcher(t *testing.T) (*zkChainWatcher, *wire.OutPoint, *
 	ZkFundingInfo := ZkFundingInfo{
 		FundingOut:      *outPoint,
 		PkScript:        pkScript,
-		BroadcastHeight: uint32(0), // TODO ZKLND-50: Replace with actual fundingtx confirm height
+		BroadcastHeight: uint32(0),
 	}
 
 	// With the channels created, we'll now create a chain watcher instance

@@ -46,6 +46,9 @@ type zkChannelManager struct {
 	// events related to the channel.
 	WatchNewZkChannel func(contractcourt.ZkChainWatcherConfig) error
 
+	// ChainIO allows us to query the state of the current main chain.
+	ChainIO lnwallet.BlockChainIO
+
 	dbPath string
 
 	// FeeEstimator calculates appropriate fee rates based on historical
@@ -116,7 +119,7 @@ var (
 	merchCloseTxKW = 0.722 // 772 weight units
 )
 
-func newZkChannelManager(cfg *Config, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, disconnectMerchant func(*btcec.PublicKey) error, feeEstimator chainfee.Estimator) *zkChannelManager {
+func newZkChannelManager(cfg *Config, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, disconnectMerchant func(*btcec.PublicKey) error, feeEstimator chainfee.Estimator, chainIO lnwallet.BlockChainIO) *zkChannelManager {
 
 	var dbPath string
 	if cfg.ZkMerchant {
@@ -127,6 +130,7 @@ func newZkChannelManager(cfg *Config, zkChainWatcher func(z contractcourt.ZkChai
 	return &zkChannelManager{
 		WatchNewZkChannel:  zkChainWatcher,
 		isMerchant:         cfg.ZkMerchant,
+		ChainIO:            chainIO,
 		dbPath:             dbPath,
 		FeeEstimator:       feeEstimator,
 		PublishTransaction: publishTx,
@@ -1148,10 +1152,18 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 	}
 	zkchLog.Debugf("fundingOut: %v", fundingOut)
 
+	// We start watching the blockchain for the escrow tx at this point as the
+	// customer now has what they need to broadcast it.
+	_, currentHeight, err := z.ChainIO.GetBestBlock()
+	if err != nil {
+		zkchLog.Error(err)
+		return
+	}
+
 	ZkFundingInfo := contractcourt.ZkFundingInfo{
 		FundingOut:      *fundingOut,
 		PkScript:        pkScript,
-		BroadcastHeight: uint32(300), // TODO ZKLND-50: Replace with actual fundingtx confirm height
+		BroadcastHeight: uint32(currentHeight),
 	}
 	zkchLog.Debugf("ZkFundingInfo: %v", ZkFundingInfo)
 	zkchLog.Debugf("pkScript: %v", ZkFundingInfo.PkScript)
@@ -1290,10 +1302,18 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 	}
 	zkchLog.Debugf("fundingOut: %v", fundingOut)
 
+	// Start watching the chain at this point for confirmations of the
+	// escrow tx
+	_, currentHeight, err := z.ChainIO.GetBestBlock()
+	if err != nil {
+		zkchLog.Error(err)
+		return
+	}
+
 	ZkFundingInfo := contractcourt.ZkFundingInfo{
 		FundingOut:      *fundingOut,
 		PkScript:        msgTx.TxOut[0].PkScript,
-		BroadcastHeight: uint32(300), // TODO ZKLND-50: Replace with actual fundingtx confirm height
+		BroadcastHeight: uint32(currentHeight),
 	}
 	zkchLog.Debugf("ZkFundingInfo: %v", ZkFundingInfo)
 	zkchLog.Debugf("pkScript: %v", ZkFundingInfo.PkScript)
@@ -1337,6 +1357,13 @@ func (z *zkChannelManager) advanceCustomerStateAfterConfirmations(notifier chain
 			"confirmation: %v", err)
 	}
 	zkchLog.Debugf("confChannel: %#v\n", confChannel)
+
+	_, escrowConfHeight, err := z.ChainIO.GetBestBlock()
+	if err != nil {
+		zkchLog.Error(err)
+		return
+	}
+	zkchLog.Infof("Escrow txid %v was confirmed at block height: %v ", escrowTxid, escrowConfHeight)
 
 	// TEMPORARY DUMMY MESSAGE
 	fundingLockedBytes := []byte("Funding Locked")
@@ -1478,9 +1505,15 @@ func (z *zkChannelManager) waitForFundingConfirmation(notifier chainntnfs.ChainN
 		return
 	}
 
+	_, currentHeight, err := z.ChainIO.GetBestBlock()
+	if err != nil {
+		zkchLog.Error(err)
+		return
+	}
+
 	NumConfsRequired := 3
 	numConfs := uint32(NumConfsRequired)
-	FundingBroadcastHeight := uint32(420)
+	FundingBroadcastHeight := uint32(currentHeight)
 
 	confNtfn, err := notifier.RegisterConfirmationsNtfn(
 		&txid, pkScript, numConfs,
@@ -1566,9 +1599,15 @@ func (z *zkChannelManager) waitForTimeout(notifier chainntnfs.ChainNotifier,
 
 	defer epochClient.Cancel()
 
-	// // On block maxHeight we will cancel the funding confirmation wait.
-	// maxHeight := completeChan.FundingBroadcastHeight + maxWaitNumBlocksFundingConf
-	maxHeight := uint32(10)
+	_, currentHeight, err := z.ChainIO.GetBestBlock()
+	if err != nil {
+		zkchLog.Error(err)
+		return
+	}
+
+	// On block maxHeight we will cancel the funding confirmation wait.
+	maxHeight := uint32(currentHeight) + maxWaitNumBlocksFundingConf
+	// maxHeight := uint32(10)
 	for {
 		select {
 		case epoch, ok := <-epochClient.Epochs:
@@ -2697,11 +2736,17 @@ func (z *zkChannelManager) MerchClose(notifier chainntnfs.ChainNotifier, escrowT
 	}
 	zkchLog.Debugf("fundingOut: %v", fundingOut)
 
+	_, currentHeight, err := z.ChainIO.GetBestBlock()
+	if err != nil {
+		zkchLog.Error(err)
+		return err
+	}
+
 	// TODO: Rename to merchClose Info, or something more general
 	ZkFundingInfo := contractcourt.ZkFundingInfo{
 		FundingOut:      *fundingOut,
 		PkScript:        msgTx.TxOut[0].PkScript,
-		BroadcastHeight: uint32(300), // TODO ZKLND-50: Replace with actual fundingtx confirm height
+		BroadcastHeight: uint32(currentHeight),
 	}
 	zkchLog.Debugf("ZkFundingInfo: %v", ZkFundingInfo)
 	zkchLog.Debugf("pkScript: %v", ZkFundingInfo.PkScript)

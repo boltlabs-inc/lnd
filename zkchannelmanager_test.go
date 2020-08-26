@@ -109,8 +109,12 @@ func createTestZkChannelManager(t *testing.T, isMerchant bool) (*zkTestNode, err
 	}
 	feeEstimator := zkchannels.NewMockFeeEstimator(10000, chainfee.FeePerKwFloor)
 
+	chainIO := &mockChainIO{
+		bestHeight: fundingBroadcastHeight,
+	}
+
 	cfg := DefaultConfig()
-	manager := newZkChannelManager(&cfg, zkChainWatcher, testDir, publishTransaction, disconnectPeer, feeEstimator)
+	manager := newZkChannelManager(&cfg, zkChainWatcher, testDir, publishTransaction, disconnectPeer, feeEstimator, chainIO)
 
 	return &zkTestNode{
 		zkChannelMgr:   manager,

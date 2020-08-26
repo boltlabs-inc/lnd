@@ -995,7 +995,7 @@ func newServer(cfg *Config, listenAddrs []net.Addr, chanDB *channeldb.DB,
 		}
 		publishTx := cc.wallet.PublishTransaction
 
-		s.zkchannelMgr = newZkChannelManager(cfg, zkChainWatcherFunc, "", publishTx, s.DisconnectPeer, cc.feeEstimator)
+		s.zkchannelMgr = newZkChannelManager(cfg, zkChainWatcherFunc, "", publishTx, s.DisconnectPeer, cc.feeEstimator, cc.chainIO)
 		if err != nil {
 			return nil, err
 		}
