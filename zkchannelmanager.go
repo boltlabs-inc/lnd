@@ -433,7 +433,6 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 
 	zkchLog.Debug("Saved custState and channelToken")
 
-	// TODO: see if it's necessary to be sending these
 	// Convert fields into bytes
 	escrowTxidBytes := []byte(escrowTxid)
 	custPkBytes := []byte(custPk)
@@ -462,7 +461,7 @@ func (z *zkChannelManager) processZkEstablishOpen(msg *lnwire.ZkEstablishOpen, p
 
 	zkchLog.Info("Just received ZkEstablishOpen")
 
-	// TODO ZKLND-51: Merchant should check ZkEstablishOpen message before proceeding
+	// ZKLND-51: Merchant should check ZkEstablishOpen message before proceeding
 	// escrowTxid := string(msg.EscrowTxid)
 	// custPk := string(msg.CustPk)
 	// escrowPrevout := string(msg.EscrowPrevout)
@@ -1082,6 +1081,8 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 		return
 	}
 
+	// ZKLND-65: On the customer's side, handle the case when this message is
+	// corresponds to isOk = false
 	switch isOk {
 	case true:
 		zkchLog.Info("Customer's initial state is valid")
@@ -1253,7 +1254,7 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 
 	zkchLog.Infof("Just received ZkEstablishStateValidated for %v", zkChannelName)
 
-	// TODO: For now, we assume isOk is true
+	// ZKLND-65: For now, we assume isOk is true
 	// Add alternative path for when isOk is false
 
 	// open the zkchanneldb to load custState
@@ -1630,10 +1631,6 @@ func (z *zkChannelManager) waitForTimeout(notifier chainntnfs.ChainNotifier,
 				return
 			}
 
-			// TODO: If we are the channel initiator implement
-			// a method for recovering the funds from the funding
-			// transaction
-
 		case <-cancelChan:
 			return
 
@@ -1649,7 +1646,7 @@ func (z *zkChannelManager) processZkEstablishFundingLocked(msg *lnwire.ZkEstabli
 
 	zkchLog.Info("Just received FundingLocked: ", msg.FundingLocked)
 
-	// TODO: Check (local) channel status has gone from pending to confirmed.
+	// ZKLND-66: Check (local) channel status has gone from pending to confirmed.
 	// Use same channel state from advanceStateAfterConfirmations.
 
 	// TEMPORARY DUMMY MESSAGE
@@ -1885,7 +1882,7 @@ func (z *zkChannelManager) InitZkPay(p lnpeer.Peer, zkChannelName string, amount
 	}
 	zkchLog.Info("New session ID:", sessionID)
 
-	// TODO: Add sessionID to custDB
+	// ZKLND-53: Add sessionID to custDB
 	// Add variables to zkchannelsdb
 	zkCustDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
@@ -2033,7 +2030,7 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpeer.Peer, zkChannelName string) {
 	zkchLog.Info("Just received ZkPayMaskCom")
 
-	// TODO ZKLND-53: match up sessionID to appropriate bucket
+	// ZKLND-53: match up sessionID to appropriate bucket
 	sessionID := string(msg.SessionID)
 	payTokenMaskCom := string(msg.PayTokenMaskCom)
 
@@ -2198,7 +2195,7 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	isOk, merchState, err := libzkchannels.PayUpdateMerchant(channelState, sessionID, payTokenMaskCom, merchState,
 		pPtr, unsafe.Pointer(C.send_cgo), unsafe.Pointer(C.receive_cgo))
 
-	// TODO: Handle this case properly
+	// ZKLND-64 Handle MPC failiure case
 	if !isOk {
 		zkchLog.Warn("MPC unsuccessful")
 	}
@@ -2246,7 +2243,7 @@ func (z *zkChannelManager) processZkPayMPCResult(msg *lnwire.ZkPayMPCResult, p l
 	zkchLog.Info("Just received ZkPayMPCResult. isOk: ", isOk)
 
 	if !isOk {
-		// TODO: Handle the case where MPC was unsuccessful, reinitiate UpdateMerchant?
+		// ZKLND-64 Handle MPC failiure case
 		zkchLog.Warn("MPC was unsuccessful for sessionID: %v, terminating payment", sessionID)
 		z.failZkPayFlow(p, err)
 		return
