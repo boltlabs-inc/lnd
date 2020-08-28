@@ -330,13 +330,7 @@ func (z *zkChannelManager) initZkEstablish(inputSats int64, custUtxoTxIdLe strin
 	txFee := int64(escrowTxKW*float64(commitFeePerKw) + 1) // round down to int64
 
 	outputSats := custBal + merchBal
-	// _, escrowTxid, escrowPrevout, err := libzkchannels.FormEscrowTx(custUtxoTxIdLe, index, custInputSk, inputSats, outputSats, custPk, merchPk, changePubKey, changePkIsHash, txFee)
-	// if err != nil {
-	// 	zkchLog.Error("FormEscrowTx: ", err)
-	// 	return err
-	// }
 
-	// TODO: move escrow signing to a later in establish
 	signedEscrowTx, _, escrowTxid, escrowPrevout, err := libzkchannels.SignEscrowTx(custUtxoTxIdLe, index, custInputSk, inputSats, outputSats, custPk, merchPk, changePubKey, changePkIsHash, txFee)
 	zkchLog.Info("escrow txid => ", escrowTxid)
 	zkchLog.Info("signedEscrowTx => ", signedEscrowTx)
