@@ -212,13 +212,12 @@ func newZkChainWatcher(cfg ZkChainWatcherConfig) (*zkChainWatcher, error) {
 // duties.
 func (c *zkChainWatcher) Start() error {
 	log.Debug("Starting new zkChainWatcher")
-
 	// // zkch TODO: What does this do? It is blocking
 	// if !atomic.CompareAndSwapInt32(&c.started, 0, 1) {
 	// 	return nil
 	// }
 
-	log.Debugf("watching for escrow: %#v\n", c.cfg.ZkFundingInfo.FundingOut.Hash.String())
+	log.Infof("watching for escrow: %#v\n", c.cfg.ZkFundingInfo.FundingOut.Hash.String())
 
 	spendNtfn, err := c.cfg.Notifier.RegisterSpendNtfn(
 		&c.cfg.ZkFundingInfo.FundingOut,
@@ -295,22 +294,19 @@ func (c *zkChainWatcher) SubscribeChannelEvents() *ZkChainEventSubscription {
 func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 	defer c.wg.Done()
 
-	log.Debug("zkCloseObserver is running")
+	log.Info("zkCloseObserver is running")
 	// determine if this node is a merchant
 	isMerch := c.cfg.IsMerch
-
 	select {
 	// We've detected a spend of the channel onchain! Depending on the type
 	// of spend, we'll act accordingly , so we'll examine the spending
 	// transaction to determine what we should do.
-
 	case commitSpend, ok := <-spendNtfn.Spend:
 		// If the channel was closed, then this means that the notifier
 		// exited, so we will as well.
 		if !ok {
 			return
 		}
-
 		if c.cfg.WatchingMerchClose {
 			log.Debug("Spend from merchClose detected")
 		} else {
@@ -343,8 +339,8 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 			err := c.zkDispatchMerchClaim(inputTxid, closeTxid, closePkScript, amount)
 			if err != nil {
-				log.Errorf("unable to handle remote "+
-					"close for channel=%v",
+				log.Errorf("unable to handle merchClaimTx "+
+					"for channel=%v",
 					inputTxid, err)
 			}
 
@@ -396,7 +392,16 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			if err != nil {
 				log.Error(err)
 			}
+
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
+
+			// TODO ZKLND-63: This is here temporarily, under the assumpiton
+			// that any tx detected will be confirmed eventually. We will
+			// have to figure out what to do if merchClose disappeares/never gets confirmed.
+			err = zkchannels.UpdateCustChannelState(c.cfg.DBPath, c.cfg.CustChannelName, "ConfirmedClose")
+			if err != nil {
+				log.Error(err)
+			}
 
 			zkBreachInfo := ZkBreachInfo{
 				IsMerchClose:    true,
@@ -455,14 +460,22 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 			// check to see if custCloseTx corresponds to a revoked state by
 			// checking if we have seen the revocation lock before.
 			if isMerch {
-
 				// Mark the channel as pending close to prevent further payments on it
 				err := zkchannels.UpdateMerchChannelState(c.cfg.DBPath, inputTxid.String(), "PendingClose")
 				if err != nil {
 					log.Error(err)
 				}
+
+				// TODO ZKLND-63: This is here temporarily, under the assumpiton
+				// that any tx detected will be confirmed eventually. We will
+				// have to figure out what to do if custClose disappeares/never gets confirmed.
+				err = zkchannels.UpdateMerchChannelState(c.cfg.DBPath, inputTxid.String(), "ConfirmedClose")
+				if err != nil {
+					log.Error(err)
+				}
+
 				// open the zkchanneldb to load merchState and channelState
-				zkMerchDB, err := zkchanneldb.OpenMerchBucket("zkmerch.db")
+				zkMerchDB, err := zkchanneldb.OpenMerchBucket(c.cfg.DBPath)
 				if err != nil {
 					log.Error(err)
 					return
@@ -476,13 +489,10 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 				zkMerchDB.Close()
 
 				isOldRevLock, revSecret, err := libzkchannels.MerchantCheckRevLock(revLock, merchState)
-
 				// The Revocation Lock in the custCloseTx corresponds to an old
 				// state. We must send the relevant transaction information
 				// to the breachArbiter to broadcast the dispute/justice tx.
 				if isOldRevLock {
-					log.Debug("Revoked Cust-close-tx detected")
-
 					zkBreachInfo := ZkBreachInfo{
 						IsMerchClose:  false,
 						EscrowTxid:    inputTxid,
@@ -507,7 +517,6 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					// a payment with it.
 				} else {
 					log.Debug("Latest Cust-close-tx detected")
-
 					err := c.zkDispatchCustClose(inputTxid, closeTxid, ClosePkScript, revLock, custClosePk, amount)
 
 					if err != nil {
@@ -550,7 +559,7 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 
 	// Load the current merchState and channelState so that it can be retrieved
 	// later when it is needed to sign the claim tx.
-	zkMerchDB, err := zkchanneldb.OpenMerchBucket("zkmerch.db")
+	zkMerchDB, err := zkchanneldb.OpenMerchBucket(c.cfg.DBPath)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -606,7 +615,7 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 
 	inAmt := amount
 	outAmt := int64(inAmt - txFee)
-	signedMerchClaimTx, err := libzkchannels.MerchantSignMerchClaimTx(closeTxidLittleEn, index, inAmt, outAmt, toSelfDelay, custClosePk, outputPk, 0, 0, merchState)
+	signedMerchClaimTx, err := libzkchannels.MerchantSignMerchClaimTx(closeTxidLittleEn, index, inAmt, outAmt, toSelfDelay, custClosePk, outputPk, uint32(0), int64(0), merchState)
 	if err != nil {
 		log.Errorf("libzkchannels.MerchantSignMerchClaimTx: ", err)
 		return err

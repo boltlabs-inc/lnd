@@ -17,6 +17,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 	"github.com/lightningnetwork/lnd/zkchanneldb"
+	"github.com/lightningnetwork/lnd/zkchannels"
 )
 
 var (
@@ -692,6 +693,11 @@ func (b *zkBreachArbiter) exactZkCloseMerch(confChan *chainntnfs.ConfirmationEve
 	}
 
 	zkbaLog.Debugf("Merch Close transaction %v has been confirmed. ", breachInfo.CloseTxid)
+
+	err := zkchannels.UpdateCustChannelState(b.cfg.DBPath, breachInfo.CustChannelName, "ConfirmedClose")
+	if err != nil {
+		zkchLog.Error(err)
+	}
 
 	closeFromEscrow := false
 	closeMerchTx, _, err := GetSignedCustCloseTxs(breachInfo.CustChannelName, closeFromEscrow, b.cfg.DBPath)

@@ -103,6 +103,7 @@ func UpdateMerchChannelState(DBPath string, escrowTxid string, newStatus string)
 			return fmt.Errorf("MerchantChangeChannelStatusToConfirmedClose, %v", err)
 
 		}
+
 	default:
 		return fmt.Errorf("unrecognised status: %v", newStatus)
 	}
@@ -140,7 +141,7 @@ func GetMerchChannelState(DBPath string, escrowTxid string) (status string, err 
 
 	status, ok := (*merchState.ChannelStatusMap)[escrowTxidBigEn].(string)
 	if ok != true {
-		return "", fmt.Errorf("error in getMerchChannelState")
+		return "", fmt.Errorf("GetMerchChannelState could not find status corresponding to txid: %v", escrowTxid)
 	}
 	return status, nil
 }
