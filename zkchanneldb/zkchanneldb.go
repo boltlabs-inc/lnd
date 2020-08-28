@@ -142,6 +142,11 @@ func OpenZkClaimBucket(escrowTxid string, dbPath string) (*bolt.DB, error) {
 	return SetupWithBucketNameDB(dbPath, escrowTxid)
 }
 
+// OpenPaysessionBucket opens or creates the bucket for a zkchannel
+func OpenPaysessionBucket(escrowTxid string, dbPath string) (*bolt.DB, error) {
+	return SetupWithBucketNameDB(dbPath, escrowTxid)
+}
+
 // AddMerchState adds merchState to the zkMerchDB
 func AddMerchState(db *bolt.DB, merchState libzkchannels.MerchState) error {
 	merchStateBytes, err := json.Marshal(merchState)
@@ -289,4 +294,29 @@ func getFieldInBytes(db *bolt.DB, bucketName string, fieldName string) ([]byte, 
 // GetMerchField gets a field from zkMerchDB
 func GetMerchField(db *bolt.DB, fieldName string, out interface{}) error {
 	return GetField(db, MerchBucket, fieldName, out)
+}
+
+// GetZkChannelName is used by the customer during zkPay to find which channel
+// corresponds to the pay sessionID
+func GetZkChannelName(dbPath string, sessionID string) (zkChannelName string, err error) {
+
+	if dbPath == "" {
+		dbPath = "custPaysessions.db"
+	}
+	paySessionDB, err := OpenZkClaimBucket(sessionID, dbPath)
+	if err != nil {
+		return "", err
+	}
+
+	err = GetField(paySessionDB, sessionID, sessionID, &zkChannelName)
+	if err != nil {
+		return "", err
+	}
+
+	err = paySessionDB.Close()
+	if err != nil {
+		return "", err
+	}
+
+	return zkChannelName, nil
 }

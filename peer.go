@@ -312,7 +312,7 @@ func newPeer(cfg *Config, conn net.Conn, connReq *connmgr.ConnReq, server *serve
 		chanCloseMsgs:      make(chan *closeMsg),
 		resentChanSyncMsg:  make(map[lnwire.ChannelID]struct{}),
 
-		chanMpcMsgs:        make(chan *lnwire.ZkMPC),
+		chanMpcMsgs: make(chan *lnwire.ZkMPC),
 
 		chanActiveTimeout: chanActiveTimeout,
 
@@ -1238,17 +1238,17 @@ out:
 		case *lnwire.ZkPayNonce:
 			p.server.zkchannelMgr.processZkPayNonce(msg, p)
 		case *lnwire.ZkPayMaskCom:
-			go p.server.zkchannelMgr.processZkPayMaskCom(msg, p, p.server.zkChannelName)
+			go p.server.zkchannelMgr.processZkPayMaskCom(msg, p)
 		case *lnwire.ZkPayMPC:
 			go p.server.zkchannelMgr.processZkPayMPC(msg, p)
 		case *lnwire.ZkPayMPCResult:
 			p.server.zkchannelMgr.processZkPayMPCResult(msg, p)
 		case *lnwire.ZkPayMaskedTxInputs:
-			p.server.zkchannelMgr.processZkPayMaskedTxInputs(msg, p, p.server.zkChannelName)
+			p.server.zkchannelMgr.processZkPayMaskedTxInputs(msg, p)
 		case *lnwire.ZkPayRevoke:
 			p.server.zkchannelMgr.processZkPayRevoke(msg, p)
 		case *lnwire.ZkPayTokenMask:
-			p.server.zkchannelMgr.processZkPayTokenMask(msg, p, p.server.zkChannelName)
+			p.server.zkchannelMgr.processZkPayTokenMask(msg, p)
 
 		case *lnwire.ZkMPC:
 			p.chanMpcMsgs <- msg

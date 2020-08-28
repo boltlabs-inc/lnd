@@ -1876,8 +1876,16 @@ func (z *zkChannelManager) InitZkPay(p lnpeer.Peer, zkChannelName string, amount
 	}
 	zkchLog.Info("New session ID:", sessionID)
 
-	// ZKLND-53: Add sessionID to custDB
-	// Add variables to zkchannelsdb
+	paySessionDB, err := zkchanneldb.OpenZkClaimBucket(sessionID, "custPaysessions.db")
+	if err != nil {
+		zkchLog.Error(err)
+	}
+	err = zkchanneldb.AddField(paySessionDB, sessionID, zkChannelName, sessionID)
+	if err != nil {
+		zkchLog.Error(err)
+	}
+	paySessionDB.Close()
+
 	zkCustDB, err = zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
 	if err != nil {
 		zkchLog.Error(err)
@@ -2021,12 +2029,18 @@ func (z *zkChannelManager) processZkPayNonce(msg *lnwire.ZkPayNonce, p lnpeer.Pe
 	}
 }
 
-func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpeer.Peer, zkChannelName string) {
+func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpeer.Peer) {
 	zkchLog.Info("Just received ZkPayMaskCom")
 
 	// ZKLND-53: match up sessionID to appropriate bucket
 	sessionID := string(msg.SessionID)
 	payTokenMaskCom := string(msg.PayTokenMaskCom)
+
+	zkChannelName, err := zkchanneldb.GetZkChannelName("", sessionID)
+	if err != nil {
+		z.failZkPayFlow(p, err)
+		return
+	}
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
@@ -2286,7 +2300,7 @@ func (z *zkChannelManager) processZkPayMPCResult(msg *lnwire.ZkPayMPCResult, p l
 	}
 }
 
-func (z *zkChannelManager) processZkPayMaskedTxInputs(msg *lnwire.ZkPayMaskedTxInputs, p lnpeer.Peer, zkChannelName string) {
+func (z *zkChannelManager) processZkPayMaskedTxInputs(msg *lnwire.ZkPayMaskedTxInputs, p lnpeer.Peer) {
 
 	sessionID := string(msg.SessionID)
 
@@ -2298,6 +2312,12 @@ func (z *zkChannelManager) processZkPayMaskedTxInputs(msg *lnwire.ZkPayMaskedTxI
 	}
 
 	zkchLog.Infof("Just received ZkPayMaskedTxInputs from sessionID: %s", sessionID)
+
+	zkChannelName, err := zkchanneldb.GetZkChannelName("", sessionID)
+	if err != nil {
+		z.failZkPayFlow(p, err)
+		return
+	}
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
@@ -2479,12 +2499,18 @@ func (z *zkChannelManager) processZkPayRevoke(msg *lnwire.ZkPayRevoke, p lnpeer.
 
 }
 
-func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p lnpeer.Peer, zkChannelName string) {
+func (z *zkChannelManager) processZkPayTokenMask(msg *lnwire.ZkPayTokenMask, p lnpeer.Peer) {
 	sessionID := string(msg.SessionID)
 	payTokenMask := string(msg.PayTokenMask)
 	payTokenMaskR := string(msg.PayTokenMaskR)
 
 	zkchLog.Info("Just received PayTokenMask and PayTokenMaskR from sessionID: ", sessionID)
+
+	zkChannelName, err := zkchanneldb.GetZkChannelName("", sessionID)
+	if err != nil {
+		z.failZkPayFlow(p, err)
+		return
+	}
 
 	// open the zkchanneldb to load custState
 	zkCustDB, err := zkchanneldb.OpenZkChannelBucket(zkChannelName, z.dbPath)
