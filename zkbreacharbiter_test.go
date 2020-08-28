@@ -242,7 +242,7 @@ func testZkBreachSpends(t *testing.T, test breachTest) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, custCloseTxid, err := zkchannels.HardcodedTxs("revokedCustClose")
+	_, custCloseTxid, err := zkchannels.HardcodedTxs("revokedCloseEscrow")
 	if err != nil {
 		t.Error(err)
 	}
