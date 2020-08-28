@@ -993,6 +993,7 @@ func (c *ChainArbitrator) WatchNewZkChannel(zkCfg ZkChainWatcherConfig) error {
 		DBPath:          zkCfg.DBPath,
 		Estimator:       zkCfg.Estimator,
 		Notifier:        zkCfg.Notifier,
+		Wallet:          zkCfg.Wallet,
 		zkContractBreach: func(zkInfo *ZkBreachInfo) error {
 			return c.cfg.CustContractBreach(zkInfo)
 		},

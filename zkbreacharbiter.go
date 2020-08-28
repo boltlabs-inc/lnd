@@ -14,6 +14,7 @@ import (
 	"github.com/lightningnetwork/lnd/htlcswitch"
 	"github.com/lightningnetwork/lnd/input"
 	"github.com/lightningnetwork/lnd/libzkchannels"
+	"github.com/lightningnetwork/lnd/lnwallet"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 	"github.com/lightningnetwork/lnd/zkchanneldb"
 )
@@ -104,10 +105,7 @@ type ZkBreachConfig struct {
 	// wallet.
 	Signer input.Signer
 
-	// // Store is a persistent resource that maintains information regarding
-	// // breached channels. This is used in conjunction with DB to recover
-	// // from crashes, restarts, or other failures.
-	// Store ZkRetributionStore
+	Wallet *lnwallet.LightningWallet
 }
 
 // zkBreachArbiter is a special subsystem which is responsible for watching and
@@ -528,8 +526,13 @@ func (b *zkBreachArbiter) exactZkDispute(confChan *chainntnfs.ConfirmationEvent,
 	escrowTxid := breachInfo.EscrowTxid.String()
 	breachTxid := breachInfo.CloseTxid.String()
 	index := uint32(0)
-	// TODO ZKLND-33: Generate outputPk from merchant's wallet
-	outputPk := "03df51984d6b8b8b1cc693e239491f77a36c9e9dfe4a486e9972a18e03610a0d22"
+
+	outputPk, err := b.cfg.Wallet.NewPubKey()
+	if err != nil {
+		zkchLog.Error(err)
+		return
+	}
+
 	revLock := breachInfo.RevLock
 	revSecret := breachInfo.RevSecret
 	custClosePk := breachInfo.CustClosePk

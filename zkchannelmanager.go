@@ -79,6 +79,8 @@ type zkChannelManager struct {
 
 	// BalMinMerch is the minimum allowed merchant balance in satoshis (zkChannels).
 	BalMinMerch int64
+
+	Wallet *lnwallet.LightningWallet
 }
 
 type Total struct {
@@ -119,7 +121,7 @@ var (
 	merchCloseTxKW = 0.722 // 772 weight units
 )
 
-func newZkChannelManager(cfg *Config, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, disconnectMerchant func(*btcec.PublicKey) error, feeEstimator chainfee.Estimator, chainIO lnwallet.BlockChainIO) *zkChannelManager {
+func newZkChannelManager(cfg *Config, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, disconnectMerchant func(*btcec.PublicKey) error, feeEstimator chainfee.Estimator, chainIO lnwallet.BlockChainIO, wallet *lnwallet.LightningWallet) *zkChannelManager {
 
 	var dbPath string
 	if cfg.ZkMerchant {
@@ -141,6 +143,7 @@ func newZkChannelManager(cfg *Config, zkChainWatcher func(z contractcourt.ZkChai
 		ValCpfp:            cfg.valCpfp,
 		BalMinCust:         cfg.balMinCust,
 		BalMinMerch:        cfg.balMinMerch,
+		Wallet:             wallet,
 	}
 }
 
@@ -1170,6 +1173,7 @@ func (z *zkChannelManager) processZkEstablishInitialState(msg *lnwire.ZkEstablis
 		DBPath:          z.dbPath,
 		Notifier:        notifier,
 		Estimator:       z.FeeEstimator,
+		Wallet:          z.Wallet,
 	}
 	zkchLog.Debugf("notifier: %v", notifier)
 
@@ -1320,6 +1324,7 @@ func (z *zkChannelManager) processZkEstablishStateValidated(msg *lnwire.ZkEstabl
 		DBPath:          z.dbPath,
 		Notifier:        notifier,
 		Estimator:       z.FeeEstimator,
+		Wallet:          z.Wallet,
 	}
 	zkchLog.Debugf("notifier: %v", notifier)
 
@@ -2776,6 +2781,7 @@ func (z *zkChannelManager) MerchClose(notifier chainntnfs.ChainNotifier, escrowT
 		DBPath:             z.dbPath,
 		Notifier:           notifier,
 		Estimator:          z.FeeEstimator,
+		Wallet:             z.Wallet,
 	}
 	zkchLog.Debugf("notifier: %v", notifier)
 

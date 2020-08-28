@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -71,6 +72,41 @@ func createTestZkArbiter(t *testing.T, custContractBreaches chan *ZkContractBrea
 		t.Fatalf("unable to create temp directory: %v", err)
 	}
 
+	chainNotifier := &mockNotifier{
+		oneConfChannel: make(chan *chainntnfs.TxConfirmation, 1),
+		sixConfChannel: make(chan *chainntnfs.TxConfirmation, 1),
+		epochChan:      make(chan *chainntnfs.BlockEpoch, 2),
+	}
+
+	netParams := activeNetParams.Params
+	estimator := chainfee.NewStaticEstimator(62500, 0)
+
+	wc := &mockWalletController{
+		rootKey: alicePrivKey,
+	}
+
+	bio := &mockChainIO{
+		bestHeight: fundingBroadcastHeight,
+	}
+
+	dbDir := filepath.Join(testDir, "lnwallet")
+	cdb, err := channeldb.Open(dbDir)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	keyRing := &mockSecretKeyRing{
+		rootKey: alicePrivKey,
+	}
+
+	lnw, err := createTestWallet(
+		cdb, netParams, chainNotifier, wc, signer, keyRing, bio,
+		estimator,
+	)
+	if err != nil {
+		t.Fatalf("unable to create test ln wallet: %v", err)
+	}
+
 	ba := newZkBreachArbiter(&ZkBreachConfig{
 		CloseLink:            func(_ *wire.OutPoint, _ htlcswitch.ChannelCloseType) {},
 		DBPath:               path.Join(testDir, "zkmerch.db"),
@@ -81,6 +117,7 @@ func createTestZkArbiter(t *testing.T, custContractBreaches chan *ZkContractBrea
 		Signer:               signer,
 		Notifier:             notifier,
 		PublishTransaction:   func(_ *wire.MsgTx, _ string) error { return nil },
+		Wallet:               lnw,
 		// Store:              store,
 	})
 

@@ -155,14 +155,7 @@ type ZkChainWatcherConfig struct {
 	// the channel as pending close in the database.
 	zkContractBreach func(*ZkBreachInfo) error
 
-	// // isOurAddr is a function that returns true if the passed address is
-	// // known to us.
-	// isOurAddr func(btcutil.Address) bool
-
-	// // extractStateNumHint extracts the encoded state hint using the passed
-	// // obfuscater. This is used by the chain watcher to identify which
-	// // state was broadcast and confirmed on-chain.
-	// extractStateNumHint func(*wire.MsgTx, [lnwallet.StateHintSize]byte) uint64
+	Wallet *lnwallet.LightningWallet
 }
 
 // ZkFundingInfo contains funding outpoint, pkscript and, confirmation blockheight
@@ -590,9 +583,11 @@ func (c *zkChainWatcher) storeMerchClaimTx(escrowTxidLittleEn string, closeTxidL
 	log.Debugf("channelState: %#v", channelState)
 	log.Debugf("toSelfDelay: %#v", toSelfDelay)
 
-	// TODO: ZKLND-33 Generate a fresh outputPk for the claimed outputs. For now this is just
-	// reusing the merchant's public key
-	outputPk := *merchState.PkM
+	outputPk, err := c.cfg.Wallet.NewPubKey()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 	index := uint32(0)
 
 	log.Debugf("closeTxidLittleEn: %#v", closeTxidLittleEn)
@@ -687,9 +682,10 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 	}
 	txFee := int64(custClaimTxKW*float64(feePerKw) + 1) // round down to int64\
 
-	// TODO: ZKLND-33 Generate a fresh outputPk for the claimed outputs. For now this is just
-	// reusing the custClosePk
-	outputPk := custClosePk
+	outputPk, err := c.cfg.Wallet.NewPubKey()
+	if err != nil {
+		return err
+	}
 	index := uint32(0)
 	// note that "inputAmount" is taken from the UTXO observed on chain, so
 	// feeCC/feeMC have already been factored in

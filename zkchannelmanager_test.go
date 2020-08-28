@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
@@ -113,8 +114,39 @@ func createTestZkChannelManager(t *testing.T, isMerchant bool) (*zkTestNode, err
 		bestHeight: fundingBroadcastHeight,
 	}
 
+	netParams := activeNetParams.Params
+	estimator := chainfee.NewStaticEstimator(62500, 0)
+
+	wc := &mockWalletController{
+		rootKey: alicePrivKey,
+	}
+	signer := &mockSigner{
+		key: alicePrivKey,
+	}
+	bio := &mockChainIO{
+		bestHeight: fundingBroadcastHeight,
+	}
+
+	dbDir := filepath.Join(testDir, "lnwallet")
+	cdb, err := channeldb.Open(dbDir)
+	if err != nil {
+		return nil, err
+	}
+
+	keyRing := &mockSecretKeyRing{
+		rootKey: alicePrivKey,
+	}
+
+	lnw, err := createTestWallet(
+		cdb, netParams, chainNotifier, wc, signer, keyRing, bio,
+		estimator,
+	)
+	if err != nil {
+		t.Fatalf("unable to create test ln wallet: %v", err)
+	}
+
 	cfg := DefaultConfig()
-	manager := newZkChannelManager(&cfg, zkChainWatcher, testDir, publishTransaction, disconnectPeer, feeEstimator, chainIO)
+	manager := newZkChannelManager(&cfg, zkChainWatcher, testDir, publishTransaction, disconnectPeer, feeEstimator, chainIO, lnw)
 
 	return &zkTestNode{
 		zkChannelMgr:   manager,
