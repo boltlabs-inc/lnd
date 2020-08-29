@@ -5,7 +5,8 @@ import "io"
 // ZkEstablishPayToken is the first msg sent by the customer to open a zkchannel
 type ZkEstablishPayToken struct {
 	// Payment contains the payment from generatePaymentProof
-	PayToken0 ZkMsgType
+	EscrowTxid ZkMsgType
+	PayToken0  ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -17,6 +18,7 @@ var _ Message = (*ZkEstablishPayToken)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishPayToken) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
+		&p.EscrowTxid,
 		&p.PayToken0)
 }
 
@@ -26,6 +28,7 @@ func (p *ZkEstablishPayToken) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishPayToken) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
+		p.EscrowTxid,
 		p.PayToken0)
 }
 

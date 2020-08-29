@@ -5,6 +5,7 @@ import "io"
 // ZkEstablishFundingConfirmed is the first msg sent by the customer to open a zkchannel
 type ZkEstablishFundingConfirmed struct {
 	// FundingConfirmed contains the payment from generatePaymentProof
+	EscrowTxid       ZkMsgType
 	FundingConfirmed ZkMsgType
 }
 
@@ -17,6 +18,7 @@ var _ Message = (*ZkEstablishFundingConfirmed)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishFundingConfirmed) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
+		&p.EscrowTxid,
 		&p.FundingConfirmed)
 }
 
@@ -26,6 +28,7 @@ func (p *ZkEstablishFundingConfirmed) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishFundingConfirmed) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
+		p.EscrowTxid,
 		p.FundingConfirmed)
 }
 

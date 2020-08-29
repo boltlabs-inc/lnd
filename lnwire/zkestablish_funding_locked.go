@@ -5,6 +5,7 @@ import "io"
 // ZkEstablishFundingLocked is the first msg sent by the customer to open a zkchannel
 type ZkEstablishFundingLocked struct {
 	// Payment contains the payment from generatePaymentProof
+	EscrowTxid    ZkMsgType
 	FundingLocked ZkMsgType
 }
 
@@ -17,6 +18,7 @@ var _ Message = (*ZkEstablishFundingLocked)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishFundingLocked) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
+		&p.EscrowTxid,
 		&p.FundingLocked)
 }
 
@@ -26,6 +28,7 @@ func (p *ZkEstablishFundingLocked) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishFundingLocked) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
+		p.EscrowTxid,
 		p.FundingLocked)
 }
 

@@ -4,6 +4,7 @@ import "io"
 
 // ZkEstablishInitialState is the first msg sent by the customer to open a zkchannel
 type ZkEstablishInitialState struct {
+	EscrowTxid    ZkMsgType
 	ChannelToken  ZkMsgType
 	InitCustState ZkMsgType
 	InitHash      ZkMsgType
@@ -18,6 +19,7 @@ var _ Message = (*ZkEstablishInitialState)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishInitialState) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
+		&p.EscrowTxid,
 		&p.ChannelToken,
 		&p.InitCustState,
 		&p.InitHash)
@@ -29,6 +31,7 @@ func (p *ZkEstablishInitialState) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishInitialState) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
+		p.EscrowTxid,
 		p.ChannelToken,
 		p.InitCustState,
 		p.InitHash)

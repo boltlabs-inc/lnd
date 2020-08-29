@@ -6550,11 +6550,6 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 		return nil, err
 	}
 
-	// ZkChannelName is defined here so that it can be retrieved when handling
-	// responses from the merchant. Note, this doesn't handle multiple channels
-	// being opened in parallel.
-	r.server.zkChannelName = in.ZkChannelName
-
 	if err := r.server.OpenZkChannel(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, peerPubKey, in.MerchPubKey, in.ZkChannelName, in.CustBalance, in.MerchBalance, in.FeeCc, in.FeeMc, lncfg.MinFee, lncfg.MaxFee); err != nil {
 		return nil, fmt.Errorf("Could not open channel "+
 			"with peer: %v", err)
@@ -6586,7 +6581,6 @@ func (r *rpcServer) ZkPay(ctx context.Context,
 		return nil, fmt.Errorf("unable to parse pubkey: %v", err)
 	}
 
-	r.server.zkChannelName = in.ZkChannelName
 	// With all initial validation complete, we'll now request that the
 	// server disconnects from the peer.
 	if err := r.server.ZkPay(peerPubKey, in.ZkChannelName, in.Amount); err != nil {

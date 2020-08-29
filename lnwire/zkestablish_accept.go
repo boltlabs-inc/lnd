@@ -5,6 +5,7 @@ import "io"
 // ZkEstablishAccept is the first msg sent by the customer to open a zkchannel
 type ZkEstablishAccept struct {
 	// Payment contains the payment from generatePaymentProof
+	EscrowTxid    ZkMsgType
 	ToSelfDelay   ZkMsgType
 	MerchPayoutPk ZkMsgType
 	MerchChildPk  ZkMsgType
@@ -20,6 +21,7 @@ var _ Message = (*ZkEstablishAccept)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishAccept) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
+		&p.EscrowTxid,
 		&p.ToSelfDelay,
 		&p.MerchPayoutPk,
 		&p.MerchChildPk,
@@ -32,6 +34,7 @@ func (p *ZkEstablishAccept) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishAccept) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
+		p.EscrowTxid,
 		p.ToSelfDelay,
 		p.MerchPayoutPk,
 		p.MerchChildPk,

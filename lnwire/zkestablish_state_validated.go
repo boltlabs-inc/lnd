@@ -5,6 +5,7 @@ import "io"
 // ZkEstablishStateValidated is the first msg sent by the customer to open a zkchannel
 type ZkEstablishStateValidated struct {
 	// Payment contains the payment from generatePaymentProof
+	EscrowTxid ZkMsgType
 	SuccessMsg ZkMsgType
 }
 
@@ -17,6 +18,7 @@ var _ Message = (*ZkEstablishStateValidated)(nil)
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishStateValidated) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
+		&p.EscrowTxid,
 		&p.SuccessMsg)
 }
 
@@ -26,6 +28,7 @@ func (p *ZkEstablishStateValidated) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkEstablishStateValidated) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
+		p.EscrowTxid,
 		p.SuccessMsg)
 }
 

@@ -296,9 +296,9 @@ func GetMerchField(db *bolt.DB, fieldName string, out interface{}) error {
 	return GetField(db, MerchBucket, fieldName, out)
 }
 
-// GetZkChannelName is used by the customer during zkPay to find which channel
+// ChanNameFromSessionID is used by the customer during zkPay to find which channel
 // corresponds to the pay sessionID
-func GetZkChannelName(dbPath string, sessionID string) (zkChannelName string, err error) {
+func ChanNameFromSessionID(dbPath string, sessionID string) (zkChannelName string, err error) {
 
 	if dbPath == "" {
 		dbPath = "custPaysessions.db"
@@ -309,6 +309,31 @@ func GetZkChannelName(dbPath string, sessionID string) (zkChannelName string, er
 	}
 
 	err = GetField(paySessionDB, sessionID, sessionID, &zkChannelName)
+	if err != nil {
+		return "", err
+	}
+
+	err = paySessionDB.Close()
+	if err != nil {
+		return "", err
+	}
+
+	return zkChannelName, nil
+}
+
+// ChanNameFromEscrow is used by the customer during openZkChannel to find
+// which zkChannelName corresponds to the escrowTxid
+func ChanNameFromEscrow(dbPath string, escrowTxid string) (zkChannelName string, err error) {
+
+	if dbPath == "" {
+		dbPath = "chanName.db"
+	}
+	paySessionDB, err := OpenZkClaimBucket(escrowTxid, dbPath)
+	if err != nil {
+		return "", err
+	}
+
+	err = GetField(paySessionDB, escrowTxid, escrowTxid, &zkChannelName)
 	if err != nil {
 		return "", err
 	}

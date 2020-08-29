@@ -293,7 +293,7 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 			"cust, instead got %T", msg2)
 	}
 
-	go cust.zkChannelMgr.processZkEstablishAccept(ZkEstablishAcceptMsg, merch, zkChannelName)
+	go cust.zkChannelMgr.processZkEstablishAccept(ZkEstablishAcceptMsg, merch)
 
 	var msg3 lnwire.Message
 	select {
@@ -339,7 +339,7 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 			"cust, instead got %T", msg4)
 	}
 
-	go cust.zkChannelMgr.processZkEstablishCCloseSigned(ZkEstablishCCloseSignedMsg, merch, zkChannelName)
+	go cust.zkChannelMgr.processZkEstablishCCloseSigned(ZkEstablishCCloseSignedMsg, merch)
 
 	var msg5 lnwire.Message
 	select {
@@ -386,7 +386,7 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 	}
 
 	go cust.zkChannelMgr.processZkEstablishStateValidated(ZkEstablishStateValidatedMsg, merch,
-		zkChannelName, cust.mockNotifier)
+		cust.mockNotifier)
 
 	// Get and return the funding transaction cust published to the network.
 	var fundingTx *wire.MsgTx
@@ -458,7 +458,7 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 			"cust, instead got %T", msg8)
 	}
 
-	go cust.zkChannelMgr.processZkEstablishFundingConfirmed(ZkEstablishFundingConfirmedMsg, merch, zkChannelName)
+	go cust.zkChannelMgr.processZkEstablishFundingConfirmed(ZkEstablishFundingConfirmedMsg, merch)
 
 	var msg9 lnwire.Message
 	select {
@@ -504,7 +504,7 @@ func TestZkChannelManagerNormalWorkflow(t *testing.T) {
 			"cust, instead got %T", msg10)
 	}
 
-	go cust.zkChannelMgr.processZkEstablishPayToken(ZkEstablishPayTokenMsg, merch, zkChannelName)
+	go cust.zkChannelMgr.processZkEstablishPayToken(ZkEstablishPayTokenMsg, merch)
 
 	var disconnectMsg *btcec.PublicKey
 	select {

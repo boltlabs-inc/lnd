@@ -203,8 +203,6 @@ type server struct {
 
 	fundingMgr *fundingManager
 
-	zkChannelName string
-
 	zkchannelMgr *zkChannelManager
 
 	chanDB *channeldb.DB
