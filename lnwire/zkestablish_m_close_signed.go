@@ -48,7 +48,6 @@ func (p *ZkEstablishMCloseSigned) Encode(w io.Writer, pver uint32) error {
 		p.EscrowTxid,
 		p.CustBal,
 		p.MerchBal,
-		p.EscrowTxid,
 		p.EscrowPrevout,
 		p.CustPk,
 		p.CustSig,
