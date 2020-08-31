@@ -2842,7 +2842,7 @@ func (z *zkChannelManager) MerchClose(notifier chainntnfs.ChainNotifier, escrowT
 		return err
 	}
 
-	// TODO: Rename to merchClose Info, or something more general
+	// ZKLND-67: Rename to merchClose Info, or something more general
 	ZkFundingInfo := contractcourt.ZkFundingInfo{
 		FundingOut:      *fundingOut,
 		PkScript:        msgTx.TxOut[0].PkScript,

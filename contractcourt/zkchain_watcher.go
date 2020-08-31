@@ -212,10 +212,10 @@ func newZkChainWatcher(cfg ZkChainWatcherConfig) (*zkChainWatcher, error) {
 // duties.
 func (c *zkChainWatcher) Start() error {
 	log.Debug("Starting new zkChainWatcher")
-	// // zkch TODO: What does this do? It is blocking
-	// if !atomic.CompareAndSwapInt32(&c.started, 0, 1) {
-	// 	return nil
-	// }
+	// If *c.started is already 1 (true), no need to run zkChainWatcher.Start
+	if !atomic.CompareAndSwapInt32(&c.started, 0, 1) {
+		return nil
+	}
 
 	log.Infof("watching for escrow: %#v\n", c.cfg.ZkFundingInfo.FundingOut.Hash.String())
 
@@ -395,7 +395,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 
 			pkScript := commitTxBroadcast.TxOut[0].PkScript
 
-			// TODO ZKLND-63: This is here temporarily, under the assumpiton
+			// ZKLND-63: This is here temporarily, under the assumpiton
 			// that any tx detected will be confirmed eventually. We will
 			// have to figure out what to do if merchClose disappeares/never gets confirmed.
 			err = zkchannels.UpdateCustChannelState(c.cfg.DBPath, c.cfg.CustChannelName, "ConfirmedClose")
@@ -466,7 +466,7 @@ func (c *zkChainWatcher) zkCloseObserver(spendNtfn *chainntnfs.SpendEvent) {
 					log.Error(err)
 				}
 
-				// TODO ZKLND-63: This is here temporarily, under the assumpiton
+				// ZKLND-63: This is here temporarily, under the assumpiton
 				// that any tx detected will be confirmed eventually. We will
 				// have to figure out what to do if custClose disappeares/never gets confirmed.
 				err = zkchannels.UpdateMerchChannelState(c.cfg.DBPath, inputTxid.String(), "ConfirmedClose")
