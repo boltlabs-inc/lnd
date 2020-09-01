@@ -3720,6 +3720,8 @@ message ListZkChannelsInfo {
     string zk_channel_id = 1 [json_name = "channel_id"];
     /// The channel Token
     ChannelToken channel_token = 2 [json_name = "channel_token"];
+    /// The channel status
+    string channel_status = 3 [json_name = "channel_status"];
 }
 
 message ListZkChannelsRequest {

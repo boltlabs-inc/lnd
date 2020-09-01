@@ -730,6 +730,46 @@ func addDummyChannelToken(t *testing.T, dbPath string) (libzkchannels.ChannelTok
 	return channelToken, nil
 }
 
+func addDummyChannelStatus(t *testing.T, dbPath string, escrowTxid string) (newStatus string, err error) {
+
+	newChanStatus := "Open"
+
+	zkMerchDB, err := zkchanneldb.OpenMerchBucket(dbPath)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
+	if err != nil {
+		zkchLog.Error(err)
+		return "", err
+	}
+
+	// Flip escrowTxid to Big Endian to match how it is stored in
+	// merchState.ChannelStatusMap
+	//This works because hex strings are of even size
+	s := ""
+	for i := 0; i < len(escrowTxid); i += 2 {
+		s = escrowTxid[i:i+2] + s
+	}
+	escrowTxidBigEn := s
+
+	(*merchState.ChannelStatusMap)[escrowTxidBigEn] = newChanStatus
+
+	err = zkchanneldb.AddMerchState(zkMerchDB, merchState)
+	if err != nil {
+		t.Errorf("%v", err)
+		return newChanStatus, err
+	}
+
+	err = zkMerchDB.Close()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	return newChanStatus, nil
+}
+
 func TestListZkChannels(t *testing.T) {
 
 	cust, merch := setupZkChannelManagers(t)
@@ -746,13 +786,15 @@ func TestListZkChannels(t *testing.T) {
 	assert.Equal(t, 0, numChannels0, "Non-empty list of zkchannels when Merchant is initialized")
 
 	addedChannelToken, err := addDummyChannelToken(t, merch.zkChannelMgr.dbPath)
+	addedStatus, err := addDummyChannelStatus(t, merch.zkChannelMgr.dbPath, addedChannelToken.EscrowTxId)
 
 	ListOfZkChannels, err = merch.zkChannelMgr.ListZkChannels()
 	if err != nil {
 		t.Errorf("%v", err)
 	}
 
-	assert.Equal(t, addedChannelToken, ListOfZkChannels.ChannelToken[0], "ListZkChannels did not return the added channel")
+	assert.Equal(t, addedChannelToken, ListOfZkChannels.ChannelToken[0], "ListZkChannels did not return the added channel token")
+	assert.Equal(t, addedStatus, ListOfZkChannels.ChannelStatus[0], "ListZkChannels did not return the added channel status")
 }
 
 func TestZkChannelBalance(t *testing.T) {

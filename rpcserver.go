@@ -6710,11 +6710,12 @@ func (r *rpcServer) ListZkChannels(ctx context.Context,
 		channelToken := ListOfZkChannels.ChannelToken[i]
 		channelTokenResp := &lnrpc.ChannelToken{PkC: channelToken.PkC, PkM: channelToken.PkM,
 			EscrowTxid: channelToken.EscrowTxId, MerchTxid: channelToken.MerchTxId}
-		listOfZkChannels := &lnrpc.ListZkChannelsInfo{
-			ZkChannelId:  ListOfZkChannels.ChannelID[i],
-			ChannelToken: channelTokenResp,
+		zkChanInfo := &lnrpc.ListZkChannelsInfo{
+			ZkChannelId:   ListOfZkChannels.ChannelID[i],
+			ChannelToken:  channelTokenResp,
+			ChannelStatus: ListOfZkChannels.ChannelStatus[i],
 		}
-		resp.ZkChannel = append(resp.ZkChannel, listOfZkChannels)
+		resp.ZkChannel = append(resp.ZkChannel, zkChanInfo)
 	}
 
 	return resp, nil

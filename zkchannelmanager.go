@@ -2980,8 +2980,9 @@ func (z *zkChannelManager) ZkInfo() (string, error) {
 }
 
 type ListOfZkChannels struct {
-	ChannelID    []string
-	ChannelToken []libzkchannels.ChannelToken
+	ChannelID     []string
+	ChannelToken  []libzkchannels.ChannelToken
+	ChannelStatus []string
 }
 
 // ListZkChannels returns a list of the merchant's zkchannels
@@ -3009,20 +3010,28 @@ func (z *zkChannelManager) ListZkChannels() (ListOfZkChannels, error) {
 		zkchLog.Error("zkChannels", err)
 		return ListOfZkChannels{}, err
 	}
+	err = zkMerchDB.Close()
 
 	var channelIDs []string
 	var channelTokens []libzkchannels.ChannelToken
+	var channelStatuses []string
 	for channelID, channelToken := range zkChannels {
 		channelIDs = append(channelIDs, channelID)
 		channelTokens = append(channelTokens, channelToken)
+		zkchLog.Info("channelToken.EscrowTxId", channelToken.EscrowTxId)
+		status, err := zkchannels.GetMerchChannelState(z.dbPath, channelToken.EscrowTxId)
+		if err != nil {
+			zkchLog.Error("zkChannels", err)
+			return ListOfZkChannels{}, err
+		}
+		channelStatuses = append(channelStatuses, status)
 	}
 
 	ListOfZkChannels := ListOfZkChannels{
-		ChannelID:    channelIDs,
-		ChannelToken: channelTokens,
+		ChannelID:     channelIDs,
+		ChannelToken:  channelTokens,
+		ChannelStatus: channelStatuses,
 	}
-
-	err = zkMerchDB.Close()
 
 	return ListOfZkChannels, err
 }
