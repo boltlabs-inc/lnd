@@ -7,7 +7,6 @@ import (
 	"image/color"
 	"io"
 	"math"
-
 	"net"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -462,10 +461,6 @@ func WriteElement(w io.Writer, element interface{}) error {
 			return err
 		}
 	case ZkMPCMsgType:
-		Length := len(e)
-		if Length > 44464 {
-			return fmt.Errorf("'ZkMPCMsgType' too long")
-		}
 		if err := wire.WriteVarBytes(w, 0, e); err != nil {
 			return err
 		}
@@ -904,7 +899,7 @@ func ReadElement(r io.Reader, element interface{}) error {
 		}
 		*e = zkPayment
 	case *ZkMPCMsgType:
-		zkMpc, err := wire.ReadVarBytes(r, 0, 44464, "zkmpc")
+		zkMpc, err := wire.ReadVarBytes(r, 0, 65535, "zkmpc")
 		if err != nil {
 			return err
 		}

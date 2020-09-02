@@ -9,6 +9,7 @@ type ZkMPCMsgType []byte
 // ZkMPC defines a message which is sent by peers while doing MPC
 type ZkMPC struct {
 	Data ZkMPCMsgType
+	Id uint32
 }
 
 // A compile time check to ensure ZkMPC implements the lnwire.Message interface.
@@ -19,7 +20,7 @@ var _ Message = (*ZkMPC)(nil)
 //
 // This is part of the lnwire.Message interface.
 func (p *ZkMPC) Decode(r io.Reader, pver uint32) error {
-	return ReadElements(r, &p.Data)
+	return ReadElements(r, &p.Data, &p.Id)
 }
 
 // Encode serializes the target ZkMPC into the passed io.Writer observing the
@@ -28,7 +29,8 @@ func (p *ZkMPC) Decode(r io.Reader, pver uint32) error {
 // This is part of the lnwire.Message interface.
 func (p *ZkMPC) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
-		p.Data)
+		p.Data,
+		p.Id)
 }
 
 // MsgType returns the integer uniquely identifying this message type on the
@@ -44,5 +46,5 @@ func (p *ZkMPC) MsgType() MessageType {
 //
 // This is part of the lnwire.Message interface.
 func (p ZkMPC) MaxPayloadLength(uint32) uint32 {
-	return 65532
+	return 65535
 }

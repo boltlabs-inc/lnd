@@ -1,8 +1,9 @@
 package lnd
 
 /*
-    struct Receive_return receive_cgo(char* msg, int length, void* p);
-	char* send_cgo(void* p);
+    struct Receive_return receive_cgo(char* msg, int length, void* p, int id);
+	char* send_cgo(void* p, int id);
+	void* duplicate_cgo(void* p);
 */
 import "C"
 import (
@@ -2070,7 +2071,7 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 	defer UnrefPointer(pPtr)
 	isOk, custState, err := libzkchannels.PayUpdateCustomer(channelState, channelToken, oldState, newState,
 		payTokenMaskCom, revLockCom, amount, custState,
-		pPtr, unsafe.Pointer(C.send_cgo), unsafe.Pointer(C.receive_cgo))
+		pPtr, unsafe.Pointer(C.send_cgo), unsafe.Pointer(C.receive_cgo), unsafe.Pointer(C.duplicate_cgo))
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
@@ -2157,7 +2158,7 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	pPtr := SavePointer(p)
 	defer UnrefPointer(pPtr)
 	isOk, merchState, err := libzkchannels.PayUpdateMerchant(channelState, sessionID, payTokenMaskCom, merchState,
-		pPtr, unsafe.Pointer(C.send_cgo), unsafe.Pointer(C.receive_cgo))
+		pPtr, unsafe.Pointer(C.send_cgo), unsafe.Pointer(C.receive_cgo), unsafe.Pointer(C.duplicate_cgo))
 
 	// TODO: Handle this case properly
 	if !isOk {

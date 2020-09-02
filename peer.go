@@ -202,7 +202,7 @@ type peer struct {
 
 	// chanMpcMsgs is a channel where messages intended for MPC
 	// communication are queued
-	chanMpcMsgs chan *lnwire.ZkMPC
+	chanMpcMsgs [24]chan *lnwire.ZkMPC
 
 	// chanCloseMsgs is a channel that any message related to channel
 	// closures are sent over. This includes lnwire.Shutdown message as
@@ -279,6 +279,11 @@ func newPeer(cfg *Config, conn net.Conn, connReq *connmgr.ConnReq, server *serve
 
 	nodePub := addr.IdentityKey
 
+	var chanMpcMsgs [24]chan *lnwire.ZkMPC
+	for i := 0; i < 24; i++ {
+		chanMpcMsgs[i] = make(chan *lnwire.ZkMPC, 25)
+	}
+
 	p := &peer{
 		conn: conn,
 		addr: addr,
@@ -312,7 +317,7 @@ func newPeer(cfg *Config, conn net.Conn, connReq *connmgr.ConnReq, server *serve
 		chanCloseMsgs:      make(chan *closeMsg),
 		resentChanSyncMsg:  make(map[lnwire.ChannelID]struct{}),
 
-		chanMpcMsgs:        make(chan *lnwire.ZkMPC),
+		chanMpcMsgs:        chanMpcMsgs,
 
 		chanActiveTimeout: chanActiveTimeout,
 
@@ -1251,7 +1256,7 @@ out:
 			p.server.zkchannelMgr.processZkPayTokenMask(msg, p, p.server.zkChannelName)
 
 		case *lnwire.ZkMPC:
-			p.chanMpcMsgs <- msg
+			p.chanMpcMsgs[msg.Id] <- msg
 
 		case *lnwire.OpenChannel:
 			p.server.fundingMgr.processFundingOpen(msg, p)

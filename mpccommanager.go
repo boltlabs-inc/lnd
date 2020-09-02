@@ -7,6 +7,7 @@ import "C"
 import (
 	"fmt"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/lightningnetwork/lnd/lnwire"
@@ -18,12 +19,13 @@ var (
 )
 
 //export send
-func send(msg *C.char, length C.int, pPtr unsafe.Pointer) *C.char {
+func send(msg *C.char, length C.int, pPtr unsafe.Pointer, id C.int) *C.char {
 	msgBytes := C.GoBytes(unsafe.Pointer(msg), length)
 	p := RestorePointer(pPtr).(*peer)
-	mpcMsg := lnwire.ZkMPC{Data: msgBytes}
+	mpcMsg := lnwire.ZkMPC{Data: msgBytes, Id: uint32(id)}
 	err := p.SendMessage(false, &mpcMsg)
 	if err != nil {
+		fmt.Println("lnd error")
 		fmt.Println(err.Error())
 		return C.CString(err.Error())
 	}
@@ -31,10 +33,24 @@ func send(msg *C.char, length C.int, pPtr unsafe.Pointer) *C.char {
 }
 
 //export receive
-func receive(pPtr unsafe.Pointer) (*C.char, C.int, *C.char) {
+func receive(pPtr unsafe.Pointer, id C.int) (*C.char, C.int, *C.char) {
 	p := RestorePointer(pPtr).(*peer)
-	msg := <-p.chanMpcMsgs
-	return (*C.char)(C.CBytes(msg.Data)), C.int(len(msg.Data)), nil
+	select {
+	case msg := <-p.chanMpcMsgs[int(id)]:
+		return (*C.char)(C.CBytes(msg.Data)), C.int(len(msg.Data)), nil
+	case <-time.After(time.Millisecond * 100):
+		return C.CString(""), C.int(0), nil
+	}
+	//msg := <-p.chanMpcMsgs[int(id)]
+	//return (*C.char)(C.CBytes(msg.Data)), C.int(len(msg.Data)), nil
+}
+
+//export duplicate
+func duplicate(pPtr unsafe.Pointer) unsafe.Pointer {
+	p := RestorePointer(pPtr).(*peer)
+	cp := p
+	pp := SavePointer(cp)
+	return pp
 }
 
 func SavePointer(v interface{}) unsafe.Pointer {
