@@ -805,7 +805,7 @@ func TestZkChannelBalance(t *testing.T) {
 	zkchannels.SetupLibzkChannels("myChannel", cust.zkChannelMgr.dbPath, merch.zkChannelMgr.dbPath)
 
 	// Test ZkChannelBalance
-	escrowTxid, localBalance, remoteBalance, err := cust.zkChannelMgr.ZkChannelBalance("myChannel")
+	escrowTxid, localBalance, remoteBalance, status, err := cust.zkChannelMgr.ZkChannelBalance("myChannel")
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -818,4 +818,5 @@ func TestZkChannelBalance(t *testing.T) {
 
 	assert.Equal(t, int64(1000000), localBalance, "ZkChannelBalance returned incorrect local balance")
 	assert.Equal(t, int64(5000), remoteBalance, "ZkChannelBalance returned incorrect remote balance")
+	assert.Equal(t, "Open", status, "ZkChannelBalance returned incorrect channel status")
 }

@@ -6647,7 +6647,7 @@ func (r *rpcServer) ZkChannelBalance(ctx context.Context,
 
 	for _, zkChannelName := range zkChannelList {
 
-		escrowTxid, localBalance, remoteBalance, err := r.server.ZkChannelBalance(zkChannelName)
+		escrowTxid, localBalance, remoteBalance, status, err := r.server.ZkChannelBalance(zkChannelName)
 		if err != nil {
 			return nil, fmt.Errorf("r.server.ZkChannelBalance: %v", err)
 		}
@@ -6655,6 +6655,7 @@ func (r *rpcServer) ZkChannelBalance(ctx context.Context,
 		zkchannel := &lnrpc.ZkChannelInfo{
 			ZkChannelName: zkChannelName,
 			EscrowTxid:    escrowTxid,
+			Status:        status,
 			LocalBalance:  localBalance,
 			RemoteBalance: remoteBalance,
 		}

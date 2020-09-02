@@ -3677,10 +3677,12 @@ message ZkChannelInfo {
     string zk_channel_name = 1 [json_name = "channel_name"];
     /// The channel escrow txid
     string escrow_txid = 2 [json_name = "escrow_txid"];
+    /// The channel status
+    string status = 3 [json_name = "status"];
     /// Number of satoshis in the local balance
-    int64 local_balance = 3 [json_name = "local_balance"];
+    int64 local_balance = 4 [json_name = "local_balance"];
     /// Number of satoshis in the remote balance
-    int64 remote_balance = 4 [json_name = "remote_balance"];
+    int64 remote_balance = 5 [json_name = "remote_balance"];
 }
 
 message ZkChannelBalanceRequest {
