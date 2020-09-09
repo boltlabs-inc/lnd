@@ -6647,7 +6647,7 @@ func (r *rpcServer) ZkChannelBalance(ctx context.Context,
 
 	for _, zkChannelName := range zkChannelList {
 
-		escrowTxid, localBalance, remoteBalance, err := r.server.ZkChannelBalance(zkChannelName)
+		escrowTxid, localBalance, remoteBalance, status, err := r.server.ZkChannelBalance(zkChannelName)
 		if err != nil {
 			return nil, fmt.Errorf("r.server.ZkChannelBalance: %v", err)
 		}
@@ -6655,6 +6655,7 @@ func (r *rpcServer) ZkChannelBalance(ctx context.Context,
 		zkchannel := &lnrpc.ZkChannelInfo{
 			ZkChannelName: zkChannelName,
 			EscrowTxid:    escrowTxid,
+			Status:        status,
 			LocalBalance:  localBalance,
 			RemoteBalance: remoteBalance,
 		}
@@ -6710,11 +6711,12 @@ func (r *rpcServer) ListZkChannels(ctx context.Context,
 		channelToken := ListOfZkChannels.ChannelToken[i]
 		channelTokenResp := &lnrpc.ChannelToken{PkC: channelToken.PkC, PkM: channelToken.PkM,
 			EscrowTxid: channelToken.EscrowTxId, MerchTxid: channelToken.MerchTxId}
-		listOfZkChannels := &lnrpc.ListZkChannelsInfo{
-			ZkChannelId:  ListOfZkChannels.ChannelID[i],
-			ChannelToken: channelTokenResp,
+		zkChanInfo := &lnrpc.ListZkChannelsInfo{
+			ZkChannelId:   ListOfZkChannels.ChannelID[i],
+			ChannelToken:  channelTokenResp,
+			ChannelStatus: ListOfZkChannels.ChannelStatus[i],
 		}
-		resp.ZkChannel = append(resp.ZkChannel, listOfZkChannels)
+		resp.ZkChannel = append(resp.ZkChannel, zkChanInfo)
 	}
 
 	return resp, nil

@@ -3659,13 +3659,13 @@ func (s *server) MerchClose(escrowTxid string) error {
 }
 
 // ZkChannelBalance returns a list of zkchannels and their balances to the customer.
-func (s *server) ZkChannelBalance(zkChannelName string) (string, int64, int64, error) {
-	escrowTxid, custBalance, merchBalance, err := s.zkchannelMgr.ZkChannelBalance(zkChannelName)
+func (s *server) ZkChannelBalance(zkChannelName string) (escrowTxid string, custBalance int64, merchBalance int64, status string, err error) {
+	escrowTxid, custBalance, merchBalance, status, err = s.zkchannelMgr.ZkChannelBalance(zkChannelName)
 	if err != nil {
-		zkchLog.Error("ZkChannelBalance: ", err)
-		return "", 0, 0, err
+		zkchLog.Error("s.zkchannelMgr.ZkChannelBalance: ", err)
+		return "", 0, 0, "", err
 	}
-	return escrowTxid, custBalance, merchBalance, nil
+	return escrowTxid, custBalance, merchBalance, status, nil
 }
 
 // TotalReceived sends the request to server to close the connection with peer
