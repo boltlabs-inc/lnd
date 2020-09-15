@@ -121,14 +121,12 @@ func GetMerchChannelState(DBPath string, escrowTxid string) (status string, err 
 	zkMerchDB, err := zkchanneldb.OpenMerchBucket(DBPath)
 	if err != nil {
 		return "", fmt.Errorf("zkchanneldb.OpenMerchBucket, %v", err)
-
 	}
 	defer zkMerchDB.Close()
 
 	merchState, err := zkchanneldb.GetMerchState(zkMerchDB)
 	if err != nil {
 		return "", fmt.Errorf("zkchanneldb.GetMerchState, %v", err)
-
 	}
 
 	// Flip bytes from Little Endiand to Big Endian

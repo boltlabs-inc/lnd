@@ -82,7 +82,7 @@ func InitMerchConstants() (txFeeInfo libzkchannels.TransactionFeeInfo, skM, payo
 	return txFeeInfo, skM, payoutSkM, childSkM, disputeSkM
 }
 
-func initCustConstants() (txFeeInfo libzkchannels.TransactionFeeInfo, custBal int64, merchBal int64, skC string, payoutSk string) {
+func InitCustConstants() (txFeeInfo libzkchannels.TransactionFeeInfo, custBal int64, merchBal int64, skC string, payoutSk string) {
 	txFeeInfo = libzkchannels.TransactionFeeInfo{
 		BalMinCust:  lncfg.BalMinCust,
 		BalMinMerch: lncfg.BalMinMerch,
@@ -99,7 +99,7 @@ func initCustConstants() (txFeeInfo libzkchannels.TransactionFeeInfo, custBal in
 	return txFeeInfo, custBal, merchBal, skC, payoutSk
 }
 
-func initFundingUTXO() (inputSats int64, cust_utxo_txid string, cust_utxo_index uint32, custInputSk string, changeSk string, changePk string, escrowFee int64) {
+func InitFundingUTXO() (inputSats int64, cust_utxo_txid string, cust_utxo_index uint32, custInputSk string, changeSk string, changePk string, escrowFee int64) {
 	inputSats = int64(100000000)
 	cust_utxo_txid = "e8aed42b9f07c74a3ce31a9417146dc61eb8611a1e66d345fd69be06b644278d"
 	cust_utxo_index = uint32(0)
@@ -232,7 +232,7 @@ func SetupLibzkChannels(zkChannelName string, custDBPath string, merchDBPath str
 		log.Fatalf("%v", err)
 	}
 
-	txFeeInfo, custBal, merchBal, skC, payoutSk := initCustConstants()
+	txFeeInfo, custBal, merchBal, skC, payoutSk := InitCustConstants()
 	feeCC := txFeeInfo.FeeCC
 	feeMC := txFeeInfo.FeeMC
 
@@ -253,7 +253,7 @@ func SetupLibzkChannels(zkChannelName string, custDBPath string, merchDBPath str
 	// merchSk := fmt.Sprintf("%v", *merchState.SkM)
 	merchPk := fmt.Sprintf("%v", *merchState.PkM)
 
-	inputSats, cust_utxo_txid, cust_utxo_index, custInputSk, _, changePk, txFee := initFundingUTXO()
+	inputSats, cust_utxo_txid, cust_utxo_index, custInputSk, _, changePk, txFee := InitFundingUTXO()
 
 	merchClosePk := fmt.Sprintf("%v", *merchState.PayoutPk)
 	merchChildPk := fmt.Sprintf("%v", *merchState.ChildPk)

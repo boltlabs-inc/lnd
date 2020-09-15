@@ -1711,14 +1711,21 @@ func (z *zkChannelManager) processZkEstablishFundingConfirmed(msg *lnwire.ZkEsta
 	// if the merchant hasn't confirmed the escrow tx on chain, wait and send the funding locked message
 	if fundingConfirmed == false {
 
-		time.Sleep(10 * time.Second)
+		// ZKLND-69 - handle case where merchant never responds with
+		// "FundingConfirmed = true"
+		fmt.Printf("re-attempt sending FundingLocked after %v seconds\n", 2)
+		time.Sleep(2 * time.Second)
 
 		fundingLockedBytes, err := json.Marshal(true)
 		if err != nil {
 			zkchLog.Error(err)
 			return
 		}
+
+		escrowTxidBytes := []byte(escrowTxid)
+
 		zkEstablishFundingLocked := lnwire.ZkEstablishFundingLocked{
+			EscrowTxid:    escrowTxidBytes,
 			FundingLocked: fundingLockedBytes,
 		}
 		err = p.SendMessage(false, &zkEstablishFundingLocked)
