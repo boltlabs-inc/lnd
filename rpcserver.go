@@ -6513,7 +6513,9 @@ func (r *rpcServer) OpenZkChannel(ctx context.Context,
 	}
 
 	if !selectedUtxo {
-		return nil, fmt.Errorf("Insufficient funds to open zkchannel.")
+		return nil, fmt.Errorf("In this beta version of zkLND, the escrow " +
+			"tx needs to be funded using a np2wkh output. No np2wkh outputs " + " with sufficient funds are available. " +
+			"Future versions of zkLND will allow funding from any combination of inputs.")
 	}
 
 	custInputSk, err := r.server.cc.wallet.FetchOutputPrivKey(pkScript)

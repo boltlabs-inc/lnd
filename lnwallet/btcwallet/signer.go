@@ -125,7 +125,7 @@ func (b *BtcWallet) FetchOutputPrivKey(outputScript []byte) (string, error) {
 // This function is specific for zkLND
 func (b *BtcWallet) NewPrivKey() (string, error) {
 
-	newAddr, err := b.NewAddress(lnwallet.NestedWitnessPubKey, false)
+	newAddr, err := b.NewAddress(lnwallet.WitnessPubKey, false)
 	if err != nil {
 		return "", err
 	}
@@ -154,7 +154,7 @@ func (b *BtcWallet) NewPrivKey() (string, error) {
 // This function is specific for zkLND
 func (b *BtcWallet) NewPubKey() (string, error) {
 
-	newAddr, err := b.NewAddress(lnwallet.NestedWitnessPubKey, false)
+	newAddr, err := b.NewAddress(lnwallet.WitnessPubKey, false)
 	if err != nil {
 		return "", err
 	}
