@@ -40,7 +40,7 @@ var (
 )
 
 var (
-	disputeTxKW = 0.552 // 522 weight units
+	disputeTxKW = 0.550 // 550 weight units
 )
 
 // ZkContractBreachEvent is an event the zkBreachArbiter will receive in case a

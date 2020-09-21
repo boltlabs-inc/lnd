@@ -138,7 +138,7 @@ func SetupTestZkDBs() (custDBpath string, merchDBpath string, err error) {
 	}
 
 	dbUrl := "redis://127.0.0.1/"
-	selfDelay := int16(1487) // used to be 1487
+	selfDelay := int16(6)
 	txFeeInfo, skM, payoutSkM, childSkM, disputeSkM := InitMerchConstants()
 
 	channelState, err := libzkchannels.ChannelSetup("channel", selfDelay, txFeeInfo.BalMinCust, txFeeInfo.BalMinMerch, txFeeInfo.ValCpFp, false)

@@ -764,7 +764,6 @@ func Main(cfg *Config, lisCfg ListenerCfg, shutdownChan <-chan struct{}) error {
 		// Do merchant initialization if merchant flag was set
 		if server.zkchannelMgr.isMerchant {
 			skM, err := server.cc.wallet.NewPrivKey()
-			ltndLog.Debugf("skM: %v", skM)
 			if err != nil {
 				ltndLog.Errorf("unable to generate privkey skM: %v", err)
 				return err

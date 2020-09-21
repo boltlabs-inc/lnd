@@ -137,7 +137,7 @@ func initZkBreachedState(t *testing.T) (*zkBreachArbiter,
 
 func initTestMerchState(DBPath, skM, payoutSkM, childSkM, disputeSkM string) error {
 	dbURL := "redis://127.0.0.1/"
-	selfDelay := int16(1487)
+	selfDelay := int16(6)
 	channelState, err := libzkchannels.ChannelSetup("channel", selfDelay, 546, 546, 1000, false)
 	if err != nil {
 		return err
