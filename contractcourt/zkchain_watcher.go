@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	merchClaimTxKW = 0.520 // 520 weight units
-	custClaimTxKW  = 0.518 // 518 weight units
+	merchClaimTxKW            = 0.520 // 520 weight units
+	custClaimWithoutChildTxKW = 0.518 // 518 weight units
+	custClaimWithChildTxKW    = 0.79  // 790 weight units
 )
 
 // ZkMerchCloseInfo provides the information needed for the customer to retrieve
@@ -689,7 +690,7 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 	if err != nil {
 		return err
 	}
-	txFee := int64(custClaimTxKW*float64(feePerKw) + 1) // round down to int64\
+	txFee := int64(custClaimWithChildTxKW*float64(feePerKw) + 1) // round down to int64\
 
 	outputPk, err := c.cfg.Wallet.NewPubKey()
 	if err != nil {
@@ -708,6 +709,10 @@ func (c *zkChainWatcher) storeCustClaimTx(escrowTxidLittleEn string, closeTxid s
 	}
 	log.Debugf("signedCustClaimWithChild: %#v", signedCustClaimWithChild)
 
+	txFee = int64(custClaimWithoutChildTxKW*float64(feePerKw) + 1) // round down to int64\
+	// For cust-claim without the child output, don't include cpfpAmount in
+	// outAmt
+	outAmt = inputAmount - txFee
 	signedCustClaimWithoutChild, err := libzkchannels.CustomerSignClaimTx(channelState, closeTxid, index, inputAmount, outAmt, toSelfDelay, outputPk, custState.RevLock, custClosePk, uint32(0), int64(0), custState)
 	if err != nil {
 		log.Error(err)
