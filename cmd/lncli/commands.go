@@ -3323,8 +3323,7 @@ func openZkChannel(ctx *cli.Context) error {
 		_, err := client.ConnectPeer(ctxb, connReq)
 		connectFinished <- err
 	}()
-	msg := <-connectFinished
-	_ = msg
+	_ = <-connectFinished
 
 	// Open Channel
 
@@ -3338,9 +3337,21 @@ func openZkChannel(ctx *cli.Context) error {
 		FeeMc:         feeMC,
 	}
 
-	lnid, err := client.OpenZkChannel(ctxb, req)
-	if err != nil {
-		return err
+	lnid, err1 := client.OpenZkChannel(ctxb, req)
+	if err1 != nil {
+		// If there was an error during OpenZkChannel, disconnect from merchant
+		fmt.Println("unable to create a new channel:", err1)
+
+		req := &lnrpc.DisconnectPeerRequest{
+			PubKey: splitAddr[0],
+		}
+
+		lnid, err2 := client.DisconnectPeer(ctxb, req)
+		if err2 != nil {
+			return fmt.Errorf("unable to disconnect from merchant: %v", err2)
+		}
+		printRespJSON(lnid)
+		return nil
 	}
 
 	printRespJSON(lnid)
