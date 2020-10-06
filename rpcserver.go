@@ -1460,6 +1460,11 @@ func (r *rpcServer) ConnectPeer(ctx context.Context,
 		return nil, ErrServerNotActive
 	}
 
+	err := r.server.RerandomizeIdentity()
+	if err != nil {
+		return nil, err
+	}
+
 	if in.Addr == nil {
 		return nil, fmt.Errorf("need: lnc pubkeyhash@hostname")
 	}
@@ -6583,8 +6588,6 @@ func (r *rpcServer) ZkPay(ctx context.Context,
 		return nil, fmt.Errorf("unable to parse pubkey: %v", err)
 	}
 
-	// With all initial validation complete, we'll now request that the
-	// server disconnects from the peer.
 	if err := r.server.ZkPay(peerPubKey, in.ZkChannelName, in.Amount); err != nil {
 		return nil, fmt.Errorf("Could not send payment "+
 			"to peer: %v", err)
@@ -6604,8 +6607,6 @@ func (r *rpcServer) CloseZkChannel(ctx context.Context,
 			"not active yet")
 	}
 
-	// With all initial validation complete, we'll now request that the
-	// server disconnects from the peer.
 	if err := r.server.CloseZkChannel(in.ZkChannelName, in.DryRun); err != nil {
 		return nil, fmt.Errorf("Could not close channel %v"+
 			": %v", in.ZkChannelName, err)

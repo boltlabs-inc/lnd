@@ -1305,6 +1305,35 @@ func newServer(cfg *Config, listenAddrs []net.Addr, chanDB *channeldb.DB,
 	return s, nil
 }
 
+func (s *server) RerandomizeIdentity() error {
+	nodeKeyDesc, err := s.cc.keyRing.DeriveNextKey(
+		keychain.KeyFamilyNodeKey,
+	)
+	if err != nil {
+		return err
+	}
+	var (
+		nodeKeyECDH   = keychain.NewPubKeyECDH(nodeKeyDesc, s.cc.keyRing)
+		nodeKeySigner = keychain.NewPubKeyDigestSigner(
+			nodeKeyDesc, s.cc.keyRing,
+		)
+	)
+
+	// Initialize the sphinx router, placing it's persistent replay log in
+	// the same directory as the channel graph database.
+	sharedSecretPath := filepath.Join(s.cfg.localDatabaseDir(), "sphinxreplay.db")
+	replayLog := htlcswitch.NewDecayedLog(sharedSecretPath, s.cc.chainNotifier)
+	sphinxRouter := sphinx.NewRouter(
+		nodeKeyECDH, activeNetParams.Params, replayLog,
+	)
+
+	s.identityECDH = nodeKeyECDH
+	s.sphinx = hop.NewOnionProcessor(sphinxRouter)
+	s.nodeSigner = netann.NewNodeSigner(nodeKeySigner)
+
+	return nil
+}
+
 // Started returns true if the server has been started, and false otherwise.
 // NOTE: This function is safe for concurrent access.
 func (s *server) Started() bool {
@@ -3613,8 +3642,7 @@ func (s *server) OpenZkChannel(inputSats int64, custUtxoTxid_LE string, index ui
 	return peer.server.zkchannelMgr.initZkEstablish(inputSats, custUtxoTxid_LE, index, custInputSk, custStateSk, custPayoutSk, changePubKey, merchPubKey, zkChannelName, custBalance, merchBalance, feeCC, feeMC, peer)
 }
 
-// ZkPay sends the request to server to close the connection with peer
-// identified by public key.
+// ZkPay
 func (s *server) ZkPay(pubKey *btcec.PublicKey, zkChannelName string, amount int64) error {
 	zkchLog.Infof("zkPay initiated")
 

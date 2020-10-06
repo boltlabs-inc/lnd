@@ -3314,16 +3314,13 @@ func openZkChannel(ctx *cli.Context) error {
 	}
 	connReq := &lnrpc.ConnectPeerRequest{
 		Addr: addr,
-		Perm: ctx.Bool("perm"),
+		Perm: false,
 	}
 
-	// Block pay until connect has finished
-	var connectFinished = make(chan error)
-	go func() {
-		_, err := client.ConnectPeer(ctxb, connReq)
-		connectFinished <- err
-	}()
-	_ = <-connectFinished
+	_, err = client.ConnectPeer(ctxb, connReq)
+	if err != nil {
+		return err
+	}
 
 	// Open Channel
 
@@ -3428,17 +3425,13 @@ func zkPay(ctx *cli.Context) error {
 	}
 	connReq := &lnrpc.ConnectPeerRequest{
 		Addr: addr,
-		Perm: ctx.Bool("perm"),
+		Perm: false,
 	}
 
-	// Block pay until connect has finished
-	var connectFinished = make(chan error)
-	go func() {
-		_, err := client.ConnectPeer(ctxb, connReq)
-		connectFinished <- err
-	}()
-	msg := <-connectFinished
-	_ = msg
+	_, err = client.ConnectPeer(ctxb, connReq)
+	if err != nil {
+		return err
+	}
 
 	// Pay merchant
 	payReq := &lnrpc.ZkPayRequest{
