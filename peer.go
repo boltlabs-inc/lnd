@@ -312,7 +312,7 @@ func newPeer(cfg *Config, conn net.Conn, connReq *connmgr.ConnReq, server *serve
 		chanCloseMsgs:      make(chan *closeMsg),
 		resentChanSyncMsg:  make(map[lnwire.ChannelID]struct{}),
 
-		chanMpcMsgs: make(chan *lnwire.ZkMPC),
+		chanMpcMsgs: make(chan *lnwire.ZkMPC, 100),
 
 		chanActiveTimeout: chanActiveTimeout,
 

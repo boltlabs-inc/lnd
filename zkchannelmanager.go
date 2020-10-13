@@ -122,6 +122,8 @@ var (
 	merchCloseTxKW = 0.722 // 772 weight units
 )
 
+var mpcMutex sync.Mutex
+
 func newZkChannelManager(cfg *Config, zkChainWatcher func(z contractcourt.ZkChainWatcherConfig) error, dbDirPath string, publishTx func(*wire.MsgTx, string) error, disconnectMerchant func(*btcec.PublicKey) error, feeEstimator chainfee.Estimator, chainIO lnwallet.BlockChainIO, wallet *lnwallet.LightningWallet) *zkChannelManager {
 
 	var dbPath string
@@ -2200,11 +2202,13 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 
 	zkchLog.Debug("channelState channelTokenPkM => ", channelToken.PkM)
 
+	mpcMutex.Lock()
 	pPtr := SavePointer(p)
 	defer UnrefPointer(pPtr)
 	isOk, custState, err := libzkchannels.PayUpdateCustomer(channelState, channelToken, oldState, newState,
 		payTokenMaskCom, revLockCom, amount, custState,
 		pPtr, unsafe.Pointer(C.send_cgo), unsafe.Pointer(C.receive_cgo))
+	mpcMutex.Unlock()
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
@@ -2288,10 +2292,12 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 	zkchLog.Debug("channelState MerchDisputePk => ", *channelState.MerchDisputePk)
 	zkchLog.Debug("channelState MerchStatePkM => ", *merchState.PkM)
 
+	mpcMutex.Lock()
 	pPtr := SavePointer(p)
 	defer UnrefPointer(pPtr)
 	isOk, merchState, err := libzkchannels.PayUpdateMerchant(channelState, sessionID, payTokenMaskCom, merchState,
 		pPtr, unsafe.Pointer(C.send_cgo), unsafe.Pointer(C.receive_cgo))
+	mpcMutex.Unlock()
 
 	// ZKLND-64 Handle MPC failiure case
 	if !isOk {
