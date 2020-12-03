@@ -2205,7 +2205,7 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 	mpcMutex.Lock()
 	pPtr := SavePointer(p)
 	defer UnrefPointer(pPtr)
-	isOk, custState, err := libzkchannels.PayUpdateCustomer(channelState, channelToken, oldState, newState,
+	success, custState, err := libzkchannels.PayUpdateCustomer(channelState, channelToken, oldState, newState,
 		payTokenMaskCom, revLockCom, amount, custState,
 		pPtr, unsafe.Pointer(C.send_cgo), unsafe.Pointer(C.receive_cgo))
 	mpcMutex.Unlock()
@@ -2214,14 +2214,7 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 		return
 	}
 
-	switch isOk {
-	case true:
-		zkchLog.Info("MPC pay protocol succeeded")
-	case false:
-		zkchLog.Info("MPC pay protocol failed")
-	}
-
-	isOkBytes, err := json.Marshal(isOk)
+	successBytes, err := json.Marshal(success)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
@@ -2229,7 +2222,7 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 
 	ZkPayMPCResult := lnwire.ZkPayMPCResult{
 		SessionID: sessionIDBytes,
-		IsOk:      isOkBytes,
+		Success:   successBytes,
 	}
 	err = p.SendMessage(false, &ZkPayMPCResult)
 	if err != nil {
@@ -2336,22 +2329,8 @@ func (z *zkChannelManager) processZkPayMPC(msg *lnwire.ZkPayMPC, p lnpeer.Peer) 
 func (z *zkChannelManager) processZkPayMPCResult(msg *lnwire.ZkPayMPCResult, p lnpeer.Peer) {
 
 	sessionID := string(msg.SessionID)
+	success := string(msg.Success)
 
-	var isOk bool
-	err := json.Unmarshal(msg.IsOk, &isOk)
-	if err != nil {
-		z.failZkPayFlow(p, err)
-		return
-	}
-
-	zkchLog.Info("Just received ZkPayMPCResult. isOk: ", isOk)
-
-	if !isOk {
-		// ZKLND-64 Handle MPC failiure case
-		zkchLog.Warn("MPC was unsuccessful for sessionID: %v, terminating payment", sessionID)
-		z.failZkPayFlow(p, err)
-		return
-	}
 	// open the zkchanneldb to load merchState
 	zkMerchDB, err := zkchanneldb.OpenMerchBucket(z.dbPath)
 	if err != nil {
@@ -2370,7 +2349,7 @@ func (z *zkChannelManager) processZkPayMPCResult(msg *lnwire.ZkPayMPCResult, p l
 		zkchLog.Error(err)
 	}
 
-	maskedTxInputs, err := libzkchannels.PayConfirmMPCResult(sessionID, isOk, merchState)
+	maskedTxInputs, err := libzkchannels.PayConfirmMPCResult(sessionID, success, merchState)
 	if err != nil {
 		z.failZkPayFlow(p, err)
 		return
