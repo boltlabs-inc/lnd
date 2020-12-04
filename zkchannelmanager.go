@@ -117,8 +117,12 @@ var (
 	// one p2wkh output. In the future, when the escrow can be funded with
 	// any form or number of inputs, the weight will have to be calculated
 	// dynamically.
-	escrowTxKW     = 0.702 // 702 weight units
-	custCloseTxKW  = 1.150 // 1150 weight units
+	escrowTxKW = 0.702 // 702 weight units
+
+	// note that for custCloseTxKW we use the biggest possible cust-close
+	// transaction (1195 KW): cust-close from merch-close with a child output.
+	// cust-close from escrow with a child output would be 1150KW.
+	custCloseTxKW  = 1.195 // 1195 weight units
 	merchCloseTxKW = 0.722 // 772 weight units
 )
 
