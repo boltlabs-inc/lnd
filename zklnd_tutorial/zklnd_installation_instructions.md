@@ -78,7 +78,7 @@ To install Rust, we recommend using [rustup](https://www.rustup.rs/). You can in
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
 
-Make sure the version of `rustc` is greater than 1.42. If you have an older version, update it by running:
+Make sure the version of `rustc` is greater than 1.49. If you have an older version, update it by running:
 
    ```bash
    rustup update
