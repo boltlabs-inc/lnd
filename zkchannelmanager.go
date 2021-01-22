@@ -2218,11 +2218,7 @@ func (z *zkChannelManager) processZkPayMaskCom(msg *lnwire.ZkPayMaskCom, p lnpee
 		return
 	}
 
-	successBytes, err := json.Marshal(success)
-	if err != nil {
-		z.failZkPayFlow(p, err)
-		return
-	}
+	successBytes := []byte(success)
 
 	ZkPayMPCResult := lnwire.ZkPayMPCResult{
 		SessionID: sessionIDBytes,
