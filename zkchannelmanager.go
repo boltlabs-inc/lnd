@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/lightningnetwork/lnd/pof"
 	"os"
 	"path"
 	"sync"
@@ -2363,9 +2364,29 @@ func (z *zkChannelManager) processZkPayMPCResult(msg *lnwire.ZkPayMPCResult, p l
 
 	sessionIDBytes := []byte(sessionID)
 
+	privkey, err := pof.LoadKey(pof.Home(), "key.seed")
+
+	if err != nil {
+		z.failZkPayFlow(p, err)
+		return
+	}
+
+	s := pof.NewSigner(privkey)
+	t, err := pof.New(s, "zkchannels", 86400)
+	if err != nil {
+		z.failZkPayFlow(p, err)
+		return
+	}
+	pofT, err := json.Marshal(t)
+	if err != nil {
+		z.failZkPayFlow(p, err)
+		return
+	}
+
 	zkPayMaskedTxInputs := lnwire.ZkPayMaskedTxInputs{
 		SessionID:      sessionIDBytes,
 		MaskedTxInputs: maskedTxInputsBytes,
+		Pof: pofT,
 	}
 
 	err = p.SendMessage(false, &zkPayMaskedTxInputs)
@@ -2385,6 +2406,8 @@ func (z *zkChannelManager) processZkPayMaskedTxInputs(msg *lnwire.ZkPayMaskedTxI
 		z.failZkPayFlow(p, err)
 		return
 	}
+
+	zkchLog.Infof("Proof of funding: %s", msg.Pof)
 
 	zkchLog.Infof("Just received ZkPayMaskedTxInputs from sessionID: %s", sessionID)
 

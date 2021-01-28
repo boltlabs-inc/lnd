@@ -1,11 +1,14 @@
 package lnwire
 
-import "io"
+import (
+	"io"
+)
 
 // ZkPayMaskedTxInputs contains the MaskedTxInputs sent by the Merchant to the Customer.
 type ZkPayMaskedTxInputs struct {
 	SessionID      ZkMsgType
 	MaskedTxInputs ZkMsgType
+	Pof            ZkMsgType
 }
 
 // A compile time check to ensure Ping implements the lnwire.Message interface.
@@ -18,7 +21,8 @@ var _ Message = (*ZkPayMaskedTxInputs)(nil)
 func (p *ZkPayMaskedTxInputs) Decode(r io.Reader, pver uint32) error {
 	return ReadElements(r,
 		&p.SessionID,
-		&p.MaskedTxInputs)
+		&p.MaskedTxInputs,
+		&p.Pof)
 }
 
 // Encode serializes the target Ping into the passed io.Writer observing the
@@ -28,7 +32,8 @@ func (p *ZkPayMaskedTxInputs) Decode(r io.Reader, pver uint32) error {
 func (p *ZkPayMaskedTxInputs) Encode(w io.Writer, pver uint32) error {
 	return WriteElements(w,
 		p.SessionID,
-		p.MaskedTxInputs)
+		p.MaskedTxInputs,
+		p.Pof)
 }
 
 // MsgType returns the integer uniquely identifying this message type on the
